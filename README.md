@@ -335,20 +335,6 @@ skip-bo-game/
 - `gameOver` - Game finished
 - `error` - Error message
 
-## Customization
-
-### Changing Server Port
-Edit `server/server.js`:
-```javascript
-const PORT = process.env.PORT || 3001;
-```
-
-### Changing Socket URL
-Edit `client/src/App.js`:
-```javascript
-const SOCKET_SERVER_URL = 'http://localhost:3001';
-```
-
 ## Future Enhancements
 
 - [ ] AI players for single-player mode
