@@ -4,7 +4,7 @@ import './App.css';
 import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
 
-const SOCKET_SERVER_URL = 'http://localhost:3001';
+const SOCKET_SERVER_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
 
 function App() {
   const [socket, setSocket] = useState(null);

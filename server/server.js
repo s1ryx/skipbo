@@ -7,12 +7,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: process.env.CORS_ORIGIN || "*",
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Store active games
 const games = new Map();
@@ -236,6 +238,7 @@ function generateRoomId() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-server.listen(PORT, () => {
-  console.log(`Skip-Bo server running on port ${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Skip-Bo server running on http://${HOST}:${PORT}`);
+  console.log(`For local network access, use your machine's IP address instead of ${HOST}`);
 });
