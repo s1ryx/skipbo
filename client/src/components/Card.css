@@ -1,0 +1,90 @@
+.card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s;
+  user-select: none;
+}
+
+.card.normal {
+  width: 80px;
+  height: 110px;
+}
+
+.card.small {
+  width: 50px;
+  height: 70px;
+}
+
+.card.visible {
+  background: white;
+  border: 3px solid #333;
+}
+
+.card.visible.wild-card {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border-color: #ff9800;
+}
+
+.card.hidden {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  border: 3px solid #a93226;
+}
+
+.card-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.card.small .card-value {
+  font-size: 1.3rem;
+}
+
+.wild-indicator {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #ff9800;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.card.small .wild-indicator {
+  font-size: 0.5rem;
+  margin-top: 2px;
+}
+
+.card-back {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-pattern {
+  width: 100%;
+  height: 100%;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.1) 10px,
+      rgba(255, 255, 255, 0.1) 20px
+    );
+}
+
+.card:hover {
+  transform: scale(1.05);
+}
