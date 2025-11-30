@@ -24,14 +24,16 @@ Be the first player to play all cards from your stockpile.
 - Each player receives a stockpile (30 cards for 2-4 players, 20 cards for 5-6 players)
 - Each player gets 5 cards in hand
 - 4 building piles in the center (shared by all players)
-- Each player has 3 discard piles
+- Each player has 4 discard piles
 
 ### Gameplay
 1. **Building Piles**: Must be built sequentially from 1 to 12
 2. **Skip-Bo Cards**: Wild cards that can represent any number
 3. **Playing Cards**: Can play from hand, stockpile top, or discard pile tops
-4. **Turn End**: Must discard one card to a discard pile to end turn
-5. **Winning**: First player to empty their stockpile wins!
+4. **Auto-draw**: When your hand becomes empty, you automatically draw 5 more cards
+5. **Turn End**: Must discard one card from hand to a discard pile to end turn
+6. **Quick Discard**: Select a card from hand and click any discard pile to end your turn immediately
+7. **Winning**: First player to empty their stockpile wins!
 
 ## Installation & Setup
 
@@ -55,7 +57,9 @@ npm install
 
 ## Running the Game
 
-### 1. Start the Server
+### Local Development (Single Machine)
+
+#### 1. Start the Server
 
 ```bash
 cd server
@@ -69,7 +73,7 @@ For development with auto-reload:
 npm run dev
 ```
 
-### 2. Start the Client
+#### 2. Start the Client
 
 In a new terminal:
 
@@ -79,6 +83,158 @@ npm start
 ```
 
 The client will run on `http://localhost:3000` and open automatically in your browser.
+
+---
+
+## Local Network Setup (Multiplayer Testing)
+
+To play with multiple users on your local network (WiFi/LAN), follow these steps:
+
+### Step 1: Find Your IP Address
+
+**On Windows:**
+```bash
+ipconfig
+```
+Look for "IPv4 Address" under your active network adapter (usually starts with `192.168.x.x` or `10.0.x.x`)
+
+**On macOS/Linux:**
+```bash
+hostname -I
+# or
+ifconfig | grep "inet "
+```
+Look for an address that starts with `192.168.x.x` or `10.0.x.x`
+
+**Example:** Your IP might be `192.168.1.5`
+
+### Step 2: Configure the Server
+
+1. Create a `.env` file in the `server` directory:
+```bash
+cd server
+cp .env.example .env
+```
+
+2. Edit `server/.env`:
+```env
+PORT=3001
+HOST=0.0.0.0
+CORS_ORIGIN=*
+```
+
+- `HOST=0.0.0.0` allows connections from any IP address on the network
+- `CORS_ORIGIN=*` allows all origins (fine for local network testing)
+
+### Step 3: Configure the Client
+
+1. Create a `.env` file in the `client` directory:
+```bash
+cd client
+cp .env.example .env
+```
+
+2. Edit `client/.env` and replace with your IP address:
+```env
+REACT_APP_SERVER_URL=http://192.168.1.5:3001
+```
+**Important:** Replace `192.168.1.5` with YOUR actual IP address from Step 1!
+
+### Step 4: Start the Server
+
+```bash
+cd server
+npm start
+```
+
+You should see:
+```
+Skip-Bo server running on http://0.0.0.0:3001
+For local network access, use your machine's IP address instead of 0.0.0.0
+```
+
+### Step 5: Build and Serve the Client
+
+For better performance and easier access, build the client for production:
+
+```bash
+cd client
+npm run build
+```
+
+Then serve it using a simple HTTP server:
+
+```bash
+# Install serve globally (one time only)
+npm install -g serve
+
+# Serve the built app
+serve -s build -l 3000
+```
+
+The client will be available at `http://YOUR_IP:3000` (e.g., `http://192.168.1.5:3000`)
+
+### Step 6: Connect Other Players
+
+**Other players on the same network** can now access the game by:
+
+1. Opening their browser
+2. Going to `http://YOUR_IP:3000` (replace with your actual IP)
+   - Example: `http://192.168.1.5:3000`
+
+### Firewall Configuration
+
+If players can't connect, you may need to allow connections through your firewall:
+
+**Windows Firewall:**
+```powershell
+# Run as Administrator
+netsh advfirewall firewall add rule name="Skip-Bo Server" dir=in action=allow protocol=TCP localport=3001
+netsh advfirewall firewall add rule name="Skip-Bo Client" dir=in action=allow protocol=TCP localport=3000
+```
+
+**macOS:**
+```bash
+# System Preferences → Security & Privacy → Firewall → Firewall Options
+# Allow incoming connections for Node
+```
+
+**Linux (ufw):**
+```bash
+sudo ufw allow 3001/tcp
+sudo ufw allow 3000/tcp
+```
+
+### Testing the Setup
+
+1. **On the host machine:**
+   - Go to `http://localhost:3000` or `http://YOUR_IP:3000`
+   - Create a room
+
+2. **On another device (phone, laptop, etc.):**
+   - Connect to the same WiFi network
+   - Go to `http://HOST_IP:3000` (e.g., `http://192.168.1.5:3000`)
+   - Join the room with the Room ID
+
+3. **Start playing!**
+
+### Troubleshooting Local Network Play
+
+**Players can't connect:**
+- ✅ Verify all devices are on the same WiFi network
+- ✅ Check firewall settings (see above)
+- ✅ Ensure the server is running and showing the correct IP
+- ✅ Try pinging the host: `ping 192.168.1.5` (replace with your IP)
+- ✅ Make sure you're using `http://` not `https://`
+
+**Game is slow or laggy:**
+- ✅ Check WiFi signal strength
+- ✅ Move closer to the router
+- ✅ Restart the router if needed
+
+**Connection drops:**
+- ✅ Some routers have WiFi isolation enabled - check router settings
+- ✅ Ensure devices aren't going to sleep mode
 
 ## How to Play
 
@@ -222,6 +378,58 @@ const SOCKET_SERVER_URL = 'http://localhost:3001';
 ## License
 
 MIT License - Feel free to use and modify!
+
+## Quick Reference
+
+### Local Development
+```bash
+# Terminal 1 - Start server
+cd server && npm start
+
+# Terminal 2 - Start client
+cd client && npm start
+```
+
+### Local Network Testing
+```bash
+# 1. Find your IP
+hostname -I  # Linux/Mac
+ipconfig     # Windows
+
+# 2. Configure environment files
+cd server && cp .env.example .env  # Edit HOST and CORS_ORIGIN
+cd client && cp .env.example .env  # Edit REACT_APP_SERVER_URL
+
+# 3. Start server
+cd server && npm start
+
+# 4. Build and serve client
+cd client && npm run build
+serve -s build -l 3000
+
+# 5. Share URL with players: http://YOUR_IP:3000
+```
+
+### Essential Commands
+```bash
+# Install dependencies (run once)
+cd server && npm install
+cd client && npm install
+
+# Development mode (auto-reload)
+cd server && npm run dev
+
+# Production build
+cd client && npm run build
+
+# Serve production build
+serve -s build -l 3000
+
+# Check your IP address
+hostname -I          # Linux/Mac
+ipconfig            # Windows
+ip addr show        # Linux alternative
+```
 
 ## Credits
 
