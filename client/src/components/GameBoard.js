@@ -43,7 +43,10 @@ function GameBoard({
   };
 
   const handleDiscardPileClick = (pileIndex) => {
-    if (!isMyTurn || !selectedCard || !discardMode) return;
+    if (!isMyTurn || !selectedCard) return;
+
+    // Only allow discarding cards from hand
+    if (selectedSource !== 'hand') return;
 
     onDiscardCard(selectedCard, pileIndex);
     setSelectedCard(null);
@@ -231,8 +234,8 @@ function GameBoard({
                             className={`card-in-pile ${cardIndex === pile.length - 1 ? 'top-card' : ''} ${selectedCard === card && cardIndex === pile.length - 1 && selectedSource === `discard${index}` ? 'selected' : ''}`}
                             style={{ marginTop: cardIndex > 0 ? '-50px' : '0' }}
                             onClick={(e) => {
-                              // In discard mode, allow the click to bubble up to discard to this pile
-                              if (discardMode) {
+                              // If a hand card is selected or in discard mode, allow click to bubble up to discard
+                              if (discardMode || (selectedCard && selectedSource === 'hand')) {
                                 return;
                               }
                               // Only allow selecting the top card for playing
