@@ -179,6 +179,11 @@ class SkipBoGame {
       this.buildingPiles[buildingPileIndex] = [];
     }
 
+    // If hand is empty after playing, automatically draw 5 more cards
+    if (player.hand.length === 0 && this.deck.length > 0) {
+      this.drawCards(playerId);
+    }
+
     // Check if player won
     if (player.stockpile.length === 0) {
       this.gameOver = true;
