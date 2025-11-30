@@ -375,6 +375,18 @@ const SOCKET_SERVER_URL = 'http://localhost:3001';
 - Check card follows sequence rules
 - Ensure building pile isn't complete (hasn't reached 12)
 
+## Disclaimer
+
+**This is a hobby/educational project.**
+
+Skip-Bo® is a registered trademark of Mattel, Inc. All intellectual property rights, including game rules, mechanics, and the Skip-Bo brand, belong to their respective owners (Mattel, Inc.).
+
+This project is an independent, non-commercial implementation created for educational and hobby purposes. The code in this repository is original work and is made available under the MIT License (see below). However, this does **not** grant any rights to the Skip-Bo trademark, brand, or game design.
+
+**I am not affiliated with, endorsed by, or associated with Mattel, Inc. in any way.**
+
+If you are a representative of Mattel, Inc. and have concerns about this project, please contact me directly.
+
 ## License
 
 MIT License - Feel free to use and modify!
