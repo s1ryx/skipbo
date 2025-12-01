@@ -33,9 +33,9 @@ Building Piles: These are piles of cards in the center of the table where player
 How to Play the Game:
 1. Starting the Game (Player's Turn):
 
-Draw 5 cards from your stockpile if you don’t have enough cards in your hand.
+At the start of your turn, draw cards from the deck until you have 5 cards in your hand.
 
-Play Cards: You can play cards from your hand, stockpile, or discard piles onto the central building piles.
+Play Cards: You can play cards from your hand, stockpile (top card only), or discard piles (top card only) onto the central building piles.
 
 Building Piles: You build from 1 to 12. The 1s are the starting cards for each pile. After a 1 is placed on a building pile, the next card in that pile must be the 2, then the 3, and so on until you reach 12. A building pile ends at 12, and no more cards can be played on that pile.
 
@@ -61,7 +61,7 @@ Card Limitations: You are only allowed to play the top card of your stockpile on
 
 4. Using the Discard Piles:
 
-Each player can have up to 3 discard piles beside their stockpile. At the end of each turn, you must discard one card from your hand to one of your discard piles.
+Each player has 4 discard piles beside their stockpile. At the end of each turn, you must discard one card from your hand to one of your discard piles.
 
 Discard piles are built in any order (you don’t have to build numerically).
 
@@ -77,9 +77,11 @@ Skip-Bo Cards in Stockpile: If you have a Skip-Bo card as the top card of your s
 
 6. End of Your Turn:
 
-End by discarding: At the end of each turn, discard one card from your hand to one of your discard piles.
+End by discarding: At the end of each turn, you must discard one card from your hand to one of your discard piles.
 
-If you have played all the cards in your hand and stockpile, you can skip the discard phase.
+If your hand becomes empty during your turn (from playing cards), you automatically draw 5 more cards from the deck.
+
+You must always discard one card to end your turn (you cannot skip the discard phase).
 
 Winning the Game:
 
