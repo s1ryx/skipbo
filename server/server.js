@@ -16,6 +16,11 @@ const io = socketIO(server, {
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Health check endpoint for Docker
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Store active games
 const games = new Map();
 const playerRooms = new Map(); // Track which room each player is in
