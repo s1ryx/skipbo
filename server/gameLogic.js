@@ -256,10 +256,7 @@ class SkipBoGame {
         stockpileCount: p.stockpile.length,
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
         handCount: p.hand.length,
-        discardPiles: p.discardPiles.map(pile => ({
-          count: pile.length,
-          top: pile.length > 0 ? pile[pile.length - 1] : null
-        }))
+        discardPiles: p.discardPiles
       })),
       buildingPiles: this.buildingPiles,
       currentPlayerIndex: this.currentPlayerIndex,

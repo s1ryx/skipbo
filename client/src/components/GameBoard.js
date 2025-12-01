@@ -147,8 +147,18 @@ function GameBoard({
                   {player.discardPiles.map((pile, idx) => (
                     <div key={idx} className="card-pile-small">
                       <div className="pile-label-small">D{idx + 1}</div>
-                      {pile.top ? (
-                        <Card value={pile.top} isVisible={true} size="small" />
+                      {pile.length > 0 ? (
+                        <div className="discard-pile-stack-small">
+                          {pile.map((card, cardIndex) => (
+                            <div
+                              key={cardIndex}
+                              className="card-in-pile-small"
+                              style={{ marginTop: cardIndex > 0 ? '-45px' : '0' }}
+                            >
+                              <Card value={card} isVisible={true} size="small" />
+                            </div>
+                          ))}
+                        </div>
                       ) : (
                         <div className="empty-pile-small"></div>
                       )}
