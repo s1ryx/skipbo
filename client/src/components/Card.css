@@ -20,6 +20,36 @@
   border: 3px solid #333;
 }
 
+.card.visible.blue-card {
+  background: linear-gradient(135deg, #4a90e2 0%, #5ba3f5 100%);
+  border-color: #2563eb;
+}
+
+.card.visible.blue-card .card-corner,
+.card.visible.blue-card .card-value-center {
+  color: white;
+}
+
+.card.visible.green-card {
+  background: linear-gradient(135deg, #48bb78 0%, #5cd68a 100%);
+  border-color: #16a34a;
+}
+
+.card.visible.green-card .card-corner,
+.card.visible.green-card .card-value-center {
+  color: white;
+}
+
+.card.visible.red-card {
+  background: linear-gradient(135deg, #e53e3e 0%, #f56565 100%);
+  border-color: #dc2626;
+}
+
+.card.visible.red-card .card-corner,
+.card.visible.red-card .card-value-center {
+  color: white;
+}
+
 .card.visible.wild-card {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
   border-color: #ff9800;
