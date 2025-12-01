@@ -22,7 +22,6 @@ function GameBoard({
   }
 
   const isMyTurn = gameState.currentPlayerId === playerId;
-  const currentPlayer = gameState.players.find(p => p.id === playerId);
 
   const handleCardSelect = (card, source) => {
     if (!isMyTurn) return;
