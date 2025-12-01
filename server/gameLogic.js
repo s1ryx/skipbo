@@ -238,13 +238,14 @@ class SkipBoGame {
       return { success: false, error: 'Not your turn' };
     }
 
-    // Draw cards for next turn
-    this.drawCards(playerId);
-
     // Move to next player
     this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
 
-    return { success: true, nextPlayer: this.getCurrentPlayer().id };
+    // Draw cards at the START of the new player's turn
+    const nextPlayer = this.getCurrentPlayer();
+    this.drawCards(nextPlayer.id);
+
+    return { success: true, nextPlayer: nextPlayer.id };
   }
 
   getGameState() {
