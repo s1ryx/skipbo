@@ -4,8 +4,18 @@ import './Card.css';
 function Card({ value, isVisible, size = 'normal' }) {
   const displayValue = value === 'SKIP-BO' ? 'SB' : value;
 
+  // Determine color class based on value
+  const getColorClass = () => {
+    if (value === 'SKIP-BO') return 'wild-card';
+    const numValue = parseInt(value);
+    if (numValue >= 1 && numValue <= 4) return 'blue-card';
+    if (numValue >= 5 && numValue <= 8) return 'green-card';
+    if (numValue >= 9 && numValue <= 12) return 'red-card';
+    return '';
+  };
+
   return (
-    <div className={`card ${isVisible ? 'visible' : 'hidden'} ${size} ${value === 'SKIP-BO' ? 'wild-card' : ''}`}>
+    <div className={`card ${isVisible ? 'visible' : 'hidden'} ${size} ${getColorClass()}`}>
       {isVisible ? (
         <div className="card-content">
           <div className="card-corner card-corner-top">{displayValue}</div>
