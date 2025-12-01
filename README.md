@@ -27,13 +27,14 @@ Be the first player to play all cards from your stockpile.
 - Each player has 4 discard piles
 
 ### Gameplay
-1. **Building Piles**: Must be built sequentially from 1 to 12
-2. **Skip-Bo Cards**: Wild cards that can represent any number
-3. **Playing Cards**: Can play from hand, stockpile top, or discard pile tops
-4. **Auto-draw**: When your hand becomes empty, you automatically draw 5 more cards
-5. **Turn End**: Must discard one card from hand to a discard pile to end turn
-6. **Quick Discard**: Select a card from hand and click any discard pile to end your turn immediately
-7. **Winning**: First player to empty their stockpile wins!
+1. **Turn Start**: Each turn begins by drawing cards from the deck until you have 5 cards in hand
+2. **Building Piles**: Must be built sequentially from 1 to 12
+3. **Skip-Bo Cards**: Wild cards that can represent any number
+4. **Playing Cards**: Can play from hand, stockpile top, or discard pile tops
+5. **Mid-Turn Draw**: If your hand becomes empty during your turn, you automatically draw 5 more cards
+6. **Turn End**: Must discard one card from hand to a discard pile to end turn
+7. **Quick Discard**: Select a card from hand and click any discard pile to end your turn immediately
+8. **Winning**: First player to empty their stockpile wins!
 
 ## Installation & Setup
 
