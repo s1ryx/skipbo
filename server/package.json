@@ -1,6 +1,6 @@
 {
   "name": "skip-bo-server",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Skip-Bo game server with Socket.IO",
   "main": "server.js",
   "scripts": {
