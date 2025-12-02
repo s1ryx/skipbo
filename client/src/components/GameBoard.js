@@ -150,7 +150,7 @@ function GameBoard({
         {gameState.players
           .filter(p => p.id !== playerId)
           .map(player => (
-            <div key={player.id} className="opponent-info">
+            <div key={player.id} className={`opponent-info ${gameState.currentPlayerId !== player.id ? 'inactive' : ''}`}>
               <h4>
                 {player.name}
                 {gameState.currentPlayerId === player.id && ' (Playing)'}
@@ -228,7 +228,7 @@ function GameBoard({
 
       {/* Current Player Area */}
       {playerState && (
-        <div className="player-area">
+        <div className={`player-area ${!isMyTurn ? 'inactive' : ''}`}>
           <h3>Your Area</h3>
 
           <div className="player-piles">
