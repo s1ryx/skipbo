@@ -1,112 +1,142 @@
-Objective of the Game:
+# Skip-Bo Game Rules
 
-The goal of Skip-Bo is to be the first player to play all the cards in your stockpile (the stack of cards you start with). You do this by building sequential piles of cards in numerical order (from 1 to 12) in the center of the table. The game ends when one player has no cards left in their stockpile.
+## Objective
 
-What You Need:
+The goal of Skip-Bo is to be the first player to play all the cards in your stockpile. You do this by building sequential piles of cards in numerical order (from 1 to 12) in the center of the table. The game ends when one player has no cards left in their stockpile.
 
-Skip-Bo Cards: The game comes with a deck of cards that includes numbers from 1 to 12 and "Skip-Bo" cards, which act as wild cards.
+## What You Need
 
-Players: 2 to 6 players.
+- **Skip-Bo Cards**: A deck that includes numbers from 1 to 12 and "Skip-Bo" cards, which act as wild cards
+- **Players**: 2 to 6 players
 
-Setting Up the Game:
+## Setting Up the Game
 
-Shuffle the Cards: Mix the deck thoroughly so the cards are in random order.
+### 1. Shuffle the Cards
+Mix the deck thoroughly so the cards are in random order.
 
-Deal Cards:
+### 2. Deal Cards
 
-Stockpile: Each player gets a stockpile of 30 cards if there are 2-4 players, or 20 cards if there are 5-6 players. You should have this many cards dealt face down in a stack in front of you. Do not look at these cards!
+**Stockpile:**
+- Each player gets a stockpile of **30 cards** if there are 2-4 players
+- Each player gets a stockpile of **20 cards** if there are 5-6 players
+- Cards are dealt face down in a stack in front of you
+- **Do not look at these cards!**
 
-Hand: After the stockpile is dealt, each player gets 5 cards to hold in their hand, face up. This is the hand you will use to play cards on your turn.
+**Hand:**
+- After the stockpile is dealt, each player gets **5 cards** to hold in their hand
+- Keep these cards face up where you can see them
 
-Building Piles: Set up four central piles where players will build their sequences of 1-12. These are the building piles, which everyone can use to play their cards onto during the game.
+**Building Piles:**
+- Set up **four central piles** where players will build sequences of 1-12
+- These building piles are shared by all players
 
-Card Order: Arrange your stockpile in a face-down pile (one card on top), and your hand of 5 cards should be placed face-up where you can see them.
+### 3. Card Order
+- Arrange your stockpile in a face-down pile (one card on top)
+- Your hand of 5 cards should be placed face-up where you can see them
 
-Types of Cards in the Deck:
+## Types of Cards
 
-Number Cards (1-12): These are the regular cards. When playing cards on the building piles, the numbers must be played in ascending order (from 1 to 12).
+### Number Cards (1-12)
+Regular cards that must be played in ascending order on the building piles.
 
-Skip-Bo Cards: These are wild cards that can represent any number from 1 to 12, and they help you complete a sequence in the building piles.
+### Skip-Bo Cards (Wild Cards)
+- Can represent any number from 1 to 12
+- Help you complete sequences in the building piles
+- Can be played whenever needed to continue a sequence
 
-Building Piles: These are piles of cards in the center of the table where players will play cards. Each pile must start with a 1 and can go up to 12, with cards placed in ascending order.
+### Building Piles
+- Four piles in the center of the table
+- Must start with a **1** and go up to **12**
+- Cards must be placed in ascending order
+- Once a pile reaches 12, it is complete and removed
 
-How to Play the Game:
-1. Starting the Game (Player's Turn):
+## How to Play
 
-At the start of your turn, draw cards from the deck until you have 5 cards in your hand.
+### Starting Your Turn
 
-Play Cards: You can play cards from your hand, stockpile (top card only), or discard piles (top card only) onto the central building piles.
+1. **Draw cards** from the deck until you have 5 cards in your hand
+2. **Play cards** from:
+   - Your hand
+   - Top card of your stockpile
+   - Top cards of your discard piles
 
-Building Piles: You build from 1 to 12. The 1s are the starting cards for each pile. After a 1 is placed on a building pile, the next card in that pile must be the 2, then the 3, and so on until you reach 12. A building pile ends at 12, and no more cards can be played on that pile.
+### Building Piles Rules
 
-Wild Cards (Skip-Bo): Wild cards can represent any number, so you can play them to complete any sequence (e.g., if there is a 5, and the next card needed is a 6, you can use a Skip-Bo as the 6).
+- Build from **1 to 12** in ascending order
+- The **1** is the starting card for each pile
+- After a 1, place a 2, then 3, and so on until you reach 12
+- **Wild cards (Skip-Bo)** can represent any number
+- Once a building pile reaches **12**, it is finished and removed from play
 
-Stockpile: You can only play the top card of your stockpile on your turn.
+### Playing from Your Stockpile
 
-Discard Piles: You can also play cards to the discard piles. At the end of your turn, you must place one card face-up in your discard pile.
+- You can **only play the top card** of your stockpile
+- You cannot look at cards below the top card
+- If the top card is playable, you should try to play it
 
-2. Sequence Rules:
+### Using Discard Piles
 
-Cards must be placed in ascending order (1, 2, 3, etc.) on the building piles. For example, if a 3 is on a building pile, the next card you can play there must be a 4.
+- Each player has **4 discard piles** beside their stockpile
+- At the **end of each turn**, you must discard one card from your hand to one of your discard piles
+- Discard piles can be built in any order (no numerical sequence required)
+- On future turns, you can play the **top card** from any of your discard piles
 
-You cannot skip a number. If there’s no 1 to start a pile, you can’t add anything to it.
+### Mid-Turn Draw
 
-Once a building pile reaches 12, it is "finished." You can start a new pile with a 1.
+- If your hand becomes **empty during your turn**, you automatically draw **5 more cards** from the deck
+- This allows you to continue playing without ending your turn
 
-3. Playing the Stockpile:
+### Ending Your Turn
 
-On your turn, if the top card of your stockpile is playable (meaning it can be placed on one of the building piles), you must play it. You cannot skip over any card in your stockpile.
+1. You **must discard one card** from your hand to one of your discard piles
+2. You cannot skip the discard phase
+3. Turn passes to the next player
 
-Card Limitations: You are only allowed to play the top card of your stockpile on any turn.
+## Sequence Rules
 
-4. Using the Discard Piles:
+- Cards must be placed in **ascending order** (1, 2, 3, etc.) on building piles
+- You **cannot skip a number** in the sequence
+- If there's no 1 to start a pile, you can't add anything to it
+- Once a building pile reaches **12**, it is finished and removed from play
+- A new pile can be started with a 1
 
-Each player has 4 discard piles beside their stockpile. At the end of each turn, you must discard one card from your hand to one of your discard piles.
+## Skip-Bo Wild Cards
 
-Discard piles are built in any order (you don’t have to build numerically).
+- Can be used as **any number** in a sequence
+- Example: If you need a 4, you can play a Skip-Bo as the 4
+- Can be played from your hand, stockpile top, or discard pile tops
+- If a Skip-Bo is the top card of your stockpile, you can play it as a 1 to start a new pile
 
-On future turns, you can use cards from your discard piles to help you build the building piles, just like cards from your hand.
+## Winning the Game
 
-5. Skip-Bo Cards (Wild Cards):
-
-A Skip-Bo card can be used as any number in a sequence (for example, if you need a 4, you can play a Skip-Bo as the 4).
-
-You can play a Skip-Bo card whenever it’s your turn and you need it to continue building a sequence.
-
-Skip-Bo Cards in Stockpile: If you have a Skip-Bo card as the top card of your stockpile, you can play it as a 1 to start a new building pile or as part of an existing pile.
-
-6. End of Your Turn:
-
-End by discarding: At the end of each turn, you must discard one card from your hand to one of your discard piles.
-
-If your hand becomes empty during your turn (from playing cards), you automatically draw 5 more cards from the deck.
-
-You must always discard one card to end your turn (you cannot skip the discard phase).
-
-Winning the Game:
-
-The first player to empty their stockpile (get rid of all their stockpile cards) wins the game!
+The **first player to empty their stockpile** wins the game!
 
 If two players empty their stockpiles at the same time, the one who played their last card first is the winner.
 
-Additional Important Rules:
+## Important Rules
 
-No Peeking: You cannot look at your stockpile cards unless they are the top card of the pile.
+- **No Peeking**: You cannot look at your stockpile cards except the top card
+- **Strategy with Discard Piles**: Keep track of cards in your discard piles that could help build sequences in the future
+- **Mandatory Discard**: You must always discard one card to end your turn
 
-Strategy with Discard Piles: Don’t forget about your discard piles. Keep an eye on cards in your discard pile that could help you continue building sequences in the future.
+## Example Turn
 
-Example of a Turn:
+### Player 1's Turn:
 
-Player 1’s turn:
+1. Starts by looking at their hand (5 cards)
+2. Checks if any cards can be played on the central building piles
+3. Plays a **3** from their hand onto a building pile
+4. Plays a **Skip-Bo** card as a **4** to continue the sequence
+5. Plays a **5** from their stockpile
+6. At the end of the turn, discards a card from their hand to one of their discard piles
 
-They start by looking at their hand (5 cards) and see if they can play anything from it onto the central piles.
+### Player 2's Turn:
 
-They play a 3 from their hand onto a building pile, followed by a Skip-Bo card, using it as a 4, then a 5 from their stockpile.
+1. Plays a **1** from their stockpile onto an empty building pile
+2. Unable to make any more plays
+3. Discards a card at the end of their turn
+4. Play passes to the next player
 
-At the end of the turn, they discard a card from their hand to one of their discard piles.
+---
 
-Player 2’s turn:
-
-They play a 1 from their stockpile onto an empty building pile.
-
-They discard a card at the end of their turn and wait for the next round.
+For more details about the implementation, see the [README](../README.md).
