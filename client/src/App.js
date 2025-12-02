@@ -25,6 +25,19 @@ function App() {
     newSocket.on('connect', () => {
       console.log('Connected to server');
       setPlayerId(newSocket.id);
+
+      // Check for existing session and attempt reconnection
+      const savedSession = localStorage.getItem('skipBoSession');
+      if (savedSession) {
+        try {
+          const { roomId, playerId, playerName } = JSON.parse(savedSession);
+          console.log('Attempting to reconnect to room:', roomId);
+          newSocket.emit('reconnect', { roomId, oldPlayerId: playerId, playerName });
+        } catch (error) {
+          console.error('Failed to parse saved session:', error);
+          localStorage.removeItem('skipBoSession');
+        }
+      }
     });
 
     newSocket.on('roomCreated', ({ roomId, playerId, gameState }) => {
@@ -33,11 +46,57 @@ function App() {
       setPlayerId(playerId);
       setGameState(gameState);
       setInLobby(false);
+
+      // Save session data
+      const player = gameState.players.find(p => p.id === playerId);
+      if (player) {
+        localStorage.setItem('skipBoSession', JSON.stringify({
+          roomId,
+          playerId,
+          playerName: player.name
+        }));
+      }
     });
 
     newSocket.on('playerJoined', ({ gameState }) => {
       console.log('Player joined');
       setGameState(gameState);
+
+      // Save session data when joining
+      const currentPlayer = gameState.players.find(p => p.id === newSocket.id);
+      if (currentPlayer) {
+        localStorage.setItem('skipBoSession', JSON.stringify({
+          roomId: gameState.roomId,
+          playerId: newSocket.id,
+          playerName: currentPlayer.name
+        }));
+      }
+    });
+
+    newSocket.on('reconnected', ({ roomId, playerId, gameState, playerState }) => {
+      console.log('Successfully reconnected to room:', roomId);
+      setRoomId(roomId);
+      setPlayerId(playerId);
+      setGameState(gameState);
+      setPlayerState(playerState);
+      setInLobby(false);
+
+      // Update session with new socket ID
+      const player = gameState.players.find(p => p.id === playerId);
+      if (player) {
+        localStorage.setItem('skipBoSession', JSON.stringify({
+          roomId,
+          playerId,
+          playerName: player.name
+        }));
+      }
+    });
+
+    newSocket.on('reconnectFailed', ({ message }) => {
+      console.log('Reconnection failed:', message);
+      localStorage.removeItem('skipBoSession');
+      setError(message);
+      setTimeout(() => setError(null), 5000);
     });
 
     newSocket.on('gameStarted', ({ gameState, playerState }) => {
@@ -57,6 +116,7 @@ function App() {
 
     newSocket.on('gameOver', ({ winner, gameState }) => {
       setGameState(gameState);
+      localStorage.removeItem('skipBoSession'); // Clear session when game ends
       alert(`Game Over! Winner: ${winner.name}`);
     });
 

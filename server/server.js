@@ -88,6 +88,50 @@ io.on('connection', (socket) => {
     console.log(`${playerName} joined room: ${roomId}`);
   });
 
+  // Reconnect to an existing room
+  socket.on('reconnect', ({ roomId, oldPlayerId, playerName }) => {
+    const game = games.get(roomId);
+
+    if (!game) {
+      socket.emit('reconnectFailed', { message: 'Room no longer exists' });
+      return;
+    }
+
+    // Find the player by old ID
+    const player = game.players.find(p => p.id === oldPlayerId);
+
+    if (!player) {
+      socket.emit('reconnectFailed', { message: 'Player not found in room' });
+      return;
+    }
+
+    // Update player's socket ID
+    player.id = socket.id;
+
+    // Update playerRooms mapping
+    playerRooms.delete(oldPlayerId);
+    playerRooms.set(socket.id, roomId);
+
+    // Join the room
+    socket.join(roomId);
+
+    // Send current game state to reconnected player
+    socket.emit('reconnected', {
+      roomId,
+      playerId: socket.id,
+      gameState: game.getGameState(),
+      playerState: game.getPlayerState(socket.id)
+    });
+
+    // Notify other players
+    socket.to(roomId).emit('playerReconnected', {
+      playerId: socket.id,
+      playerName: player.name
+    });
+
+    console.log(`${playerName} reconnected to room: ${roomId}`);
+  });
+
   // Start the game
   socket.on('startGame', () => {
     const roomId = playerRooms.get(socket.id);
