@@ -48,7 +48,7 @@ npm start
 
 ### Testing on Local Network
 
-See the [Local Network Setup](README.md#local-network-setup-multiplayer-testing) section in the README for detailed instructions.
+See the [Local Network Setup](../README.md#local-network-setup-multiplayer-testing) section in the README for detailed instructions.
 
 ## Commit Message Guidelines
 
@@ -335,7 +335,7 @@ Add screenshots for UI changes
 ## Questions or Issues?
 
 If you have questions or run into issues:
-- Check the [README](README.md) for setup instructions
+- Check the [README](../README.md) for setup instructions
 - Review existing [issues](https://github.com/s1ryx/skipbo/issues)
 - Open a new issue if your problem isn't already reported
 
