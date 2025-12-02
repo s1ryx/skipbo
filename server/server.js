@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
 const SkipBoGame = require('./gameLogic');
+const packageJson = require('./package.json');
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +16,16 @@ const io = socketIO(server, {
 
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
+const VERSION = packageJson.version;
+
+// Health check endpoint for Docker
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    version: VERSION,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Store active games
 const games = new Map();
@@ -239,6 +250,6 @@ function generateRoomId() {
 }
 
 server.listen(PORT, HOST, () => {
-  console.log(`Skip-Bo server running on http://${HOST}:${PORT}`);
+  console.log(`Skip-Bo server v${VERSION} running on http://${HOST}:${PORT}`);
   console.log(`For local network access, use your machine's IP address instead of ${HOST}`);
 });

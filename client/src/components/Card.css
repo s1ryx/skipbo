@@ -20,6 +20,36 @@
   border: 3px solid #333;
 }
 
+.card.visible.blue-card {
+  background: linear-gradient(135deg, #4a90e2 0%, #5ba3f5 100%);
+  border-color: #2563eb;
+}
+
+.card.visible.blue-card .card-corner,
+.card.visible.blue-card .card-value-center {
+  color: white;
+}
+
+.card.visible.green-card {
+  background: linear-gradient(135deg, #48bb78 0%, #5cd68a 100%);
+  border-color: #16a34a;
+}
+
+.card.visible.green-card .card-corner,
+.card.visible.green-card .card-value-center {
+  color: white;
+}
+
+.card.visible.red-card {
+  background: linear-gradient(135deg, #e53e3e 0%, #f56565 100%);
+  border-color: #dc2626;
+}
+
+.card.visible.red-card .card-corner,
+.card.visible.red-card .card-value-center {
+  color: white;
+}
+
 .card.visible.wild-card {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
   border-color: #ff9800;
@@ -32,6 +62,7 @@
 
 .card-content {
   height: 100%;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -39,28 +70,64 @@
   padding: 8px;
 }
 
-.card-value {
-  font-size: 2rem;
+.card-corner {
+  position: absolute;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  line-height: 1;
+}
+
+.card-corner-top {
+  top: 4px;
+  right: 4px;
+}
+
+.card-corner-bottom {
+  bottom: 4px;
+  left: 4px;
+  transform: rotate(180deg);
+}
+
+.card-value-center {
+  font-size: 2.5rem;
   font-weight: bold;
   color: #333;
 }
 
-.card.small .card-value {
-  font-size: 1.3rem;
+/* Small card adjustments */
+.card.small .card-corner {
+  font-size: 0.65rem;
+}
+
+.card.small .card-corner-top {
+  top: 3px;
+  right: 3px;
+}
+
+.card.small .card-corner-bottom {
+  bottom: 3px;
+  left: 3px;
+}
+
+.card.small .card-value-center {
+  font-size: 1.5rem;
 }
 
 .wild-indicator {
-  font-size: 0.65rem;
-  font-weight: 600;
+  position: absolute;
+  bottom: 22px;
+  font-size: 0.6rem;
+  font-weight: 700;
   color: #ff9800;
-  margin-top: 4px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
 }
 
 .card.small .wild-indicator {
-  font-size: 0.5rem;
-  margin-top: 2px;
+  font-size: 0.45rem;
+  bottom: 14px;
+  letter-spacing: 1px;
 }
 
 .card-back {
