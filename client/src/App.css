@@ -51,3 +51,16 @@
   color: white;
   font-size: 1.5rem;
 }
+
+.App-footer {
+  margin-top: auto;
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.App-footer .version {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
