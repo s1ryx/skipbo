@@ -256,6 +256,7 @@ cd skip-bo-game
 
 2. **Build and start all services**:
 ```bash
+cd deployment/docker
 docker-compose up -d
 ```
 
@@ -347,6 +348,7 @@ railway up
 **Render.com**:
 - Connect your GitHub repository
 - Select "Docker" as environment
+- Set root directory to `deployment/docker`
 - Render will auto-detect `docker-compose.yml`
 
 **Fly.io**:
@@ -597,6 +599,9 @@ ip addr show        # Linux alternative
 
 ### Docker Deployment
 ```bash
+# Navigate to deployment directory
+cd deployment/docker
+
 # Build and start all services
 docker-compose up -d
 
