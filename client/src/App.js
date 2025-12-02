@@ -134,9 +134,9 @@ function App() {
     };
   }, []);
 
-  const createRoom = (playerName, maxPlayers) => {
+  const createRoom = (playerName, maxPlayers, stockpileSize) => {
     if (socket) {
-      socket.emit('createRoom', { playerName, maxPlayers });
+      socket.emit('createRoom', { playerName, maxPlayers, stockpileSize });
     }
   };
 
