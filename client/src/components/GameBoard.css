@@ -122,6 +122,12 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   flex: 1;
   min-width: 200px;
+  transition: opacity 0.3s, filter 0.3s;
+}
+
+.opponent-info.inactive {
+  opacity: 0.5;
+  filter: grayscale(30%);
 }
 
 .opponent-info h4 {
@@ -281,6 +287,12 @@
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.3s, filter 0.3s;
+}
+
+.player-area.inactive {
+  opacity: 0.5;
+  filter: grayscale(30%);
 }
 
 .player-area h3 {
