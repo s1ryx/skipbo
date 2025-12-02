@@ -16,6 +16,10 @@ function GameBoard({
   const [selectedCard, setSelectedCard] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
   const [discardMode, setDiscardMode] = useState(false);
+  const [quickDiscardEnabled, setQuickDiscardEnabled] = useState(() => {
+    const saved = localStorage.getItem('skipBoQuickDiscard');
+    return saved === 'true';
+  });
 
   if (!gameState) {
     return <div className="loading">Loading game...</div>;
@@ -57,10 +61,19 @@ function GameBoard({
     const sourceType = getSourceType(selectedSource);
     if (sourceType !== 'hand') return;
 
+    // Quick discard: allow immediate discard if enabled, otherwise require discard mode
+    if (!quickDiscardEnabled && !discardMode) return;
+
     onDiscardCard(selectedCard, pileIndex);
     setSelectedCard(null);
     setSelectedSource(null);
     setDiscardMode(false);
+  };
+
+  const toggleQuickDiscard = () => {
+    const newValue = !quickDiscardEnabled;
+    setQuickDiscardEnabled(newValue);
+    localStorage.setItem('skipBoQuickDiscard', newValue.toString());
   };
 
   const handleEndTurn = () => {
@@ -253,9 +266,13 @@ function GameBoard({
                             className={`card-in-pile ${cardIndex === pile.length - 1 ? 'top-card' : ''} ${selectedCard === card && cardIndex === pile.length - 1 && selectedSource === `discard${index}` ? 'selected' : ''}`}
                             style={{ marginTop: cardIndex > 0 ? '-50px' : '0' }}
                             onClick={(e) => {
-                              // If a hand card is selected or in discard mode, allow click to bubble up to discard
+                              // If in discard mode, allow click to bubble up to discard
+                              if (discardMode) {
+                                return;
+                              }
+                              // If a hand card is selected and quick discard is enabled, allow click to bubble up
                               const sourceType = getSourceType(selectedSource);
-                              if (discardMode || (selectedCard && sourceType === 'hand')) {
+                              if (quickDiscardEnabled && selectedCard && sourceType === 'hand') {
                                 return;
                               }
                               // Only allow selecting the top card for playing
@@ -304,6 +321,16 @@ function GameBoard({
                 </button>
               </div>
             )}
+            <div className="settings-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={quickDiscardEnabled}
+                  onChange={toggleQuickDiscard}
+                />
+                Quick Discard (click discard pile with selected card)
+              </label>
+            </div>
           </div>
         </div>
       )}
