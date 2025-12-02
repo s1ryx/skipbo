@@ -214,7 +214,7 @@ function GameBoard({
               {pile.length > 0 ? (
                 <div className="pile-stack">
                   <Card value={pile[pile.length - 1]} isVisible={true} />
-                  <div className="pile-count">{pile.length} cards</div>
+                  <div className="pile-count">{pile.length} {pile.length === 1 ? 'card' : 'cards'}</div>
                 </div>
               ) : (
                 <div className="empty-pile">
