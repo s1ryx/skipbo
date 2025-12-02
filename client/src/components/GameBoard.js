@@ -74,7 +74,7 @@ function GameBoard({
 
     const lastCard = pile[pile.length - 1];
     if (lastCard === 'SKIP-BO') {
-      let value = 1;
+      let value = 0;
       for (let i = 0; i < pile.length; i++) {
         if (pile[i] !== 'SKIP-BO') {
           value = pile[i];
