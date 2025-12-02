@@ -175,6 +175,11 @@ class SkipBoGame {
     );
 
     if (pileValue === 12) {
+      // Shuffle completed pile back into deck
+      const completedPile = this.buildingPiles[buildingPileIndex];
+      this.deck = this.deck.concat(completedPile);
+      this.deck = this.shuffleDeck(this.deck);
+
       // Clear the completed pile
       this.buildingPiles[buildingPileIndex] = [];
     }
