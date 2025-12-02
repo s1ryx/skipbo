@@ -190,6 +190,10 @@ If players can't connect, you may need to allow connections through your firewal
 **Windows Firewall:**
 ```powershell
 # Run as Administrator
+# First, allow script execution (required for setup scripts):
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# Then add firewall rules:
 netsh advfirewall firewall add rule name="Skip-Bo Server" dir=in action=allow protocol=TCP localport=3001
 netsh advfirewall firewall add rule name="Skip-Bo Client" dir=in action=allow protocol=TCP localport=3000
 ```
