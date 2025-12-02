@@ -4,8 +4,8 @@ services:
   # Backend server
   server:
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: ../../server
+      dockerfile: ../deployment/docker/Dockerfile.server
     container_name: skipbo-server
     restart: unless-stopped
     environment:
@@ -27,8 +27,8 @@ services:
   # Frontend client
   client:
     build:
-      context: ./client
-      dockerfile: Dockerfile
+      context: ../../client
+      dockerfile: ../deployment/docker/Dockerfile.client
       args:
         # Empty REACT_APP_SERVER_URL means Socket.IO will connect to same origin
         # nginx will proxy /socket.io/ requests to the backend
@@ -57,8 +57,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - skipbo-network
     depends_on:
