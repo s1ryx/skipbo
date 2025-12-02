@@ -7,6 +7,7 @@ import Lobby from './components/Lobby';
 // When REACT_APP_SERVER_URL is not set or empty, use undefined to connect to same origin
 // This allows Socket.IO to connect to the domain where the app is hosted
 const SOCKET_SERVER_URL = process.env.REACT_APP_SERVER_URL || undefined;
+const VERSION = process.env.REACT_APP_VERSION || require('../package.json').version;
 
 function App() {
   const [socket, setSocket] = useState(null);
@@ -140,6 +141,10 @@ function App() {
           onEndTurn={endTurn}
         />
       )}
+
+      <footer className="App-footer">
+        <span className="version">v{VERSION}</span>
+      </footer>
     </div>
   );
 }
