@@ -23,11 +23,19 @@ function GameBoard({
 
   const isMyTurn = gameState.currentPlayerId === playerId;
 
+  const getSourceType = (source) => {
+    if (!source) return null;
+    if (source.startsWith('hand-')) return 'hand';
+    if (source.startsWith('discard')) return source;
+    return source;
+  };
+
   const handleCardSelect = (card, source) => {
     if (!isMyTurn) return;
 
     // In discard mode, only allow selecting cards from hand
-    if (discardMode && source !== 'hand') return;
+    const sourceType = getSourceType(source);
+    if (discardMode && sourceType !== 'hand') return;
 
     setSelectedCard(card);
     setSelectedSource(source);
@@ -36,7 +44,8 @@ function GameBoard({
   const handleBuildingPileClick = (pileIndex) => {
     if (!isMyTurn || !selectedCard || discardMode) return;
 
-    onPlayCard(selectedCard, selectedSource, pileIndex);
+    const sourceType = getSourceType(selectedSource);
+    onPlayCard(selectedCard, sourceType, pileIndex);
     setSelectedCard(null);
     setSelectedSource(null);
   };
@@ -45,7 +54,8 @@ function GameBoard({
     if (!isMyTurn || !selectedCard) return;
 
     // Only allow discarding cards from hand
-    if (selectedSource !== 'hand') return;
+    const sourceType = getSourceType(selectedSource);
+    if (sourceType !== 'hand') return;
 
     onDiscardCard(selectedCard, pileIndex);
     setSelectedCard(null);
@@ -244,7 +254,8 @@ function GameBoard({
                             style={{ marginTop: cardIndex > 0 ? '-50px' : '0' }}
                             onClick={(e) => {
                               // If a hand card is selected or in discard mode, allow click to bubble up to discard
-                              if (discardMode || (selectedCard && selectedSource === 'hand')) {
+                              const sourceType = getSourceType(selectedSource);
+                              if (discardMode || (selectedCard && sourceType === 'hand')) {
                                 return;
                               }
                               // Only allow selecting the top card for playing
@@ -273,6 +284,7 @@ function GameBoard({
           <PlayerHand
             hand={playerState.hand}
             selectedCard={selectedCard}
+            selectedSource={selectedSource}
             onCardSelect={handleCardSelect}
             disabled={!isMyTurn}
           />
