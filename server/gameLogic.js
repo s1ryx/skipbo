@@ -238,13 +238,14 @@ class SkipBoGame {
       return { success: false, error: 'Not your turn' };
     }
 
-    // Draw cards for next turn
-    this.drawCards(playerId);
-
     // Move to next player
     this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
 
-    return { success: true, nextPlayer: this.getCurrentPlayer().id };
+    // Draw cards at the START of the new player's turn
+    const nextPlayer = this.getCurrentPlayer();
+    this.drawCards(nextPlayer.id);
+
+    return { success: true, nextPlayer: nextPlayer.id };
   }
 
   getGameState() {
@@ -256,10 +257,7 @@ class SkipBoGame {
         stockpileCount: p.stockpile.length,
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
         handCount: p.hand.length,
-        discardPiles: p.discardPiles.map(pile => ({
-          count: pile.length,
-          top: pile.length > 0 ? pile[pile.length - 1] : null
-        }))
+        discardPiles: p.discardPiles
       })),
       buildingPiles: this.buildingPiles,
       currentPlayerIndex: this.currentPlayerIndex,

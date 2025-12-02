@@ -27,13 +27,14 @@ Be the first player to play all cards from your stockpile.
 - Each player has 4 discard piles
 
 ### Gameplay
-1. **Building Piles**: Must be built sequentially from 1 to 12
-2. **Skip-Bo Cards**: Wild cards that can represent any number
-3. **Playing Cards**: Can play from hand, stockpile top, or discard pile tops
-4. **Auto-draw**: When your hand becomes empty, you automatically draw 5 more cards
-5. **Turn End**: Must discard one card from hand to a discard pile to end turn
-6. **Quick Discard**: Select a card from hand and click any discard pile to end your turn immediately
-7. **Winning**: First player to empty their stockpile wins!
+1. **Turn Start**: Each turn begins by drawing cards from the deck until you have 5 cards in hand
+2. **Building Piles**: Must be built sequentially from 1 to 12
+3. **Skip-Bo Cards**: Wild cards that can represent any number
+4. **Playing Cards**: Can play from hand, stockpile top, or discard pile tops
+5. **Mid-Turn Draw**: If your hand becomes empty during your turn, you automatically draw 5 more cards
+6. **Turn End**: Must discard one card from hand to a discard pile to end turn
+7. **Quick Discard**: Select a card from hand and click any discard pile to end your turn immediately
+8. **Winning**: First player to empty their stockpile wins!
 
 ## Installation & Setup
 
@@ -236,6 +237,173 @@ sudo ufw allow 3000/tcp
 - ✅ Some routers have WiFi isolation enabled - check router settings
 - ✅ Ensure devices aren't going to sleep mode
 
+---
+
+## Docker Deployment (Recommended for Internet Play)
+
+For production deployment or easy internet play, use Docker for containerized deployment with optimized performance and security.
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) (v20.10+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+)
+
+### Quick Start with Docker
+
+1. **Clone or navigate to the project**:
+```bash
+cd skip-bo-game
+```
+
+2. **Build and start all services**:
+```bash
+cd deployment/docker
+docker-compose up -d
+```
+
+This will:
+- Build the client and server Docker images
+- Start nginx reverse proxy on port 80
+- Configure all networking and health checks automatically
+
+3. **Access the game**:
+- Local: `http://localhost`
+- Network: `http://YOUR_IP_ADDRESS` (find IP with `hostname -I` or `ipconfig`)
+
+4. **View logs**:
+```bash
+docker-compose logs -f
+```
+
+5. **Stop the services**:
+```bash
+docker-compose down
+```
+
+### Architecture
+
+The Docker setup includes:
+- **Client**: React app served by nginx (optimized production build)
+- **Server**: Node.js Socket.IO server with health checks
+- **Nginx Reverse Proxy**: Routes traffic and handles WebSocket connections
+- **Docker Network**: Isolated bridge network for service communication
+
+```
+Internet/LAN
+    ↓
+nginx (port 80)
+    ├── / → client (React app)
+    ├── /socket.io/ → server (WebSocket)
+    └── /api/ → server (REST endpoints)
+```
+
+### Configuration
+
+#### Production Environment Variables
+
+For production deployment, create environment files:
+
+**Server** (`server/.env.production`):
+```env
+NODE_ENV=production
+PORT=3001
+HOST=0.0.0.0
+CORS_ORIGIN=*  # Change to your domain in production
+```
+
+**Client** (`client/.env.production`):
+```env
+# Leave empty for same-origin Socket.IO connection (recommended)
+REACT_APP_SERVER_URL=
+```
+
+#### Custom Domain Setup
+
+To use a custom domain:
+
+1. Point your domain's DNS A record to your server's IP
+2. Update `CORS_ORIGIN` in `docker-compose.yml`:
+```yaml
+environment:
+  - CORS_ORIGIN=https://yourdomain.com
+```
+3. For HTTPS, add SSL certificates to nginx configuration
+
+### Deployment Platforms
+
+#### Deploy to Cloud Platforms
+
+The Docker setup works with any container platform:
+
+**Railway.app**:
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login and deploy
+railway login
+railway init
+railway up
+```
+
+**Render.com**:
+- Connect your GitHub repository
+- Select "Docker" as environment
+- Set root directory to `deployment/docker`
+- Render will auto-detect `docker-compose.yml`
+
+**Fly.io**:
+```bash
+# Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# Deploy
+fly launch
+fly deploy
+```
+
+**DigitalOcean/AWS/GCP**:
+- Deploy to any VPS with Docker installed
+- Use docker-compose as shown above
+- Configure firewall to allow port 80/443
+
+### Production Best Practices
+
+1. **HTTPS/SSL**: Use a reverse proxy like Cloudflare or Let's Encrypt certificates
+2. **Environment Variables**: Never commit `.env` files with secrets
+3. **CORS**: Update `CORS_ORIGIN` to your specific domain (not `*`)
+4. **Monitoring**: Use `docker-compose logs` or integrate with logging services
+5. **Backups**: No database needed - game state is in-memory
+6. **Scaling**: For multiple instances, add a Redis adapter for Socket.IO
+
+### Troubleshooting Docker Deployment
+
+**Build fails:**
+```bash
+# Clear Docker cache and rebuild
+docker-compose build --no-cache
+```
+
+**Services won't start:**
+```bash
+# Check logs for specific service
+docker-compose logs server
+docker-compose logs client
+docker-compose logs nginx
+```
+
+**Can't connect:**
+- ✅ Verify all containers are running: `docker-compose ps`
+- ✅ Check health status: `docker-compose ps` (should show "healthy")
+- ✅ Ensure port 80 is not in use: `sudo lsof -i :80`
+- ✅ Check firewall allows port 80: `sudo ufw status`
+
+**WebSocket connection fails:**
+- ✅ Verify nginx is proxying correctly: `docker-compose logs nginx`
+- ✅ Check browser console for connection errors
+- ✅ Ensure CORS_ORIGIN is set correctly
+
+---
+
 ## How to Play
 
 ### Starting a Game
@@ -427,6 +595,31 @@ serve -s build -l 3000
 hostname -I          # Linux/Mac
 ipconfig            # Windows
 ip addr show        # Linux alternative
+```
+
+### Docker Deployment
+```bash
+# Navigate to deployment directory
+cd deployment/docker
+
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up -d --build
+
+# Check service health
+docker-compose ps
+
+# Access the game
+# Local: http://localhost
+# Network: http://YOUR_IP_ADDRESS
 ```
 
 ## Credits
