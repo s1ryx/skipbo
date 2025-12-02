@@ -41,6 +41,9 @@ fi
 echo "📍 Your IP address: $IP_ADDRESS"
 echo ""
 
+# Navigate to docker directory
+cd "$(dirname "$0")/docker"
+
 # Build and start services
 echo "🏗️  Building Docker images (this may take a few minutes)..."
 docker-compose build
