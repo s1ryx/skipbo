@@ -1,7 +1,8 @@
 class SkipBoGame {
-  constructor(roomId, playerCount) {
+  constructor(roomId, playerCount, stockpileSize) {
     this.roomId = roomId;
     this.playerCount = playerCount;
+    this.stockpileSize = stockpileSize; // Custom stockpile size
     this.players = [];
     this.deck = [];
     this.buildingPiles = [[], [], [], []]; // 4 building piles
@@ -59,13 +60,17 @@ class SkipBoGame {
 
     this.deck = this.createDeck();
 
-    // Determine stockpile size based on player count
-    const stockpileSize = this.players.length <= 4 ? 30 : 20;
+    // Use custom stockpile size if provided, otherwise use default based on player count
+    const stockpileSize = this.stockpileSize || (this.players.length <= 4 ? 30 : 20);
+
+    // Validate stockpile size against game rules
+    const maxAllowed = this.players.length <= 4 ? 30 : 20;
+    const actualStockpileSize = Math.min(stockpileSize, maxAllowed);
 
     // Deal stockpiles and hands to each player
     this.players.forEach(player => {
       // Deal stockpile (face down)
-      for (let i = 0; i < stockpileSize; i++) {
+      for (let i = 0; i < actualStockpileSize; i++) {
         player.stockpile.push(this.deck.pop());
       }
 

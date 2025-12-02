@@ -35,9 +35,9 @@ io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
   // Create or join a room
-  socket.on('createRoom', ({ playerName, maxPlayers }) => {
+  socket.on('createRoom', ({ playerName, maxPlayers, stockpileSize }) => {
     const roomId = generateRoomId();
-    const game = new SkipBoGame(roomId, maxPlayers || 2);
+    const game = new SkipBoGame(roomId, maxPlayers || 2, stockpileSize);
     game.addPlayer(socket.id, playerName);
 
     games.set(roomId, game);

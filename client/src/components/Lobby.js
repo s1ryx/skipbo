@@ -4,13 +4,27 @@ import './Lobby.css';
 function Lobby({ onCreateRoom, onJoinRoom }) {
   const [playerName, setPlayerName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(2);
+  const [stockpileSize, setStockpileSize] = useState(30);
   const [roomIdToJoin, setRoomIdToJoin] = useState('');
   const [showJoinForm, setShowJoinForm] = useState(false);
+
+  // Get max allowed stockpile size based on player count
+  const getMaxStockpileSize = (players) => {
+    return players <= 4 ? 30 : 20;
+  };
+
+  const handleMaxPlayersChange = (newMaxPlayers) => {
+    setMaxPlayers(newMaxPlayers);
+    const maxAllowed = getMaxStockpileSize(newMaxPlayers);
+    if (stockpileSize > maxAllowed) {
+      setStockpileSize(maxAllowed);
+    }
+  };
 
   const handleCreateRoom = (e) => {
     e.preventDefault();
     if (playerName.trim()) {
-      onCreateRoom(playerName, maxPlayers);
+      onCreateRoom(playerName, maxPlayers, stockpileSize);
     }
   };
 
@@ -46,7 +60,7 @@ function Lobby({ onCreateRoom, onJoinRoom }) {
                   <label>Max Players:</label>
                   <select
                     value={maxPlayers}
-                    onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
+                    onChange={(e) => handleMaxPlayersChange(parseInt(e.target.value))}
                   >
                     <option value={2}>2 Players</option>
                     <option value={3}>3 Players</option>
@@ -54,6 +68,24 @@ function Lobby({ onCreateRoom, onJoinRoom }) {
                     <option value={5}>5 Players</option>
                     <option value={6}>6 Players</option>
                   </select>
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    Stockpile Size: {stockpileSize} cards
+                    <span className="label-hint">
+                      (Max {getMaxStockpileSize(maxPlayers)} for {maxPlayers} players)
+                    </span>
+                  </label>
+                  <input
+                    type="range"
+                    min="5"
+                    max={getMaxStockpileSize(maxPlayers)}
+                    step="5"
+                    value={stockpileSize}
+                    onChange={(e) => setStockpileSize(parseInt(e.target.value))}
+                    className="stockpile-slider"
+                  />
                 </div>
 
                 <button type="submit" className="btn-primary">
