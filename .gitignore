@@ -101,3 +101,7 @@ Desktop.ini
 # Build outputs
 *.bundle.js
 *.bundle.js.map
+
+# Docker
+.env.production
+docker-compose.override.yml

@@ -6,7 +6,7 @@
 
 .App-header {
   background-color: rgba(0, 0, 0, 0.3);
-  padding: 20px;
+  padding: 12px 20px;
   text-align: center;
   color: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
@@ -14,7 +14,7 @@
 
 .App-header h1 {
   margin: 0;
-  font-size: 2.5rem;
+  font-size: 2rem;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -50,4 +50,17 @@
   height: 80vh;
   color: white;
   font-size: 1.5rem;
+}
+
+.App-footer {
+  margin-top: auto;
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.App-footer .version {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: monospace;
+  letter-spacing: 0.5px;
 }

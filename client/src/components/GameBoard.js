@@ -22,13 +22,20 @@ function GameBoard({
   }
 
   const isMyTurn = gameState.currentPlayerId === playerId;
-  const currentPlayer = gameState.players.find(p => p.id === playerId);
+
+  const getSourceType = (source) => {
+    if (!source) return null;
+    if (source.startsWith('hand-')) return 'hand';
+    if (source.startsWith('discard')) return source;
+    return source;
+  };
 
   const handleCardSelect = (card, source) => {
     if (!isMyTurn) return;
 
     // In discard mode, only allow selecting cards from hand
-    if (discardMode && source !== 'hand') return;
+    const sourceType = getSourceType(source);
+    if (discardMode && sourceType !== 'hand') return;
 
     setSelectedCard(card);
     setSelectedSource(source);
@@ -37,7 +44,8 @@ function GameBoard({
   const handleBuildingPileClick = (pileIndex) => {
     if (!isMyTurn || !selectedCard || discardMode) return;
 
-    onPlayCard(selectedCard, selectedSource, pileIndex);
+    const sourceType = getSourceType(selectedSource);
+    onPlayCard(selectedCard, sourceType, pileIndex);
     setSelectedCard(null);
     setSelectedSource(null);
   };
@@ -46,7 +54,8 @@ function GameBoard({
     if (!isMyTurn || !selectedCard) return;
 
     // Only allow discarding cards from hand
-    if (selectedSource !== 'hand') return;
+    const sourceType = getSourceType(selectedSource);
+    if (sourceType !== 'hand') return;
 
     onDiscardCard(selectedCard, pileIndex);
     setSelectedCard(null);
@@ -65,7 +74,7 @@ function GameBoard({
 
     const lastCard = pile[pile.length - 1];
     if (lastCard === 'SKIP-BO') {
-      let value = 1;
+      let value = 0;
       for (let i = 0; i < pile.length; i++) {
         if (pile[i] !== 'SKIP-BO') {
           value = pile[i];
@@ -148,8 +157,18 @@ function GameBoard({
                   {player.discardPiles.map((pile, idx) => (
                     <div key={idx} className="card-pile-small">
                       <div className="pile-label-small">D{idx + 1}</div>
-                      {pile.top ? (
-                        <Card value={pile.top} isVisible={true} size="small" />
+                      {pile.length > 0 ? (
+                        <div className="discard-pile-stack-small">
+                          {pile.map((card, cardIndex) => (
+                            <div
+                              key={cardIndex}
+                              className="card-in-pile-small"
+                              style={{ marginTop: cardIndex > 0 ? '-45px' : '0' }}
+                            >
+                              <Card value={card} isVisible={true} size="small" />
+                            </div>
+                          ))}
+                        </div>
                       ) : (
                         <div className="empty-pile-small"></div>
                       )}
@@ -235,7 +254,8 @@ function GameBoard({
                             style={{ marginTop: cardIndex > 0 ? '-50px' : '0' }}
                             onClick={(e) => {
                               // If a hand card is selected or in discard mode, allow click to bubble up to discard
-                              if (discardMode || (selectedCard && selectedSource === 'hand')) {
+                              const sourceType = getSourceType(selectedSource);
+                              if (discardMode || (selectedCard && sourceType === 'hand')) {
                                 return;
                               }
                               // Only allow selecting the top card for playing
@@ -264,6 +284,7 @@ function GameBoard({
           <PlayerHand
             hand={playerState.hand}
             selectedCard={selectedCard}
+            selectedSource={selectedSource}
             onCardSelect={handleCardSelect}
             disabled={!isMyTurn}
           />
