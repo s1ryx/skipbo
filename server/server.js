@@ -273,8 +273,7 @@ io.on('connection', (socket) => {
       if (game) {
         // Notify other players
         io.to(roomId).emit('playerDisconnected', {
-          playerId: socket.id,
-          message: 'A player has disconnected'
+          playerId: socket.id
         });
 
         // If game hasn't started, remove the game
