@@ -155,3 +155,101 @@
 .card:hover {
   transform: scale(1.05);
 }
+
+/* Responsive card sizing for mobile */
+@media (max-width: 768px) {
+  .card.normal {
+    width: 70px;
+    height: 96px;
+  }
+
+  .card-value-center {
+    font-size: 2.2rem;
+  }
+
+  .card-corner {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .card.normal {
+    width: 60px;
+    height: 82px;
+  }
+
+  .card.small {
+    width: 45px;
+    height: 62px;
+  }
+
+  .card-value-center {
+    font-size: 1.8rem;
+  }
+
+  .card.small .card-value-center {
+    font-size: 1.3rem;
+  }
+
+  .card-corner {
+    font-size: 0.8rem;
+  }
+
+  .card.small .card-corner {
+    font-size: 0.6rem;
+  }
+
+  .wild-indicator {
+    font-size: 0.5rem;
+    bottom: 18px;
+  }
+
+  .card.small .wild-indicator {
+    font-size: 0.4rem;
+    bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card.normal {
+    width: 55px;
+    height: 75px;
+  }
+
+  .card.small {
+    width: 40px;
+    height: 55px;
+  }
+
+  .card-value-center {
+    font-size: 1.6rem;
+  }
+
+  .card.small .card-value-center {
+    font-size: 1.1rem;
+  }
+
+  .card-corner {
+    font-size: 0.75rem;
+  }
+
+  .card.small .card-corner {
+    font-size: 0.55rem;
+  }
+
+  .card-content {
+    padding: 6px;
+  }
+
+  .wild-indicator {
+    font-size: 0.45rem;
+    bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  .card.small .wild-indicator {
+    font-size: 0.35rem;
+    bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+}
