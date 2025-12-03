@@ -11,7 +11,8 @@ function GameBoard({
   onStartGame,
   onPlayCard,
   onDiscardCard,
-  onEndTurn
+  onEndTurn,
+  onLeaveGame
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
@@ -138,6 +139,9 @@ function GameBoard({
         <div className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
           {isMyTurn ? "Your Turn!" : "Waiting for other player..."}
         </div>
+        <button onClick={onLeaveGame} className="btn-leave-game">
+          Leave Game
+        </button>
         {discardMode && (
           <div className="discard-instruction">
             Click on one of your discard piles to end your turn

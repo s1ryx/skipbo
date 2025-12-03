@@ -263,6 +263,30 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Handle leave game
+  socket.on('leaveGame', () => {
+    console.log(`Player ${socket.id} is leaving the game`);
+
+    const roomId = playerRooms.get(socket.id);
+    if (roomId) {
+      const game = games.get(roomId);
+      if (game) {
+        // Notify all players in the room that the game is being aborted
+        io.to(roomId).emit('gameAborted');
+
+        // Remove all players from playerRooms
+        game.players.forEach(player => {
+          playerRooms.delete(player.id);
+        });
+
+        // Delete the game
+        games.delete(roomId);
+
+        console.log(`Game in room ${roomId} has been aborted`);
+      }
+    }
+  });
+
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);

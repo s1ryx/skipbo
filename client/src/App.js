@@ -132,6 +132,16 @@ function App() {
       });
     });
 
+    newSocket.on('gameAborted', () => {
+      console.log('Game aborted by a player');
+      // Clear session and return to lobby
+      localStorage.removeItem('skipBoSession');
+      setGameState(null);
+      setPlayerState(null);
+      setRoomId(null);
+      setInLobby(true);
+    });
+
     newSocket.on('error', ({ message }) => {
       setError(message);
       setTimeout(() => setError(null), 3000);
@@ -180,6 +190,12 @@ function App() {
     }
   };
 
+  const leaveGame = () => {
+    if (socket) {
+      socket.emit('leaveGame');
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -207,6 +223,7 @@ function App() {
           onPlayCard={playCard}
           onDiscardCard={discardCard}
           onEndTurn={endTurn}
+          onLeaveGame={leaveGame}
         />
       )}
 
