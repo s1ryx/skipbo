@@ -62,3 +62,74 @@
   padding: 40px;
   font-style: italic;
 }
+
+/* Responsive hand card sizing */
+@media (max-width: 768px) {
+  .hand-cards {
+    gap: 6px;
+  }
+
+  .player-hand {
+    padding: 12px;
+    margin-top: 12px;
+  }
+
+  .hand-label {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hand-cards {
+    gap: 5px;
+  }
+
+  .player-hand {
+    padding: 10px;
+    margin-top: 10px;
+  }
+
+  .hand-label {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+
+  .hand-card:hover {
+    transform: translateY(-12px);
+  }
+
+  .hand-card.selected {
+    transform: translateY(-16px) scale(1.08);
+  }
+}
+
+@media (max-width: 480px) {
+  .hand-cards {
+    gap: 4px;
+  }
+
+  .player-hand {
+    padding: 8px;
+    margin-top: 8px;
+  }
+
+  .hand-label {
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+  }
+
+  .hand-card:hover {
+    transform: translateY(-10px);
+  }
+
+  .hand-card.selected {
+    transform: translateY(-14px) scale(1.05);
+  }
+
+  .hand-card.selected::after {
+    border-left-width: 6px;
+    border-right-width: 6px;
+    border-bottom-width: 6px;
+  }
+}
