@@ -27,8 +27,8 @@ services:
   # Frontend client
   client:
     build:
-      context: ../../client
-      dockerfile: ../deployment/docker/Dockerfile.client
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.client
       args:
         # Empty REACT_APP_SERVER_URL means Socket.IO will connect to same origin
         # nginx will proxy /socket.io/ requests to the backend
