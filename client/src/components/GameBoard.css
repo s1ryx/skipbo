@@ -200,6 +200,7 @@
   color: #999;
   text-align: center;
   padding: 5px;
+  margin: 10px auto 0;
 }
 
 .building-piles {
@@ -222,11 +223,15 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 @media (max-width: 768px) {
   .piles-container {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 100%;
+    gap: 8px;
   }
 }
 
@@ -240,7 +245,9 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   transition: all 0.3s;
+  width: 100%;
 }
 
 .building-pile.clickable {
@@ -288,6 +295,10 @@
   font-weight: 500;
 }
 
+.empty-pile-text {
+  padding: 0 10px;
+}
+
 .player-area {
   background: white;
   padding: 15px;
@@ -326,13 +337,13 @@
 
 .discard-piles-container {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .discard-pile {
   flex: 1;
-  min-width: 120px;
+  min-width: 90px;
   text-align: center;
 }
 
@@ -525,6 +536,153 @@
 }
 
 /* Additional responsive optimizations */
+@media (max-width: 768px) {
+  .player-piles {
+    gap: 10px;
+  }
+
+  .discard-piles-container {
+    gap: 5px;
+  }
+
+  .discard-pile {
+    min-width: 70px;
+  }
+
+  .stockpile-section {
+    min-width: 100px;
+  }
+
+  .discard-piles-section {
+    min-width: 220px;
+  }
+
+  .player-area {
+    padding: 12px;
+  }
+
+  .player-area h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+
+  .pile-label {
+    font-size: 0.8rem;
+  }
+
+  .building-pile {
+    min-height: 140px;
+    padding: 8px;
+  }
+
+  .building-piles {
+    padding: 12px;
+  }
+
+  .building-piles h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+
+  .pile-info {
+    font-size: 0.85rem;
+  }
+
+  .next-card {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .piles-container {
+    max-width: 100%;
+    gap: 6px;
+  }
+
+  .player-piles {
+    gap: 8px;
+  }
+
+  .discard-piles-container {
+    gap: 4px;
+  }
+
+  .discard-pile {
+    min-width: 60px;
+  }
+
+  .stockpile-section {
+    min-width: 80px;
+  }
+
+  .discard-piles-section {
+    min-width: 200px;
+  }
+
+  .player-area {
+    padding: 10px;
+  }
+
+  .pile-label {
+    font-size: 0.75rem;
+  }
+
+  .pile-label-small {
+    font-size: 0.65rem;
+  }
+
+  .actions {
+    gap: 8px;
+  }
+
+  .settings-toggle {
+    padding: 8px 15px;
+  }
+
+  .settings-toggle label {
+    font-size: 0.85rem;
+  }
+
+  /* More aggressive card overlap in discard piles */
+  .card-in-pile {
+    margin-top: -42px !important;
+  }
+
+  .card-in-pile:first-child {
+    margin-top: 0 !important;
+  }
+
+  .building-pile {
+    min-height: 130px;
+    padding: 6px;
+  }
+
+  .building-piles {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .pile-info {
+    font-size: 0.8rem;
+  }
+
+  .next-card {
+    font-size: 0.75rem;
+  }
+
+  .pile-count {
+    font-size: 0.75rem;
+  }
+
+  .empty-pile {
+    min-height: 100px;
+  }
+
+  .empty-pile-text {
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 480px) {
   .game-board {
     padding: 5px;
@@ -537,8 +695,41 @@
   }
 
   .building-pile {
-    min-height: 140px;
+    min-height: 115px;
+    padding: 5px;
+  }
+
+  .building-piles {
     padding: 8px;
+  }
+
+  .building-piles h3 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .pile-info {
+    font-size: 0.75rem;
+  }
+
+  .next-card {
+    font-size: 0.7rem;
+    margin-top: 3px;
+  }
+
+  .pile-count {
+    font-size: 0.7rem;
+    margin-top: 5px;
+  }
+
+  .empty-pile {
+    min-height: 90px;
+    font-size: 0.7rem;
+  }
+
+  .piles-container {
+    max-width: 100%;
+    gap: 5px;
   }
 
   .player-piles {
@@ -552,8 +743,79 @@
     width: 100%;
   }
 
+  .discard-piles-container {
+    gap: 3px;
+    justify-content: space-between;
+  }
+
+  .discard-pile {
+    min-width: unset;
+    flex: 1;
+  }
+
   .opponent-info {
     min-width: unset;
+    padding: 8px;
+  }
+
+  .player-area {
+    padding: 8px;
+  }
+
+  .player-area h3 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .pile-label {
+    font-size: 0.7rem;
+  }
+
+  .pile-label-small {
+    font-size: 0.6rem;
+  }
+
+  .actions {
+    margin-top: 10px;
+    gap: 6px;
+  }
+
+  .btn-end-turn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+
+  .settings-toggle {
+    padding: 6px 12px;
+  }
+
+  .settings-toggle label {
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .settings-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .selected-card-info {
+    padding: 8px 15px;
+    gap: 8px;
+  }
+
+  .selected-card-info button {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  /* Even more aggressive overlap for smallest screens */
+  .card-in-pile {
+    margin-top: -38px !important;
+  }
+
+  .card-in-pile:first-child {
+    margin-top: 0 !important;
   }
 }
 
