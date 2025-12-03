@@ -154,6 +154,7 @@ function GameBoard({
               <h4>
                 {player.name}
                 {gameState.currentPlayerId === player.id && ' (Playing)'}
+                {player.disconnected && <span className="disconnected-indicator"> (Disconnected)</span>}
               </h4>
               <div className="opponent-cards">
                 <div className="card-pile">

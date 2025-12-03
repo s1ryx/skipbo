@@ -119,8 +119,17 @@ function App() {
       localStorage.removeItem('skipBoSession'); // Clear session when game ends
     });
 
-    newSocket.on('playerDisconnected', ({ message }) => {
-      alert(message);
+    newSocket.on('playerDisconnected', ({ playerId }) => {
+      // Update game state to mark player as disconnected
+      setGameState(prevState => {
+        if (!prevState) return prevState;
+        return {
+          ...prevState,
+          players: prevState.players.map(p =>
+            p.id === playerId ? { ...p, disconnected: true } : p
+          )
+        };
+      });
     });
 
     newSocket.on('error', ({ message }) => {

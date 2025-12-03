@@ -135,6 +135,12 @@
   color: #333;
 }
 
+.disconnected-indicator {
+  color: #ff6b6b;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
 .opponent-cards {
   display: flex;
   gap: 10px;
