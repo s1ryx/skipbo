@@ -114,10 +114,9 @@ function App() {
       console.log('Turn changed to:', currentPlayerId);
     });
 
-    newSocket.on('gameOver', ({ winner, gameState }) => {
+    newSocket.on('gameOver', ({ gameState }) => {
       setGameState(gameState);
       localStorage.removeItem('skipBoSession'); // Clear session when game ends
-      alert(`Game Over! Winner: ${winner.name}`);
     });
 
     newSocket.on('playerDisconnected', ({ message }) => {
