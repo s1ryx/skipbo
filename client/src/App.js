@@ -9,6 +9,21 @@ import Lobby from './components/Lobby';
 const SOCKET_SERVER_URL = process.env.REACT_APP_SERVER_URL || undefined;
 const VERSION = process.env.REACT_APP_VERSION || require('../package.json').version;
 
+// Generate a stable unique player identifier
+const generatePlayerUniqueId = () => {
+  return 'player_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+};
+
+// Get or create stable player ID
+const getStablePlayerId = () => {
+  let stableId = localStorage.getItem('skipBoStablePlayerId');
+  if (!stableId) {
+    stableId = generatePlayerUniqueId();
+    localStorage.setItem('skipBoStablePlayerId', stableId);
+  }
+  return stableId;
+};
+
 function App() {
   const [socket, setSocket] = useState(null);
   const [gameState, setGameState] = useState(null);
@@ -17,6 +32,7 @@ function App() {
   const [roomId, setRoomId] = useState(null);
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
+  const [stablePlayerId] = useState(getStablePlayerId());
 
   useEffect(() => {
     const newSocket = io(SOCKET_SERVER_URL);
