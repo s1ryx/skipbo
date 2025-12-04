@@ -16,6 +16,7 @@ function GameBoard({
   onLeaveGame,
   chatMessages,
   onSendChatMessage,
+  onMarkMessagesRead,
   stablePlayerId
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
@@ -366,6 +367,7 @@ function GameBoard({
       <Chat
         messages={chatMessages}
         onSendMessage={onSendChatMessage}
+        onMarkMessagesRead={onMarkMessagesRead}
         stablePlayerId={stablePlayerId}
       />
     </div>

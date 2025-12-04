@@ -269,6 +269,12 @@ function App() {
     }
   };
 
+  const markMessagesAsRead = () => {
+    setChatMessages(prevMessages =>
+      prevMessages.map(msg => ({ ...msg, read: true }))
+    );
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -299,6 +305,7 @@ function App() {
           onLeaveGame={leaveGame}
           chatMessages={chatMessages}
           onSendChatMessage={sendChatMessage}
+          onMarkMessagesRead={markMessagesAsRead}
           stablePlayerId={stablePlayerId}
         />
       )}
