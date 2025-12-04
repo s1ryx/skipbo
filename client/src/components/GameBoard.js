@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './GameBoard.css';
 import Card from './Card';
 import PlayerHand from './PlayerHand';
+import Chat from './Chat';
 
 function GameBoard({
   gameState,
@@ -12,7 +13,10 @@ function GameBoard({
   onPlayCard,
   onDiscardCard,
   onEndTurn,
-  onLeaveGame
+  onLeaveGame,
+  chatMessages,
+  onSendChatMessage,
+  stablePlayerId
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
@@ -358,6 +362,12 @@ function GameBoard({
           </div>
         </div>
       )}
+
+      <Chat
+        messages={chatMessages}
+        onSendMessage={onSendChatMessage}
+        stablePlayerId={stablePlayerId}
+      />
     </div>
   );
 }

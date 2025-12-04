@@ -32,6 +32,7 @@ function App() {
   const [roomId, setRoomId] = useState(null);
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
   const [stablePlayerId] = useState(getStablePlayerId());
 
   useEffect(() => {
@@ -156,6 +157,11 @@ function App() {
       setPlayerState(null);
       setRoomId(null);
       setInLobby(true);
+      setChatMessages([]);
+    });
+
+    newSocket.on('chatMessage', (messageData) => {
+      setChatMessages(prevMessages => [...prevMessages, messageData]);
     });
 
     newSocket.on('error', ({ message }) => {
@@ -212,6 +218,12 @@ function App() {
     }
   };
 
+  const sendChatMessage = (message) => {
+    if (socket) {
+      socket.emit('sendChatMessage', { message, stablePlayerId });
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -240,6 +252,9 @@ function App() {
           onDiscardCard={discardCard}
           onEndTurn={endTurn}
           onLeaveGame={leaveGame}
+          chatMessages={chatMessages}
+          onSendChatMessage={sendChatMessage}
+          stablePlayerId={stablePlayerId}
         />
       )}
 
