@@ -177,6 +177,19 @@
   gap: 5px;
 }
 
+.opponent-hand-stack {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.card-in-hand {
+  position: relative;
+  transition: transform 0.2s;
+}
+
 .pile-label {
   font-size: 0.85rem;
   color: #666;

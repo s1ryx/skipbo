@@ -169,7 +169,17 @@ function GameBoard({
                 </div>
                 <div className="card-pile">
                   <div className="pile-label">Hand: {player.handCount}</div>
-                  <Card value="?" isVisible={false} />
+                  <div className="opponent-hand-stack">
+                    {Array.from({ length: Math.min(player.handCount, 5) }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="card-in-hand"
+                        style={{ marginLeft: idx > 0 ? '-30px' : '0', zIndex: idx }}
+                      >
+                        <Card value="?" isVisible={false} size="small" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="discard-piles-opponent">
                   {player.discardPiles.map((pile, idx) => (
