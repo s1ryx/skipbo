@@ -189,7 +189,7 @@ function GameBoard({
                         <div className="discard-pile-stack-small">
                           {pile.map((card, cardIndex) => (
                             <div
-                              key={cardIndex}
+                              key={`opponent-${idx}-${cardIndex}-${card}-${pile.length}`}
                               className="card-in-pile-small"
                               style={{ marginTop: cardIndex > 0 ? '-45px' : '0' }}
                             >
@@ -277,7 +277,7 @@ function GameBoard({
                       <div className="discard-pile-stack">
                         {pile.map((card, cardIndex) => (
                           <div
-                            key={cardIndex}
+                            key={`${index}-${cardIndex}-${card}-${pile.length}`}
                             className={`card-in-pile ${cardIndex === pile.length - 1 ? 'top-card' : ''} ${selectedCard === card && cardIndex === pile.length - 1 && selectedSource === `discard${index}` ? 'selected' : ''}`}
                             style={{ marginTop: cardIndex > 0 ? '-50px' : '0' }}
                             onClick={(e) => {
