@@ -263,6 +263,36 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Handle chat messages
+  socket.on('sendChatMessage', ({ message, stablePlayerId }) => {
+    const roomId = playerRooms.get(socket.id);
+    if (!roomId) {
+      return;
+    }
+
+    const game = games.get(roomId);
+    if (!game) {
+      return;
+    }
+
+    // Find the player's name
+    const player = game.players.find(p => p.id === socket.id);
+    if (!player) {
+      return;
+    }
+
+    // Broadcast message to all players in the room
+    io.to(roomId).emit('chatMessage', {
+      playerId: socket.id,
+      playerName: player.name,
+      stablePlayerId: stablePlayerId,
+      message: message.trim(),
+      timestamp: Date.now()
+    });
+
+    console.log(`Chat message in room ${roomId} from ${player.name}: ${message}`);
+  });
+
   // Handle leave game
   socket.on('leaveGame', () => {
     console.log(`Player ${socket.id} is leaving the game`);

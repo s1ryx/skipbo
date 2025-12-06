@@ -9,6 +9,21 @@ import Lobby from './components/Lobby';
 const SOCKET_SERVER_URL = process.env.REACT_APP_SERVER_URL || undefined;
 const VERSION = process.env.REACT_APP_VERSION || require('../package.json').version;
 
+// Generate a stable unique player identifier
+const generatePlayerUniqueId = () => {
+  return 'player_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+};
+
+// Get or create stable player ID
+const getStablePlayerId = () => {
+  let stableId = localStorage.getItem('skipBoStablePlayerId');
+  if (!stableId) {
+    stableId = generatePlayerUniqueId();
+    localStorage.setItem('skipBoStablePlayerId', stableId);
+  }
+  return stableId;
+};
+
 function App() {
   const [socket, setSocket] = useState(null);
   const [gameState, setGameState] = useState(null);
@@ -17,6 +32,30 @@ function App() {
   const [roomId, setRoomId] = useState(null);
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
+  const [chatMessages, setChatMessages] = useState(() => {
+    // Load chat messages from localStorage on initialization
+    const savedSession = localStorage.getItem('skipBoSession');
+    if (savedSession) {
+      try {
+        const { roomId } = JSON.parse(savedSession);
+        const savedMessages = localStorage.getItem(`skipBoChat_${roomId}`);
+        if (savedMessages) {
+          return JSON.parse(savedMessages);
+        }
+      } catch (error) {
+        console.error('Failed to load chat messages:', error);
+      }
+    }
+    return [];
+  });
+  const [stablePlayerId] = useState(getStablePlayerId());
+
+  // Save chat messages to localStorage whenever they change
+  useEffect(() => {
+    if (roomId && chatMessages.length > 0) {
+      localStorage.setItem(`skipBoChat_${roomId}`, JSON.stringify(chatMessages));
+    }
+  }, [chatMessages, roomId]);
 
   useEffect(() => {
     const newSocket = io(SOCKET_SERVER_URL);
@@ -116,7 +155,17 @@ function App() {
 
     newSocket.on('gameOver', ({ gameState }) => {
       setGameState(gameState);
-      localStorage.removeItem('skipBoSession'); // Clear session when game ends
+      // Clear session and chat when game ends
+      const savedSession = localStorage.getItem('skipBoSession');
+      if (savedSession) {
+        try {
+          const { roomId } = JSON.parse(savedSession);
+          localStorage.removeItem(`skipBoChat_${roomId}`);
+        } catch (error) {
+          console.error('Failed to clear chat messages:', error);
+        }
+      }
+      localStorage.removeItem('skipBoSession');
     });
 
     newSocket.on('playerDisconnected', ({ playerId }) => {
@@ -134,12 +183,26 @@ function App() {
 
     newSocket.on('gameAborted', () => {
       console.log('Game aborted by a player');
-      // Clear session and return to lobby
+      // Clear session, chat and return to lobby
+      const savedSession = localStorage.getItem('skipBoSession');
+      if (savedSession) {
+        try {
+          const { roomId } = JSON.parse(savedSession);
+          localStorage.removeItem(`skipBoChat_${roomId}`);
+        } catch (error) {
+          console.error('Failed to clear chat messages:', error);
+        }
+      }
       localStorage.removeItem('skipBoSession');
       setGameState(null);
       setPlayerState(null);
       setRoomId(null);
       setInLobby(true);
+      setChatMessages([]);
+    });
+
+    newSocket.on('chatMessage', (messageData) => {
+      setChatMessages(prevMessages => [...prevMessages, messageData]);
     });
 
     newSocket.on('error', ({ message }) => {
@@ -192,8 +255,24 @@ function App() {
 
   const leaveGame = () => {
     if (socket) {
+      // Clear chat messages from localStorage before leaving
+      if (roomId) {
+        localStorage.removeItem(`skipBoChat_${roomId}`);
+      }
       socket.emit('leaveGame');
     }
+  };
+
+  const sendChatMessage = (message) => {
+    if (socket) {
+      socket.emit('sendChatMessage', { message, stablePlayerId });
+    }
+  };
+
+  const markMessagesAsRead = () => {
+    setChatMessages(prevMessages =>
+      prevMessages.map(msg => ({ ...msg, read: true }))
+    );
   };
 
   return (
@@ -224,6 +303,10 @@ function App() {
           onDiscardCard={discardCard}
           onEndTurn={endTurn}
           onLeaveGame={leaveGame}
+          chatMessages={chatMessages}
+          onSendChatMessage={sendChatMessage}
+          onMarkMessagesRead={markMessagesAsRead}
+          stablePlayerId={stablePlayerId}
         />
       )}
 
