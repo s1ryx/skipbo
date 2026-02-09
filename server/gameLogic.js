@@ -58,6 +58,11 @@ class SkipBoGame {
       return false;
     }
 
+    // Prevent starting an already-started game
+    if (this.gameStarted) {
+      return false;
+    }
+
     this.deck = this.createDeck();
 
     // Use custom stockpile size if provided, otherwise use default based on player count
