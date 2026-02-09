@@ -207,6 +207,30 @@ commit 4: fix: reset building piles and game flags on start (+4 lines)
 - If one fix causes issues, can revert just that commit
 - Clear git history shows exactly what changed when
 
+#### How to Split Commits
+
+**By Concern:**
+- Separate validation from logic changes
+- Separate cleanup from new functionality
+- Separate guards from state resets
+
+**By File (when independent):**
+- Client changes in one commit
+- Server changes in another
+- Only if they can work independently
+
+**By Layer:**
+- Data model changes first
+- API changes second
+- UI changes last
+
+**Ask yourself:**
+1. Can this commit be split further?
+2. Does each piece make sense alone?
+3. Would each piece pass tests independently?
+
+If yes to all three, split it!
+
 ## Tagging and Releases
 
 This project uses **Git tags** to mark release versions. Tags help track stable snapshots of the codebase and provide clear version history.
