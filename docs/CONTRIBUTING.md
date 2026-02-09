@@ -163,19 +163,49 @@ Each commit should represent **one logical change** - the smallest possible chan
 - ❌ Don't include WIP commits in pull requests
 - ❌ Don't create large "fix multiple bugs" commits
 
-**Example of good atomic commits:**
-```
-commit 1: feat: add environment-based configuration
-commit 2: build: add environment configuration examples
-commit 3: docs: add local network setup guide
-```
+#### Real-World Example: Splitting a Complex Fix
 
-**Example of bad commits:**
+**❌ Too Large (19 lines in one commit):**
 ```
-commit 1: Fixed everything and added docs
-commit 2: WIP
-commit 3: More changes
+fix: prevent double card dealing on game restart
+
+Add guards and clear arrays to prevent players from receiving
+double cards when restarting a game.
+
+Changes:
+- Add gameStarted check to prevent restarting
+- Clear player arrays before dealing
+- Reset game flags
+- Prevent duplicate players
 ```
+*Problem: Mixes 4 independent fixes that could each work alone.*
+
+**✅ Properly Split (4 atomic commits):**
+```
+commit 1: fix: prevent duplicate players in same room (+5 lines)
+  - Check if player ID exists before adding
+  - Works independently, prevents one specific issue
+
+commit 2: fix: prevent restarting already-started game (+5 lines)
+  - Add gameStarted guard in startGame()
+  - Works independently, prevents different issue
+
+commit 3: fix: clear player arrays before dealing cards (+5 lines)
+  - Reset stockpile, hand, discardPiles to empty arrays
+  - Defensive programming, works on its own
+
+commit 4: fix: reset building piles and game flags on start (+4 lines)
+  - Reset buildingPiles, gameOver, winner to initial state
+  - Completes state reset independently
+```
+*Each commit is minimal, focused, and independently functional.*
+
+**Benefits of splitting:**
+- Each fix can be understood without reading the others
+- Easy to review (5 lines vs 19 lines per commit)
+- Can cherry-pick individual fixes if needed
+- If one fix causes issues, can revert just that commit
+- Clear git history shows exactly what changed when
 
 ## Tagging and Releases
 
