@@ -68,15 +68,15 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 
 Choose the appropriate type for your commit:
 
-- `feat`: A new feature for the game/application itself
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `refactor`: Code change that neither fixes a bug nor adds a feature
-- `test`: Adding or updating tests
-- `build`: Changes to build system, build scripts, automation tools, CI/CD
-- `chore`: Maintenance tasks, dependency updates, configuration
-- `perf`: Performance improvements
-- `style`: Code style/formatting changes (no logic changes)
+- `feat`: New features or enhancements (new functionality, UI improvements, feature polish)
+- `fix`: Bug fixes (correcting defects, fixing broken behavior)
+- `docs`: Documentation changes only (README, guides, comments)
+- `refactor`: Code restructuring without changing behavior (renaming, reorganizing)
+- `test`: Test changes only (adding tests, updating test code)
+- `build`: Build system changes (webpack, npm scripts, Docker, CI/CD)
+- `chore`: Maintenance tasks (dependency updates, configuration, tooling)
+- `perf`: Performance improvements (optimizations, efficiency)
+- `style`: Code formatting only (prettier, linting, whitespace) - NOT CSS/UI styling
 
 ### Subject Line
 
