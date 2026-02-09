@@ -141,6 +141,18 @@ Closes #56
 
 ### Atomic Commits
 
+**Philosophy: Make commits as small as possible while keeping them atomic.**
+
+Each commit should represent **one logical change** - the smallest possible change that:
+- Makes sense on its own
+- Could be understood in isolation
+- Would compile and run successfully if checked out
+- Addresses exactly one concern
+
+**When in doubt, split it!** If you can split a commit into smaller pieces where each piece still works independently, you should.
+
+#### Guidelines
+
 Each commit should represent **one logical change**:
 
 - ✅ One bug fix per commit
