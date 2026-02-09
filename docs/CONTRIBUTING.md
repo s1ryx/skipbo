@@ -153,14 +153,15 @@ Each commit should represent **one logical change** - the smallest possible chan
 
 #### Guidelines
 
-Each commit should represent **one logical change**:
-
-- ✅ One bug fix per commit
-- ✅ One feature per commit
-- ✅ Group related changes together
+- ✅ **Prefer many small commits over fewer large commits**
+- ✅ One bug fix per commit (split if fixing multiple issues)
+- ✅ One feature per commit (split into sub-features if possible)
 - ✅ Each commit should compile and run successfully
+- ✅ Split by concern: separate logic changes from state resets
+- ✅ Split by file when changes are independent
 - ❌ Don't mix unrelated changes
 - ❌ Don't include WIP commits in pull requests
+- ❌ Don't create large "fix multiple bugs" commits
 
 **Example of good atomic commits:**
 ```
