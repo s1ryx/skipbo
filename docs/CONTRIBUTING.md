@@ -231,6 +231,13 @@ commit 4: fix: reset building piles and game flags on start (+4 lines)
 
 If yes to all three, split it!
 
+**Remember:** There's no such thing as "too many commits" as long as each one is meaningful and atomic. Small commits are easier to:
+- Review
+- Understand
+- Revert if needed
+- Cherry-pick
+- Debug (with `git bisect`)
+
 ## Tagging and Releases
 
 This project uses **Git tags** to mark release versions. Tags help track stable snapshots of the codebase and provide clear version history.
