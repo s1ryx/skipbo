@@ -207,6 +207,18 @@ git push origin --delete hotfix-1.2.1
 
 **Special consideration**: If a release branch exists when creating a hotfix, merge the hotfix to the release branch instead of `develop`. The changes will propagate to `develop` when bug fixes from the release branch are continuously merged back.
 
+#### Release Management
+
+Release branches coordinate the transition from development to production. They provide a dedicated space for release preparation while allowing ongoing development to continue on `develop`.
+
+**Release branches** (`release-*`):
+- **Branch from**: `develop` (when ready for release)
+- **Merge back to**: `master` (at completion) AND `develop` (continuously during preparation)
+- **Naming**: `release-X.Y` (e.g., `release-1.2`, `release-2.0`)
+- **Purpose**: Prepare production releases (bug fixes, final polishing, then version bumping)
+- **Allowed changes**: Only minor bug fixes and release metadata (no new features)
+- **Lifetime**: From release preparation start until merged to master and tagged
+
 ## Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
