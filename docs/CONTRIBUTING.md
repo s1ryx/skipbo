@@ -59,6 +59,15 @@ npm start
 
 See the [Local Network Setup](../README.md#local-network-setup-multiplayer-testing) section in the README for detailed instructions.
 
+### Git-Flow Branching Workflow
+
+This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/) for managing development and releases. Understanding this workflow is essential for contributing effectively.
+
+![Git-Flow Branching Model](images/git-flow-model.png)
+*Figure: Git-Flow branching model by Vincent Driessen, licensed under CC BY-SA. [Original source](https://nvie.com/posts/a-successful-git-branching-model/)*
+
+**Code Review Process**: Unlike the strict git-flow model where feature branches remain local, we push all supporting branches to origin for code review before merging. This enables collaboration, catches bugs early, and provides visibility into ongoing work.
+
 ## Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
