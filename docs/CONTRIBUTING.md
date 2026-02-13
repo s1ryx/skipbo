@@ -369,6 +369,37 @@ git branch -d release-1.2
 git push origin --delete release-1.2
 ```
 
+**Release Branch Lifecycle Visualization**:
+```
+Time →
+
+develop:  ---F1---F2---M1---M2------------------F3---
+                   \  /    /
+release-1.2:        \-B1--B2---V (version bump)
+                                \
+master:   ---------------------------M3--v1.2.0 (tag)
+
+F1, F2, F3 = Features (continue on develop during release)
+B1, B2 = Bug fixes (committed on release, continuously merged to develop)
+M1, M2 = Continuous merges bringing B1, B2 to develop
+V = Version bump (last commit, only on release branch)
+M3 = Merge to master (creates production release with all fixes + version)
+
+Note: No final merge to develop since it already has B1, B2 via M1, M2
+```
+
+**Key Points**:
+- **Version bump LAST**: This is the crucial difference - bump version as the final commit
+- **Continuous merging**: Bug fixes continuously merge to `develop` (without version bump)
+- **Clean separation**: Develop gets all fixes but keeps its own development version
+- **No final merge needed**: Skip the traditional final merge to develop - it already has everything important
+- Features continue being added to `develop` while release is being prepared
+- Always use **--no-ff** when merging branches to preserve history and enable easy rollback
+- Simple bug fixes (single commits) go directly on release branch, no dedicated fix branch needed
+- Complex bugs requiring multiple commits use dedicated `fix/*` branches
+- Always use **signed, annotated tags** (`git tag -s`) with changelogs generated from commit messages
+- Tags are not pushed automatically - use `git push origin v1.2.0` or `git push origin --tags`
+
 ## Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
