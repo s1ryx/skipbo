@@ -19,15 +19,7 @@ Thank you for your interest in contributing to the Skip-Bo Game project! This do
    # or
    git checkout -b fix/bug-description
    ```
-   **Important:** Keep your branch focused on a single feature or fix. Unrelated changes (like documentation updates, refactoring) should be on separate branches.
-
-   This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/). Feature and fix branches exist only as long as the feature is in development, then merge back into `develop` and are deleted. Each branch should contain **only commits directly related to that specific feature or bug fix**. This focused approach provides several benefits:
-   - **Easier code review**: Reviewers can understand the feature in isolation
-   - **Cleaner history**: `git log` clearly shows what was added when
-   - **Simpler rollback**: If a feature causes issues, all related commits can be reverted as a unit
-   - **Better collaboration**: Team members can understand the scope at a glance
-
-   If you discover unrelated issues or improvements while working on a feature, create a separate branch for them rather than mixing concerns.
+   This project follows the [git-flow branching model](docs/GIT_WORKFLOW.md). Keep your branch focused on a single feature or fix — see the [Git Workflow Guide](docs/GIT_WORKFLOW.md) for branch naming, merging strategy, and the full workflow.
 3. **Install dependencies**:
    ```bash
    cd server && npm install
@@ -35,7 +27,7 @@ Thank you for your interest in contributing to the Skip-Bo Game project! This do
    ```
 4. **Make your changes** following the code style guidelines
 5. **Test your changes** thoroughly
-6. **Commit your changes** following the commit message guidelines below
+6. **Commit your changes** following the [commit message guidelines](docs/COMMIT_GUIDELINES.md)
 7. **Push to your fork** and create a pull request
 
 ## Development Workflow
