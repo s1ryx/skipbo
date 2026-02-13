@@ -688,7 +688,7 @@ If you have questions or run into issues:
 
 ## License
 
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
+By contributing to this project, you agree that your contributions fall under the terms defined in the [LICENSE](../LICENSE) file.
 
 ---
 
