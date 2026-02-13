@@ -68,6 +68,145 @@ This project follows the [git-flow branching model](https://nvie.com/posts/a-suc
 
 **Code Review Process**: Unlike the strict git-flow model where feature branches remain local, we push all supporting branches to origin for code review before merging. This enables collaboration, catches bugs early, and provides visibility into ongoing work.
 
+#### Main Branches
+
+The repository maintains two permanent branches with infinite lifetime:
+
+**`master`**:
+- Represents production-ready code
+- The source code at HEAD always reflects a production-ready state
+- Every commit is a new production release by definition
+- Only receives merges from release and hotfix branches
+- Every merge commit is tagged with a version number
+
+**`develop`**:
+- Integration branch for ongoing development
+- Contains the latest delivered development changes for the next release
+- Serves as the foundation for feature development
+- Receives merges from feature, fix, release, and hotfix branches
+- Also receives direct bug fix commits for simple issues
+
+#### Supporting Branches
+
+Supporting branches are temporary and serve specific purposes. They always have limited lifetimes and are deleted after merging.
+
+**Feature branches** (`feature/*`):
+- **Branch from**: `develop`
+- **Merge back to**: `develop` only
+- **Naming**: `feature/feature-name` (anything except `master`, `develop`, `release-*`, or `hotfix-*`)
+- **Purpose**: Develop new features for upcoming releases
+- **Lifetime**: Exists only during feature development
+- **Scope**: Contains only commits related to that specific feature
+
+**Workflow**:
+```bash
+# Create feature branch
+git checkout -b feature/new-game-mode develop
+
+# Develop with atomic commits
+git commit -m "feat: add game mode selection UI"
+git commit -m "feat: implement new game mode logic"
+
+# Push to origin for code review
+git push -u origin feature/new-game-mode
+
+# After review, merge to develop with --no-ff
+# (--no-ff preserves branch history and groups related commits)
+git checkout develop
+git merge --no-ff feature/new-game-mode
+git push origin develop
+
+# Delete local and remote branch
+git branch -d feature/new-game-mode
+git push origin --delete feature/new-game-mode
+```
+
+**Bug Fixes**:
+
+Most bug fixes are simple enough to be committed directly without a dedicated branch:
+
+**Small bugs (single commit)**:
+```bash
+# Fix directly on develop
+git checkout develop
+git commit -m "fix: correct score display rounding"
+git push origin develop
+```
+
+**Fix branches** (`fix/*`) - for large bugs only:
+- **Branch from**: `develop`
+- **Merge back to**: `develop`
+- **Naming**: `fix/complex-bug-description`
+- **Purpose**: Fix complex, non-critical bugs that require multiple commits to resolve
+- **When to use**: Only when a bug fix needs multiple commits or significant changes
+- **Scope**: Contains only commits related to that specific bug fix
+- **Note**: Use hotfix branches for critical production bugs that need immediate deployment
+
+**Workflow for complex bugs**:
+```bash
+# Create fix branch for a complex bug requiring multiple commits
+git checkout -b fix/reconnection-logic develop
+
+# Fix with atomic commits
+git commit -m "fix: add connection state tracking"
+git commit -m "fix: implement reconnection retry logic"
+git commit -m "fix: restore game state after reconnect"
+
+# Push for code review
+git push -u origin fix/reconnection-logic
+
+# After review, merge with --no-ff (multiple commits benefit from grouping)
+git checkout develop
+git merge --no-ff fix/reconnection-logic
+git push origin develop
+
+# Delete branch
+git branch -d fix/reconnection-logic
+git push origin --delete fix/reconnection-logic
+```
+
+**Hotfix branches** (`hotfix/*`):
+- **Branch from**: `master` (production code)
+- **Merge back to**: Both `master` AND `develop` (or active release branch if one exists)
+- **Naming**: `hotfix/critical-bug` or `hotfix-X.Y.Z` (e.g., `hotfix-1.2.1`)
+- **Purpose**: Emergency fixes for critical production bugs that halt business operation or block progress
+- **Lifetime**: Very short - only until the fix is complete
+- **Creates**: A new patch version tag on master
+- **Key difference**: Skips the normal release cycle for immediate deployment
+
+**Workflow**:
+```bash
+# Create hotfix branch from master
+git checkout -b hotfix-1.2.1 master
+
+# Fix the critical bug first
+git commit -m "fix: prevent game state corruption on disconnect"
+
+# Push for visibility
+git push -u origin hotfix-1.2.1
+
+# Bump patch version (last commit before merging)
+git commit -m "chore: bump version to 1.2.1"
+git push origin hotfix-1.2.1
+
+# Merge to master with --no-ff and create tag with generated changelog
+git checkout master
+git merge --no-ff hotfix-1.2.1
+git tag -s v1.2.1 -m "$(git log --format='- %s' v1.2.0..hotfix-1.2.1)"
+git push origin master --tags
+
+# Merge to develop with --no-ff
+git checkout develop
+git merge --no-ff hotfix-1.2.1
+git push origin develop
+
+# Delete local and remote branch
+git branch -d hotfix-1.2.1
+git push origin --delete hotfix-1.2.1
+```
+
+**Special consideration**: If a release branch exists when creating a hotfix, merge the hotfix to the release branch instead of `develop`. The changes will propagate to `develop` when bug fixes from the release branch are continuously merged back.
+
 ## Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
