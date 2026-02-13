@@ -56,15 +56,15 @@ npm start
 
 ### Testing on Local Network
 
-See the [Local Network Setup](../README.md#local-network-setup-multiplayer-testing) section in the README for detailed instructions.
+See the [Local Network Setup](README.md#local-network-setup-multiplayer-testing) section in the README for detailed instructions.
 
 ### Git-Flow Branching Workflow
 
-This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/). See the [Git Workflow Guide](GIT_WORKFLOW.md) for full details on branch types, merging strategy, and release management.
+This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/). See the [Git Workflow Guide](docs/GIT_WORKFLOW.md) for full details on branch types, merging strategy, and release management.
 
 ## Commit Message Guidelines
 
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. See the [Commit Guidelines](COMMIT_GUIDELINES.md) for the full format reference, commit types, and atomic commit philosophy.
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. See the [Commit Guidelines](docs/COMMIT_GUIDELINES.md) for the full format reference, commit types, and atomic commit philosophy.
 
 ## Code Style
 
@@ -109,13 +109,13 @@ A pull request template is automatically provided when you open a PR on GitHub.
 ## Questions or Issues?
 
 If you have questions or run into issues:
-- Check the [README](../README.md) for setup instructions
+- Check the [README](README.md) for setup instructions
 - Review existing [issues](https://github.com/s1ryx/skipbo/issues)
 - Open a new issue if your problem isn't already reported
 
 ## License
 
-By contributing to this project, you agree that your contributions fall under the terms defined in the [LICENSE](../LICENSE) file.
+By contributing to this project, you agree that your contributions fall under the terms defined in the [LICENSE](LICENSE) file.
 
 ---
 
