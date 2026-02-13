@@ -400,6 +400,31 @@ Note: No final merge to develop since it already has B1, B2 via M1, M2
 - Always use **signed, annotated tags** (`git tag -s`) with changelogs generated from commit messages
 - Tags are not pushed automatically - use `git push origin v1.2.0` or `git push origin --tags`
 
+**Keep branches focused**:
+- Each branch should address exactly one feature, bug, or release
+- If you discover unrelated issues while working, create a separate branch
+- This makes code review easier and rollback simpler
+- For simple bugs, skip the branch and commit directly
+
+**Branch lifetime**:
+- Supporting branches are temporary - always delete after merging (both local and remote)
+- Keeps repository clean and navigation simple
+- Completed work lives in develop or master, not in abandoned branches
+
+**Why this model works**:
+- **Clear separation**: Development isolated from production code
+- **Parallel development**: Multiple features developed simultaneously without conflicts
+- **Release control**: Master always represents production-ready state
+- **Easy rollback**: Features can be reverted as a unit using merge commits
+- **Hotfix capability**: Critical fixes can bypass normal development cycle
+- **Release preparation**: Releases can be polished while development continues
+- **Continuous stability**: Bug fixes immediately available on develop through continuous merging
+- **Version isolation**: Release versions stay on master, develop keeps development versions
+- **Code review**: Pushing branches enables collaboration and early bug detection
+- **Clean history**: Single-commit bug fixes don't clutter history with unnecessary merge commits
+
+For complete details on the original model, see the [git-flow article](https://nvie.com/posts/a-successful-git-branching-model/).
+
 ## Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
