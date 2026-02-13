@@ -233,6 +233,142 @@ Examples:
 - `v0.2.1` - Fixed bug in existing feature
 - `v1.0.0` - First stable release or breaking change
 
+**Complete Release Workflow**:
+
+**Step 1: Create release branch from develop (WITHOUT version bump)**
+
+**Important**: Do NOT bump the version yet. The version bump will be the last commit before merging to master.
+
+```bash
+# Ensure develop is up to date
+git checkout develop
+git pull origin develop
+
+# Create release branch (version in branch name, but don't bump code yet)
+git checkout -b release-1.2 develop
+
+# Push for review and tracking
+git push -u origin release-1.2
+```
+
+**Step 2: Release preparation with continuous merging**
+
+During this phase, `develop` continues to receive new features for the next release, while the release branch focuses on stabilization through bug fixes only.
+
+**Critical**: Bug fixes made on the release branch should be **continuously merged back to develop** as they are made. This ensures `develop` always has the latest fixes. Since the version hasn't been bumped yet, these merges are clean and don't pollute develop with release version numbers.
+
+```bash
+# On release-1.2 branch: fix a bug found during testing (commit directly)
+git commit -m "fix: correct score display rounding"
+git push origin release-1.2
+
+# Immediately merge this fix back to develop
+git checkout develop
+git merge --no-ff release-1.2
+git push origin develop
+
+# Back on release branch: fix another bug
+git checkout release-1.2
+git commit -m "fix: adjust card animation timing"
+git push origin release-1.2
+
+# Immediately merge to develop again
+git checkout develop
+git merge --no-ff release-1.2
+git push origin develop
+```
+
+**Pattern**: After each bug fix on the release branch, merge the entire branch to `develop` immediately using `--no-ff`. Git is smart enough to recognize which commits already exist and will only add the new bug fix. This keeps `develop` in sync with all stability improvements.
+
+**No new features allowed on release branch** - they go to `develop` for the next release.
+
+**Step 3: Version bump as final commit**
+
+When all bug fixes are complete and you're ready to release:
+
+```bash
+# On release-1.2 branch: bump version as the LAST commit
+# Edit package.json, version files, etc.
+git commit -m "chore: bump version to 1.2.0"
+git push origin release-1.2
+```
+
+**Why bump version last**: By making the version bump the final commit on the release branch, all prior bug fixes have already been merged to `develop` without the release version number. This keeps `develop` at its own development version while ensuring it has all stability fixes.
+
+**Step 4: Merge to master and create tag**
+
+```bash
+# Merge to master with --no-ff (preserves branch history)
+git checkout master
+git pull origin master
+git merge --no-ff release-1.2
+
+# Create signed tag with generated changelog from commits
+git tag -s v1.2.0 -m "$(cat <<'EOF'
+v1.2.0 - Release Title
+
+## Features
+$(git log --format='- %s' v1.1.0..release-1.2 | grep '^- feat:')
+
+## Bug Fixes
+$(git log --format='- %s' v1.1.0..release-1.2 | grep '^- fix:')
+
+## Documentation
+$(git log --format='- %s' v1.1.0..release-1.2 | grep '^- docs:')
+EOF
+)"
+
+# Push master and tag
+git push origin master
+git push origin v1.2.0
+```
+
+**Alternative: Simplified automated tag**:
+```bash
+# Simple one-liner for tag with all commits
+git tag -s v1.2.0 -m "$(git log --format='- %s' v1.1.0..release-1.2)"
+```
+
+**Alternative: Manual changelog** (if you need to edit):
+```bash
+# Generate changelog template
+git log --format="- %s" v1.1.0..release-1.2 > release-notes.txt
+
+# Edit manually
+nano release-notes.txt
+
+# Create tag from edited file
+git tag -s v1.2.0 -F release-notes.txt
+```
+
+**Step 5: Skip final merge to develop**
+
+Because you've been continuously merging bug fixes to `develop` throughout the release process, **develop already has all the important changes**. The only new commit on the release branch is the version bump, which develop doesn't need (it should maintain its own development version).
+
+**Therefore, skip the final merge to develop.** The develop branch already has all bug fixes from continuous merging.
+
+```bash
+# No final merge needed - develop already has all bug fixes
+# The version bump stays isolated to master
+```
+
+**Optional**: If you specifically want the release version bump in develop's history (rare), you can merge:
+```bash
+# Optional: merge if you want version bump in develop
+git checkout develop
+git merge --no-ff release-1.2
+# Then manually revert the version back to development version
+git commit -m "chore: revert to development version"
+git push origin develop
+```
+
+**Step 6: Clean up release branch**
+```bash
+# Delete local and remote branch
+git branch -d release-1.2
+git push origin --delete release-1.2
+```
+
 ## Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
