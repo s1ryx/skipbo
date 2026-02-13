@@ -219,6 +219,20 @@ Release branches coordinate the transition from development to production. They 
 - **Allowed changes**: Only minor bug fixes and release metadata (no new features)
 - **Lifetime**: From release preparation start until merged to master and tagged
 
+**Version Numbering (SemVer)**:
+
+All version tags follow [Semantic Versioning](https://semver.org/) (SemVer) format: `vMAJOR.MINOR.PATCH`
+
+- **MAJOR** (v**X**.0.0): Incompatible API changes or breaking changes
+- **MINOR** (v0.**X**.0): New features added in a backwards-compatible manner
+- **PATCH** (v0.0.**X**): Backwards-compatible bug fixes
+
+Examples:
+- `v0.1.0` - Initial release with basic features
+- `v0.2.0` - Added new gameplay feature (backwards-compatible)
+- `v0.2.1` - Fixed bug in existing feature
+- `v1.0.0` - First stable release or breaking change
+
 ## Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
