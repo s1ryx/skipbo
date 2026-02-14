@@ -17,7 +17,7 @@ function GameBoard({
   chatMessages,
   onSendChatMessage,
   onMarkMessagesRead,
-  stablePlayerId
+  stablePlayerId,
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
@@ -114,9 +114,11 @@ function GameBoard({
         <p>Share this room ID with your friends!</p>
 
         <div className="players-waiting">
-          <h3>Players ({gameState.players.length}/{gameState.players.length}):</h3>
+          <h3>
+            Players ({gameState.players.length}/{gameState.players.length}):
+          </h3>
           <ul>
-            {gameState.players.map(player => (
+            {gameState.players.map((player) => (
               <li key={player.id}>
                 {player.name} {player.id === playerId ? '(You)' : ''}
               </li>
@@ -130,9 +132,7 @@ function GameBoard({
           </button>
         )}
 
-        {gameState.players.length < 2 && (
-          <p>Waiting for more players to join...</p>
-        )}
+        {gameState.players.length < 2 && <p>Waiting for more players to join...</p>}
       </div>
     );
   }
@@ -142,7 +142,7 @@ function GameBoard({
       <div className="game-header">
         <h3>Room: {roomId}</h3>
         <div className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
-          {isMyTurn ? "Your Turn!" : "Waiting for other player..."}
+          {isMyTurn ? 'Your Turn!' : 'Waiting for other player...'}
         </div>
         <button onClick={onLeaveGame} className="btn-leave-game">
           Leave Game
@@ -157,20 +157,23 @@ function GameBoard({
       {/* Other Players */}
       <div className="other-players">
         {gameState.players
-          .filter(p => p.id !== playerId)
-          .map(player => (
-            <div key={player.id} className={`opponent-info ${gameState.currentPlayerId !== player.id ? 'inactive' : ''}`}>
+          .filter((p) => p.id !== playerId)
+          .map((player) => (
+            <div
+              key={player.id}
+              className={`opponent-info ${gameState.currentPlayerId !== player.id ? 'inactive' : ''}`}
+            >
               <h4>
                 {player.name}
                 {gameState.currentPlayerId === player.id && ' (Playing)'}
-                {player.disconnected && <span className="disconnected-indicator"> (Disconnected)</span>}
+                {player.disconnected && (
+                  <span className="disconnected-indicator"> (Disconnected)</span>
+                )}
               </h4>
               <div className="opponent-cards">
                 <div className="card-pile">
                   <div className="pile-label">Stockpile: {player.stockpileCount}</div>
-                  {player.stockpileTop && (
-                    <Card value={player.stockpileTop} isVisible={true} />
-                  )}
+                  {player.stockpileTop && <Card value={player.stockpileTop} isVisible={true} />}
                 </div>
                 <div className="card-pile">
                   <div className="pile-label">Hand: {player.handCount}</div>
@@ -226,15 +229,15 @@ function GameBoard({
               <div className="pile-info">
                 Pile {index + 1}
                 {pile.length > 0 && (
-                  <span className="next-card">
-                    Next: {getNextCardForPile(pile) || 'Complete'}
-                  </span>
+                  <span className="next-card">Next: {getNextCardForPile(pile) || 'Complete'}</span>
                 )}
               </div>
               {pile.length > 0 ? (
                 <div className="pile-stack">
                   <Card value={pile[pile.length - 1]} isVisible={true} />
-                  <div className="pile-count">{pile.length} {pile.length === 1 ? 'card' : 'cards'}</div>
+                  <div className="pile-count">
+                    {pile.length} {pile.length === 1 ? 'card' : 'cards'}
+                  </div>
                 </div>
               ) : (
                 <div className="empty-pile">
@@ -336,7 +339,12 @@ function GameBoard({
             {selectedCard && (
               <div className="selected-card-info">
                 Selected: <Card value={selectedCard} isVisible={true} size="small" />
-                <button onClick={() => { setSelectedCard(null); setSelectedSource(null); }}>
+                <button
+                  onClick={() => {
+                    setSelectedCard(null);
+                    setSelectedSource(null);
+                  }}
+                >
                   Cancel
                 </button>
               </div>

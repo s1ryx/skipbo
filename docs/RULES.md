@@ -12,39 +12,47 @@ The goal of Skip-Bo is to be the first player to play all the cards in your stoc
 ## Setting Up the Game
 
 ### 1. Shuffle the Cards
+
 Mix the deck thoroughly so the cards are in random order.
 
 ### 2. Deal Cards
 
 **Stockpile:**
+
 - Each player gets a stockpile of **30 cards** if there are 2-4 players
 - Each player gets a stockpile of **20 cards** if there are 5-6 players
 - Cards are dealt face down in a stack in front of you
 - **Do not look at these cards!**
 
 **Hand:**
+
 - After the stockpile is dealt, each player gets **5 cards** to hold in their hand
 - Keep these cards face up where you can see them
 
 **Building Piles:**
+
 - Set up **four central piles** where players will build sequences of 1-12
 - These building piles are shared by all players
 
 ### 3. Card Order
+
 - Arrange your stockpile in a face-down pile (one card on top)
 - Your hand of 5 cards should be placed face-up where you can see them
 
 ## Types of Cards
 
 ### Number Cards (1-12)
+
 Regular cards that must be played in ascending order on the building piles.
 
 ### Skip-Bo Cards (Wild Cards)
+
 - Can represent any number from 1 to 12
 - Help you complete sequences in the building piles
 - Can be played whenever needed to continue a sequence
 
 ### Building Piles
+
 - Four piles in the center of the table
 - Must start with a **1** and go up to **12**
 - Cards must be placed in ascending order

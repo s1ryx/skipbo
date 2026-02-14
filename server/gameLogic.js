@@ -68,7 +68,7 @@ class SkipBoGame {
     const actualStockpileSize = Math.min(stockpileSize, maxAllowed);
 
     // Deal stockpiles and hands to each player
-    this.players.forEach(player => {
+    this.players.forEach((player) => {
       // Deal stockpile (face down)
       for (let i = 0; i < actualStockpileSize; i++) {
         player.stockpile.push(this.deck.pop());
@@ -95,7 +95,8 @@ class SkipBoGame {
     }
 
     const lastCard = pileCards[pileCards.length - 1];
-    const lastValue = lastCard === 'SKIP-BO' ? this.getActualValue(pileCards, pileCards.length - 1) : lastCard;
+    const lastValue =
+      lastCard === 'SKIP-BO' ? this.getActualValue(pileCards, pileCards.length - 1) : lastCard;
 
     if (lastValue === 12) {
       return null; // Pile is complete
@@ -133,7 +134,7 @@ class SkipBoGame {
   }
 
   playCard(playerId, card, source, buildingPileIndex, discardIndex = null) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
       return { success: false, error: 'Not your turn' };
@@ -204,7 +205,7 @@ class SkipBoGame {
   }
 
   discardCard(playerId, card, discardPileIndex) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
       return { success: false, error: 'Not your turn' };
@@ -227,7 +228,7 @@ class SkipBoGame {
   }
 
   drawCards(playerId) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player) {
       return { success: false, error: 'Player not found' };
@@ -242,7 +243,7 @@ class SkipBoGame {
   }
 
   endTurn(playerId) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
       return { success: false, error: 'Not your turn' };
@@ -261,13 +262,13 @@ class SkipBoGame {
   getGameState() {
     return {
       roomId: this.roomId,
-      players: this.players.map(p => ({
+      players: this.players.map((p) => ({
         id: p.id,
         name: p.name,
         stockpileCount: p.stockpile.length,
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
         handCount: p.hand.length,
-        discardPiles: p.discardPiles
+        discardPiles: p.discardPiles,
       })),
       buildingPiles: this.buildingPiles,
       currentPlayerIndex: this.currentPlayerIndex,
@@ -275,19 +276,20 @@ class SkipBoGame {
       deckCount: this.deck.length,
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
-      winner: this.winner
+      winner: this.winner,
     };
   }
 
   getPlayerState(playerId) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
     if (!player) return null;
 
     return {
       hand: player.hand,
       stockpile: player.stockpile,
-      stockpileTop: player.stockpile.length > 0 ? player.stockpile[player.stockpile.length - 1] : null,
-      discardPiles: player.discardPiles
+      stockpileTop:
+        player.stockpile.length > 0 ? player.stockpile[player.stockpile.length - 1] : null,
+      discardPiles: player.discardPiles,
     };
   }
 }

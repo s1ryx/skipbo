@@ -3,7 +3,7 @@
 This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/) for managing development and releases. Understanding this workflow is essential for contributing effectively.
 
 ![Git-Flow Branching Model](images/git-flow-model.png)
-*Figure: Git-Flow branching model by Vincent Driessen, licensed under CC BY-SA. [Original source](https://nvie.com/posts/a-successful-git-branching-model/)*
+_Figure: Git-Flow branching model by Vincent Driessen, licensed under CC BY-SA. [Original source](https://nvie.com/posts/a-successful-git-branching-model/)_
 
 **Code Review Process**: Unlike the strict git-flow model where feature branches remain local, we push all supporting branches to origin for code review before merging. This enables collaboration, catches bugs early, and provides visibility into ongoing work.
 
@@ -12,6 +12,7 @@ This project follows the [git-flow branching model](https://nvie.com/posts/a-suc
 The repository maintains two permanent branches with infinite lifetime:
 
 **`master`**:
+
 - Represents production-ready code
 - The source code at HEAD always reflects a production-ready state
 - Every commit is a new production release by definition
@@ -19,6 +20,7 @@ The repository maintains two permanent branches with infinite lifetime:
 - Every merge commit is tagged with a version number
 
 **`develop`**:
+
 - Integration branch for ongoing development
 - Contains the latest delivered development changes for the next release
 - Serves as the foundation for feature development
@@ -30,6 +32,7 @@ The repository maintains two permanent branches with infinite lifetime:
 Supporting branches are temporary and serve specific purposes. They always have limited lifetimes and are deleted after merging.
 
 **Feature branches** (`feature/*`):
+
 - **Branch from**: `develop`
 - **Merge back to**: `develop` only
 - **Naming**: `feature/feature-name` (anything except `master`, `develop`, `release-*`, or `hotfix-*`)
@@ -38,6 +41,7 @@ Supporting branches are temporary and serve specific purposes. They always have 
 - **Scope**: Contains only commits related to that specific feature
 
 **Workflow**:
+
 ```bash
 # Create feature branch
 git checkout -b feature/new-game-mode develop
@@ -65,6 +69,7 @@ git push origin --delete feature/new-game-mode
 Most bug fixes are simple enough to be committed directly without a dedicated branch:
 
 **Small bugs (single commit)**:
+
 ```bash
 # Fix directly on develop
 git checkout develop
@@ -73,6 +78,7 @@ git push origin develop
 ```
 
 **Fix branches** (`fix/*`) - for large bugs only:
+
 - **Branch from**: `develop`
 - **Merge back to**: `develop`
 - **Naming**: `fix/complex-bug-description`
@@ -82,6 +88,7 @@ git push origin develop
 - **Note**: Use hotfix branches for critical production bugs that need immediate deployment
 
 **Workflow for complex bugs**:
+
 ```bash
 # Create fix branch for a complex bug requiring multiple commits
 git checkout -b fix/reconnection-logic develop
@@ -105,6 +112,7 @@ git push origin --delete fix/reconnection-logic
 ```
 
 **Hotfix branches** (`hotfix/*`):
+
 - **Branch from**: `master` (production code)
 - **Merge back to**: Both `master` AND `develop` (or active release branch if one exists)
 - **Naming**: `hotfix/critical-bug` or `hotfix-X.Y.Z` (e.g., `hotfix-1.2.1`)
@@ -114,6 +122,7 @@ git push origin --delete fix/reconnection-logic
 - **Key difference**: Skips the normal release cycle for immediate deployment
 
 **Workflow**:
+
 ```bash
 # Create hotfix branch from master
 git checkout -b hotfix-1.2.1 master
@@ -151,6 +160,7 @@ git push origin --delete hotfix-1.2.1
 Release branches coordinate the transition from development to production. They provide a dedicated space for release preparation while allowing ongoing development to continue on `develop`.
 
 **Release branches** (`release-*`):
+
 - **Branch from**: `develop` (when ready for release)
 - **Merge back to**: `master` (at completion) AND `develop` (continuously during preparation)
 - **Naming**: `release-X.Y` (e.g., `release-1.2`, `release-2.0`)
@@ -167,6 +177,7 @@ All version tags follow [Semantic Versioning](https://semver.org/) (SemVer) form
 - **PATCH** (v0.0.**X**): Backwards-compatible bug fixes
 
 Examples:
+
 - `v0.1.0` - Initial release with basic features
 - `v0.2.0` - Added new gameplay feature (backwards-compatible)
 - `v0.2.1` - Fixed bug in existing feature
@@ -263,12 +274,14 @@ git push origin v1.2.0
 ```
 
 **Alternative: Simplified automated tag**:
+
 ```bash
 # Simple one-liner for tag with all commits
 git tag -s v1.2.0 -m "$(git log --format='- %s' v1.1.0..release-1.2)"
 ```
 
 **Alternative: Manual changelog** (if you need to edit):
+
 ```bash
 # Generate changelog template
 git log --format="- %s" v1.1.0..release-1.2 > release-notes.txt
@@ -292,6 +305,7 @@ Because you've been continuously merging bug fixes to `develop` throughout the r
 ```
 
 **Optional**: If you specifically want the release version bump in develop's history (rare), you can merge:
+
 ```bash
 # Optional: merge if you want version bump in develop
 git checkout develop
@@ -302,6 +316,7 @@ git push origin develop
 ```
 
 **Step 6: Clean up release branch**
+
 ```bash
 # Delete local and remote branch
 git branch -d release-1.2
@@ -309,6 +324,7 @@ git push origin --delete release-1.2
 ```
 
 **Release Branch Lifecycle Visualization**:
+
 ```
 Time →
 
@@ -328,6 +344,7 @@ Note: No final merge to develop since it already has B1, B2 via M1, M2
 ```
 
 **Key Points**:
+
 - **Version bump LAST**: This is the crucial difference - bump version as the final commit
 - **Continuous merging**: Bug fixes continuously merge to `develop` (without version bump)
 - **Clean separation**: Develop gets all fixes but keeps its own development version
@@ -340,17 +357,20 @@ Note: No final merge to develop since it already has B1, B2 via M1, M2
 - Tags are not pushed automatically - use `git push origin v1.2.0` or `git push origin --tags`
 
 **Keep branches focused**:
+
 - Each branch should address exactly one feature, bug, or release
 - If you discover unrelated issues while working, create a separate branch
 - This makes code review easier and rollback simpler
 - For simple bugs, skip the branch and commit directly
 
 **Branch lifetime**:
+
 - Supporting branches are temporary - always delete after merging (both local and remote)
 - Keeps repository clean and navigation simple
 - Completed work lives in develop or master, not in abandoned branches
 
 **Why this model works**:
+
 - **Clear separation**: Development isolated from production code
 - **Parallel development**: Multiple features developed simultaneously without conflicts
 - **Release control**: Master always represents production-ready state

@@ -35,12 +35,14 @@ Thank you for your interest in contributing to the Skip-Bo Game project! This do
 ### Running the Development Environment
 
 **Server (with auto-reload):**
+
 ```bash
 cd server
 npm run dev
 ```
 
 **Client:**
+
 ```bash
 cd client
 npm start
@@ -101,6 +103,7 @@ A pull request template is automatically provided when you open a PR on GitHub.
 ## Questions or Issues?
 
 If you have questions or run into issues:
+
 - Check the [README](README.md) for setup instructions
 - Review existing [issues](https://github.com/s1ryx/skipbo/issues)
 - Open a new issue if your problem isn't already reported

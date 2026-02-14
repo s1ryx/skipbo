@@ -8,7 +8,11 @@
     "dev": "nodemon server.js",
     "lint": "eslint ."
   },
-  "keywords": ["skip-bo", "card-game", "socket.io"],
+  "keywords": [
+    "skip-bo",
+    "card-game",
+    "socket.io"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {

@@ -95,10 +95,7 @@ function Lobby({ onCreateRoom, onJoinRoom }) {
 
               <div className="divider">OR</div>
 
-              <button
-                onClick={() => setShowJoinForm(true)}
-                className="btn-secondary"
-              >
+              <button onClick={() => setShowJoinForm(true)} className="btn-secondary">
                 Join Existing Room
               </button>
             </div>
@@ -134,10 +131,7 @@ function Lobby({ onCreateRoom, onJoinRoom }) {
                 </button>
               </form>
 
-              <button
-                onClick={() => setShowJoinForm(false)}
-                className="btn-secondary"
-              >
+              <button onClick={() => setShowJoinForm(false)} className="btn-secondary">
                 Back to Create Room
               </button>
             </div>
