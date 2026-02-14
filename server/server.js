@@ -8,10 +8,10 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "*",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
 
 const PORT = process.env.PORT || 3001;
@@ -23,7 +23,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     version: VERSION,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -48,7 +48,7 @@ io.on('connection', (socket) => {
     socket.emit('roomCreated', {
       roomId,
       playerId: socket.id,
-      gameState: game.getGameState()
+      gameState: game.getGameState(),
     });
 
     console.log(`Room created: ${roomId} by ${playerName}`);
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('playerJoined', {
       playerId: socket.id,
       playerName,
-      gameState: game.getGameState()
+      gameState: game.getGameState(),
     });
 
     console.log(`${playerName} joined room: ${roomId}`);
@@ -98,7 +98,7 @@ io.on('connection', (socket) => {
     }
 
     // Find the player by old ID
-    const player = game.players.find(p => p.id === oldPlayerId);
+    const player = game.players.find((p) => p.id === oldPlayerId);
 
     if (!player) {
       socket.emit('reconnectFailed', { message: 'Player not found in room' });
@@ -120,13 +120,13 @@ io.on('connection', (socket) => {
       roomId,
       playerId: socket.id,
       gameState: game.getGameState(),
-      playerState: game.getPlayerState(socket.id)
+      playerState: game.getPlayerState(socket.id),
     });
 
     // Notify other players
     socket.to(roomId).emit('playerReconnected', {
       playerId: socket.id,
-      playerName: player.name
+      playerName: player.name,
     });
 
     console.log(`${playerName} reconnected to room: ${roomId}`);
@@ -150,10 +150,10 @@ io.on('connection', (socket) => {
     }
 
     // Send game state to all players
-    game.players.forEach(player => {
+    game.players.forEach((player) => {
       io.to(player.id).emit('gameStarted', {
         gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id)
+        playerState: game.getPlayerState(player.id),
       });
     });
 
@@ -178,10 +178,10 @@ io.on('connection', (socket) => {
     }
 
     // Update all players
-    game.players.forEach(player => {
+    game.players.forEach((player) => {
       io.to(player.id).emit('gameStateUpdate', {
         gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id)
+        playerState: game.getPlayerState(player.id),
       });
     });
 
@@ -189,7 +189,7 @@ io.on('connection', (socket) => {
     if (game.gameOver) {
       io.to(roomId).emit('gameOver', {
         winner: game.winner,
-        gameState: game.getGameState()
+        gameState: game.getGameState(),
       });
     }
   });
@@ -220,16 +220,16 @@ io.on('connection', (socket) => {
     }
 
     // Update all players
-    game.players.forEach(player => {
+    game.players.forEach((player) => {
       io.to(player.id).emit('gameStateUpdate', {
         gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id)
+        playerState: game.getPlayerState(player.id),
       });
     });
 
     // Notify about turn change
     io.to(roomId).emit('turnChanged', {
-      currentPlayerId: endTurnResult.nextPlayer
+      currentPlayerId: endTurnResult.nextPlayer,
     });
   });
 
@@ -251,15 +251,15 @@ io.on('connection', (socket) => {
     }
 
     // Update all players
-    game.players.forEach(player => {
+    game.players.forEach((player) => {
       io.to(player.id).emit('gameStateUpdate', {
         gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id)
+        playerState: game.getPlayerState(player.id),
       });
     });
 
     io.to(roomId).emit('turnChanged', {
-      currentPlayerId: result.nextPlayer
+      currentPlayerId: result.nextPlayer,
     });
   });
 
@@ -276,7 +276,7 @@ io.on('connection', (socket) => {
     }
 
     // Find the player's name
-    const player = game.players.find(p => p.id === socket.id);
+    const player = game.players.find((p) => p.id === socket.id);
     if (!player) {
       return;
     }
@@ -287,7 +287,7 @@ io.on('connection', (socket) => {
       playerName: player.name,
       stablePlayerId: stablePlayerId,
       message: message.trim(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     console.log(`Chat message in room ${roomId} from ${player.name}: ${message}`);
@@ -305,7 +305,7 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('gameAborted');
 
         // Remove all players from playerRooms
-        game.players.forEach(player => {
+        game.players.forEach((player) => {
           playerRooms.delete(player.id);
         });
 
@@ -327,7 +327,7 @@ io.on('connection', (socket) => {
       if (game) {
         // Notify other players
         io.to(roomId).emit('playerDisconnected', {
-          playerId: socket.id
+          playerId: socket.id,
         });
 
         // If game hasn't started, remove the game
