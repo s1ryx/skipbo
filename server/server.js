@@ -59,19 +59,19 @@ io.on('connection', (socket) => {
     const game = games.get(roomId);
 
     if (!game) {
-      socket.emit('error', { message: 'Room not found' });
+      socket.emit('error', { message: 'error.roomNotFound' });
       return;
     }
 
     if (game.gameStarted) {
-      socket.emit('error', { message: 'Game already started' });
+      socket.emit('error', { message: 'error.gameAlreadyStarted' });
       return;
     }
 
     const added = game.addPlayer(socket.id, playerName);
 
     if (!added) {
-      socket.emit('error', { message: 'Room is full' });
+      socket.emit('error', { message: 'error.roomFull' });
       return;
     }
 
@@ -93,7 +93,7 @@ io.on('connection', (socket) => {
     const game = games.get(roomId);
 
     if (!game) {
-      socket.emit('reconnectFailed', { message: 'Room no longer exists' });
+      socket.emit('reconnectFailed', { message: 'error.roomNoLongerExists' });
       return;
     }
 
@@ -101,7 +101,7 @@ io.on('connection', (socket) => {
     const player = game.players.find((p) => p.id === oldPlayerId);
 
     if (!player) {
-      socket.emit('reconnectFailed', { message: 'Player not found in room' });
+      socket.emit('reconnectFailed', { message: 'error.playerNotFound' });
       return;
     }
 
@@ -138,14 +138,14 @@ io.on('connection', (socket) => {
     const game = games.get(roomId);
 
     if (!game) {
-      socket.emit('error', { message: 'Room not found' });
+      socket.emit('error', { message: 'error.roomNotFound' });
       return;
     }
 
     const started = game.startGame();
 
     if (!started) {
-      socket.emit('error', { message: 'Cannot start game (need at least 2 players)' });
+      socket.emit('error', { message: 'error.needMorePlayers' });
       return;
     }
 
@@ -166,7 +166,7 @@ io.on('connection', (socket) => {
     const game = games.get(roomId);
 
     if (!game) {
-      socket.emit('error', { message: 'Room not found' });
+      socket.emit('error', { message: 'error.roomNotFound' });
       return;
     }
 
@@ -200,7 +200,7 @@ io.on('connection', (socket) => {
     const game = games.get(roomId);
 
     if (!game) {
-      socket.emit('error', { message: 'Room not found' });
+      socket.emit('error', { message: 'error.roomNotFound' });
       return;
     }
 
@@ -239,7 +239,7 @@ io.on('connection', (socket) => {
     const game = games.get(roomId);
 
     if (!game) {
-      socket.emit('error', { message: 'Room not found' });
+      socket.emit('error', { message: 'error.roomNotFound' });
       return;
     }
 
