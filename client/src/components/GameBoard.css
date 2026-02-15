@@ -24,6 +24,41 @@
   margin-bottom: 30px;
 }
 
+.shareable-link-container {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  align-items: center;
+}
+
+.shareable-link-input {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: monospace;
+  background: #f9f9f9;
+  cursor: pointer;
+}
+
+.shareable-link-input:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.or-text {
+  color: #888;
+  font-size: 14px;
+  margin: 15px 0;
+}
+
+.or-text strong {
+  color: #333;
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
 .players-waiting {
   margin: 30px 0;
 }
