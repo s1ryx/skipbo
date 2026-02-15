@@ -342,8 +342,17 @@ io.on('connection', (socket) => {
 });
 
 // Helper function to generate random room ID
+// Uses only easily distinguishable characters to avoid confusion
 function generateRoomId() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  // Exclude confusing characters: 0, O, I, 1, 5, S, 8, B, 2, Z
+  const chars = '3467ACDEFGHJKMNPQRTUVWXY';
+  let roomId = '';
+
+  for (let i = 0; i < 6; i++) {
+    roomId += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  return roomId;
 }
 
 server.listen(PORT, HOST, () => {
