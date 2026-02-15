@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Lobby.css';
 
-function Lobby({ onCreateRoom, onJoinRoom }) {
+function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
   const [playerName, setPlayerName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [stockpileSize, setStockpileSize] = useState(30);
   const [roomIdToJoin, setRoomIdToJoin] = useState('');
   const [showJoinForm, setShowJoinForm] = useState(false);
+
+  // If initialRoomId is provided from URL, pre-fill and show join form
+  useEffect(() => {
+    if (initialRoomId) {
+      setRoomIdToJoin(initialRoomId);
+      setShowJoinForm(true);
+    }
+  }, [initialRoomId]);
 
   // Get max allowed stockpile size based on player count
   const getMaxStockpileSize = (players) => {
