@@ -133,7 +133,7 @@ class SkipBoGame {
     return card === nextValue;
   }
 
-  playCard(playerId, card, source, buildingPileIndex, discardIndex = null) {
+  playCard(playerId, card, source, buildingPileIndex, _discardIndex = null) {
     const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
