@@ -8,7 +8,8 @@ import Lobby from './components/Lobby';
 // When REACT_APP_SERVER_URL is not set or empty, use undefined to connect to same origin
 // This allows Socket.IO to connect to the domain where the app is hosted
 const SOCKET_SERVER_URL = process.env.REACT_APP_SERVER_URL || undefined;
-const VERSION = process.env.REACT_APP_VERSION || require('../package.json').version;
+const VERSION = require('../package.json').version;
+const COMMIT_HASH = process.env.REACT_APP_COMMIT_HASH;
 
 // Generate a stable unique player identifier
 const generatePlayerUniqueId = () => {
@@ -324,7 +325,10 @@ function App() {
       )}
 
       <footer className="App-footer">
-        <span className="version">v{VERSION}</span>
+        <span className="version">
+          v{VERSION}
+          {COMMIT_HASH && ` (${COMMIT_HASH})`}
+        </span>
       </footer>
     </div>
   );
