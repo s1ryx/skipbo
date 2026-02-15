@@ -12,7 +12,7 @@ function GameBoard({
   onStartGame,
   onPlayCard,
   onDiscardCard,
-  onEndTurn,
+  onEndTurn, // eslint-disable-line no-unused-vars
   onLeaveGame,
   chatMessages,
   onSendChatMessage,
