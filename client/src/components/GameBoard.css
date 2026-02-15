@@ -47,6 +47,22 @@
   border-color: #4caf50;
 }
 
+.btn-copy {
+  padding: 12px 24px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  background: #45a049;
+}
+
 .or-text {
   color: #888;
   font-size: 14px;
