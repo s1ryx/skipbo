@@ -113,11 +113,27 @@ function GameBoard({
     return lastCard === 12 ? null : lastCard + 1;
   };
 
+  const shareableLink = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+
   if (!gameState.gameStarted) {
     return (
       <div className="waiting-room">
         <h2>Room: {roomId}</h2>
-        <p>Share this room ID with your friends!</p>
+        <p>Share this link with your friends to join!</p>
+
+        <div className="shareable-link-container">
+          <input
+            type="text"
+            value={shareableLink}
+            readOnly
+            className="shareable-link-input"
+            onClick={(e) => e.target.select()}
+          />
+        </div>
+
+        <p className="or-text">
+          Or share the room code: <strong>{roomId}</strong>
+        </p>
 
         <div className="players-waiting">
           <h3>
