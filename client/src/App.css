@@ -55,7 +55,10 @@
 .App-footer {
   margin-top: auto;
   padding: 8px 16px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
 }
 
 .App-footer .version {
@@ -63,4 +66,19 @@
   color: rgba(255, 255, 255, 0.4);
   font-family: monospace;
   letter-spacing: 0.5px;
+}
+
+.language-selector {
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+}
+
+.language-selector option {
+  background: #2d3748;
+  color: #e2e8f0;
 }
