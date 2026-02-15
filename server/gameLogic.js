@@ -142,12 +142,12 @@ class SkipBoGame {
     const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'Not your turn' };
+      return { success: false, error: 'error.notYourTurn' };
     }
 
     // Validate the move
     if (!this.canPlayCard(card, buildingPileIndex)) {
-      return { success: false, error: 'Invalid move' };
+      return { success: false, error: 'error.invalidMove' };
     }
 
     // Remove card from source
@@ -173,7 +173,7 @@ class SkipBoGame {
     }
 
     if (!cardRemoved) {
-      return { success: false, error: 'Card not found in source' };
+      return { success: false, error: 'error.cardNotFound' };
     }
 
     // Add card to building pile
@@ -213,16 +213,16 @@ class SkipBoGame {
     const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'Not your turn' };
+      return { success: false, error: 'error.notYourTurn' };
     }
 
     if (discardPileIndex < 0 || discardPileIndex > 3) {
-      return { success: false, error: 'Invalid discard pile' };
+      return { success: false, error: 'error.invalidDiscardPile' };
     }
 
     const cardIndex = player.hand.indexOf(card);
     if (cardIndex === -1) {
-      return { success: false, error: 'Card not in hand' };
+      return { success: false, error: 'error.cardNotInHand' };
     }
 
     // Remove from hand and add to discard pile
@@ -236,7 +236,7 @@ class SkipBoGame {
     const player = this.players.find((p) => p.id === playerId);
 
     if (!player) {
-      return { success: false, error: 'Player not found' };
+      return { success: false, error: 'error.playerNotFoundDraw' };
     }
 
     // Draw cards until hand has 5 cards
@@ -251,7 +251,7 @@ class SkipBoGame {
     const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'Not your turn' };
+      return { success: false, error: 'error.notYourTurn' };
     }
 
     // Move to next player
