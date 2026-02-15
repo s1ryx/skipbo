@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
+import { useTranslation } from '../i18n';
 
 function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
+  const { t } = useTranslation();
   const [inputMessage, setInputMessage] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const messagesEndRef = useRef(null);
@@ -59,7 +61,7 @@ function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
       <div className="chat-header" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="chat-header-content">
           <span className="chat-icon">💬</span>
-          <span className="chat-title">Chat</span>
+          <span className="chat-title">{t('chat.title')}</span>
           <span className="toggle-icon">{isExpanded ? '▼' : '▲'}</span>
         </div>
         {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
@@ -69,7 +71,7 @@ function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
         <>
           <div className="chat-messages">
             {messages.length === 0 ? (
-              <div className="no-messages">No messages yet. Start chatting!</div>
+              <div className="no-messages">{t('chat.noMessages')}</div>
             ) : (
               messages.map((msg, index) => (
                 <div
@@ -93,12 +95,12 @@ function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={t('chat.placeholder')}
               maxLength={200}
               className="chat-input"
             />
             <button type="submit" className="chat-send-button" disabled={!inputMessage.trim()}>
-              Send
+              {t('chat.send')}
             </button>
           </form>
         </>
