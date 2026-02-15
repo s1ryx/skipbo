@@ -33,6 +33,7 @@ function App() {
   const [roomId, setRoomId] = useState(null);
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
+  const [roomIdFromUrl, setRoomIdFromUrl] = useState(null);
   const [chatMessages, setChatMessages] = useState(() => {
     // Load chat messages from localStorage on initialization
     const savedSession = localStorage.getItem('skipBoSession');
@@ -50,6 +51,17 @@ function App() {
     return [];
   });
   const [stablePlayerId] = useState(getStablePlayerId());
+
+  // Extract room ID from URL parameters on load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if (roomParam) {
+      setRoomIdFromUrl(roomParam.toUpperCase());
+      // Clean up URL after extracting the parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   // Save chat messages to localStorage whenever they change
   useEffect(() => {
@@ -292,7 +304,7 @@ function App() {
       {error && <div className="error-message">{error}</div>}
 
       {inLobby ? (
-        <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+        <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} initialRoomId={roomIdFromUrl} />
       ) : (
         <GameBoard
           gameState={gameState}
