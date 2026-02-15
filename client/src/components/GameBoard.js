@@ -88,6 +88,12 @@ function GameBoard({
     setDiscardMode(true);
   };
 
+  const handleCancelDiscard = () => {
+    setDiscardMode(false);
+    setSelectedCard(null);
+    setSelectedSource(null);
+  };
+
   const getNextCardForPile = (pile) => {
     if (pile.length === 0) return 1;
 
@@ -150,6 +156,9 @@ function GameBoard({
         {discardMode && (
           <div className="discard-instruction">
             Click on one of your discard piles to end your turn
+            <button onClick={handleCancelDiscard} className="btn-cancel-discard">
+              Cancel
+            </button>
           </div>
         )}
       </div>
