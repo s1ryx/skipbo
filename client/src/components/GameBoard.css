@@ -102,6 +102,27 @@
   border-radius: 8px;
   font-weight: 600;
   animation: blink 1s infinite;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.btn-cancel-discard {
+  background: white;
+  color: #ff9800;
+  border: 2px solid white;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  animation: none;
+  flex-shrink: 0;
+}
+
+.btn-cancel-discard:hover {
+  background: #f5f5f5;
+  transform: scale(1.05);
 }
 
 @keyframes blink {
