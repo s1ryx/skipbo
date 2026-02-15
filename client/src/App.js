@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import './App.css';
@@ -87,13 +88,16 @@ function App() {
       setInLobby(false);
 
       // Save session data
-      const player = gameState.players.find(p => p.id === playerId);
+      const player = gameState.players.find((p) => p.id === playerId);
       if (player) {
-        localStorage.setItem('skipBoSession', JSON.stringify({
-          roomId,
-          playerId,
-          playerName: player.name
-        }));
+        localStorage.setItem(
+          'skipBoSession',
+          JSON.stringify({
+            roomId,
+            playerId,
+            playerName: player.name,
+          })
+        );
       }
     });
 
@@ -102,13 +106,16 @@ function App() {
       setGameState(gameState);
 
       // Save session data when joining
-      const currentPlayer = gameState.players.find(p => p.id === newSocket.id);
+      const currentPlayer = gameState.players.find((p) => p.id === newSocket.id);
       if (currentPlayer) {
-        localStorage.setItem('skipBoSession', JSON.stringify({
-          roomId: gameState.roomId,
-          playerId: newSocket.id,
-          playerName: currentPlayer.name
-        }));
+        localStorage.setItem(
+          'skipBoSession',
+          JSON.stringify({
+            roomId: gameState.roomId,
+            playerId: newSocket.id,
+            playerName: currentPlayer.name,
+          })
+        );
       }
     });
 
@@ -121,13 +128,16 @@ function App() {
       setInLobby(false);
 
       // Update session with new socket ID
-      const player = gameState.players.find(p => p.id === playerId);
+      const player = gameState.players.find((p) => p.id === playerId);
       if (player) {
-        localStorage.setItem('skipBoSession', JSON.stringify({
-          roomId,
-          playerId,
-          playerName: player.name
-        }));
+        localStorage.setItem(
+          'skipBoSession',
+          JSON.stringify({
+            roomId,
+            playerId,
+            playerName: player.name,
+          })
+        );
       }
     });
 
@@ -170,13 +180,13 @@ function App() {
 
     newSocket.on('playerDisconnected', ({ playerId }) => {
       // Update game state to mark player as disconnected
-      setGameState(prevState => {
+      setGameState((prevState) => {
         if (!prevState) return prevState;
         return {
           ...prevState,
-          players: prevState.players.map(p =>
+          players: prevState.players.map((p) =>
             p.id === playerId ? { ...p, disconnected: true } : p
-          )
+          ),
         };
       });
     });
@@ -202,7 +212,7 @@ function App() {
     });
 
     newSocket.on('chatMessage', (messageData) => {
-      setChatMessages(prevMessages => [...prevMessages, messageData]);
+      setChatMessages((prevMessages) => [...prevMessages, messageData]);
     });
 
     newSocket.on('error', ({ message }) => {
@@ -270,9 +280,7 @@ function App() {
   };
 
   const markMessagesAsRead = () => {
-    setChatMessages(prevMessages =>
-      prevMessages.map(msg => ({ ...msg, read: true }))
-    );
+    setChatMessages((prevMessages) => prevMessages.map((msg) => ({ ...msg, read: true })));
   };
 
   return (
@@ -281,17 +289,10 @@ function App() {
         <h1>Skip-Bo Card Game</h1>
       </header>
 
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       {inLobby ? (
-        <Lobby
-          onCreateRoom={createRoom}
-          onJoinRoom={joinRoom}
-        />
+        <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />
       ) : (
         <GameBoard
           gameState={gameState}

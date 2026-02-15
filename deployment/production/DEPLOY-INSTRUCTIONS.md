@@ -1,14 +1,17 @@
 # Deployment Instructions for example.com
 
 ## Overview
+
 This directory contains configuration files for deploying Skip-Bo to example.com with HTTPS.
 
 ## Files
+
 - `docker-compose.override.yml` - Overrides for HTTPS and certificate mounting
 - `nginx-https.conf` - HTTPS nginx configuration with LetsEncrypt
 - `deploy-to-server.sh` - Automated deployment script
 
 ## Prerequisites on Server
+
 - Docker and Docker Compose installed
 - LetsEncrypt certificate at `/etc/letsencrypt/live/example.com/`
 - Ports 80 and 443 available (bare metal nginx will be stopped)
@@ -18,6 +21,7 @@ This directory contains configuration files for deploying Skip-Bo to example.com
 ### 1. Copy files to the server
 
 From your local machine (WSL):
+
 ```bash
 cd /home/maint/skip-bo-game
 
@@ -75,6 +79,7 @@ docker-compose logs -f
 ## Troubleshooting
 
 **View logs:**
+
 ```bash
 docker-compose logs -f nginx
 docker-compose logs -f server
@@ -82,21 +87,25 @@ docker-compose logs -f client
 ```
 
 **Check container health:**
+
 ```bash
 docker-compose ps
 ```
 
 **Test nginx config:**
+
 ```bash
 docker-compose exec nginx nginx -t
 ```
 
 **WebSocket not connecting:**
+
 - Check browser console for errors
 - Verify CORS_ORIGIN in docker-compose.override.yml
 - Check nginx logs: `docker-compose logs nginx`
 
 **SSL errors:**
+
 - Verify certificate path: `ls -la /etc/letsencrypt/live/example.com/`
 - Check certificate permissions
 - Ensure certificate is not expired
@@ -104,6 +113,7 @@ docker-compose exec nginx nginx -t
 ## Rollback
 
 To restore bare metal nginx:
+
 ```bash
 docker-compose down
 sudo systemctl start nginx

@@ -35,11 +35,13 @@ Choose the appropriate type for your commit:
 - Describe **what** the commit does concisely
 
 **Good examples:**
+
 - `feat: add user authentication`
 - `fix: prevent race condition in card selection`
 - `docs: update installation instructions`
 
 **Bad examples:**
+
 - `Added some stuff`
 - `Fixed bug.`
 - `Updated the code`
@@ -53,6 +55,7 @@ Choose the appropriate type for your commit:
 - Provide context that isn't obvious from the code
 
 **Example:**
+
 ```
 feat: add environment-based configuration for network play
 
@@ -71,10 +74,12 @@ Server changes:
 ## Footer (Optional)
 
 Use the footer for:
+
 - **Breaking changes**: `BREAKING CHANGE: description of the breaking change`
 - **Issue references**: `Fixes #123`, `Closes #456`, `Relates to #789`
 
 **Example:**
+
 ```
 feat: redesign game state management
 
@@ -92,6 +97,7 @@ Closes #56
 **Philosophy: Make commits as small as possible while keeping them atomic.**
 
 Each commit should represent **one logical change** - the smallest possible change that:
+
 - Makes sense on its own
 - Could be understood in isolation
 - Would compile and run successfully if checked out
@@ -114,6 +120,7 @@ Each commit should represent **one logical change** - the smallest possible chan
 ### Real-World Example: Splitting a Complex Fix
 
 **❌ Too Large (19 lines in one commit):**
+
 ```
 fix: prevent double card dealing on game restart
 
@@ -126,9 +133,11 @@ Changes:
 - Reset game flags
 - Prevent duplicate players
 ```
-*Problem: Mixes 4 independent fixes that could each work alone.*
+
+_Problem: Mixes 4 independent fixes that could each work alone._
 
 **✅ Properly Split (4 atomic commits):**
+
 ```
 commit 1: fix: prevent duplicate players in same room (+5 lines)
   - Check if player ID exists before adding
@@ -146,9 +155,11 @@ commit 4: fix: reset building piles and game flags on start (+4 lines)
   - Reset buildingPiles, gameOver, winner to initial state
   - Completes state reset independently
 ```
-*Each commit is minimal, focused, and independently functional.*
+
+_Each commit is minimal, focused, and independently functional._
 
 **Benefits of splitting:**
+
 - Each fix can be understood without reading the others
 - Easy to review (5 lines vs 19 lines per commit)
 - Can cherry-pick individual fixes if needed
@@ -158,21 +169,25 @@ commit 4: fix: reset building piles and game flags on start (+4 lines)
 ### How to Split Commits
 
 **By Concern:**
+
 - Separate validation from logic changes
 - Separate cleanup from new functionality
 - Separate guards from state resets
 
 **By File (when independent):**
+
 - Client changes in one commit
 - Server changes in another
 - Only if they can work independently
 
 **By Layer:**
+
 - Data model changes first
 - API changes second
 - UI changes last
 
 **Ask yourself:**
+
 1. Can this commit be split further?
 2. Does each piece make sense alone?
 3. Would each piece pass tests independently?
@@ -180,6 +195,7 @@ commit 4: fix: reset building piles and game flags on start (+4 lines)
 If yes to all three, split it!
 
 **Remember:** There's no such thing as "too many commits" as long as each one is meaningful and atomic. Small commits are easier to:
+
 - Review
 - Understand
 - Revert if needed

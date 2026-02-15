@@ -43,7 +43,7 @@ function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -52,24 +52,17 @@ function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
     return msg.stablePlayerId === stablePlayerId;
   };
 
-  const unreadCount = messages.filter(msg =>
-    !msg.read && !isOwnMessage(msg)
-  ).length;
+  const unreadCount = messages.filter((msg) => !msg.read && !isOwnMessage(msg)).length;
 
   return (
     <div className={`chat-container ${isExpanded ? 'expanded' : 'collapsed'}`}>
-      <div
-        className="chat-header"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
+      <div className="chat-header" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="chat-header-content">
           <span className="chat-icon">💬</span>
           <span className="chat-title">Chat</span>
           <span className="toggle-icon">{isExpanded ? '▼' : '▲'}</span>
         </div>
-        {unreadCount > 0 && (
-          <span className="unread-badge">{unreadCount}</span>
-        )}
+        {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
       </div>
 
       {isExpanded && (
@@ -104,11 +97,7 @@ function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
               maxLength={200}
               className="chat-input"
             />
-            <button
-              type="submit"
-              className="chat-send-button"
-              disabled={!inputMessage.trim()}
-            >
+            <button type="submit" className="chat-send-button" disabled={!inputMessage.trim()}>
               Send
             </button>
           </form>
