@@ -62,14 +62,22 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 
 ## Code Style
 
-### JavaScript/React
+Code formatting and linting are enforced automatically. You do not need to memorize style rules — the tooling handles it.
 
-- Use **2 spaces** for indentation
-- Use **camelCase** for variable and function names
-- Use **PascalCase** for component names
-- Add comments for complex logic
-- Keep functions small and focused
-- Avoid deep nesting
+- **Prettier** formats all JS, CSS, JSON, and Markdown files on commit
+- **ESLint** catches code quality issues on commit and in CI
+- A **pre-commit hook** (husky + lint-staged) runs both tools on staged files
+- **GitHub Actions CI** blocks PRs that fail formatting or lint checks
+
+Run checks manually before pushing if you prefer:
+
+```bash
+npx prettier --check .             # verify formatting
+cd client && npx eslint src/       # lint client code
+cd server && npx eslint .          # lint server code
+```
+
+See [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md) for the full ruleset reference.
 
 ### File Organization
 
