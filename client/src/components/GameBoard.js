@@ -26,6 +26,7 @@ function GameBoard({
     const saved = localStorage.getItem('skipBoQuickDiscard');
     return saved === 'true';
   });
+  const [copySuccess, setCopySuccess] = useState(false);
 
   if (!gameState) {
     return <div className="loading">Loading game...</div>;
@@ -115,6 +116,16 @@ function GameBoard({
 
   const shareableLink = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
 
+  const copyLinkToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareableLink);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err); // eslint-disable-line no-console
+    }
+  };
+
   if (!gameState.gameStarted) {
     return (
       <div className="waiting-room">
@@ -129,6 +140,9 @@ function GameBoard({
             className="shareable-link-input"
             onClick={(e) => e.target.select()}
           />
+          <button onClick={copyLinkToClipboard} className="btn-copy">
+            {copySuccess ? '✓ Copied!' : 'Copy Link'}
+          </button>
         </div>
 
         <p className="or-text">
