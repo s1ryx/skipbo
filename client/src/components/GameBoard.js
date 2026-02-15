@@ -26,6 +26,7 @@ function GameBoard({
     const saved = localStorage.getItem('skipBoQuickDiscard');
     return saved === 'true';
   });
+  const [copySuccess, setCopySuccess] = useState(false);
 
   if (!gameState) {
     return <div className="loading">Loading game...</div>;
@@ -113,11 +114,40 @@ function GameBoard({
     return lastCard === 12 ? null : lastCard + 1;
   };
 
+  const shareableLink = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+
+  const copyLinkToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareableLink);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err); // eslint-disable-line no-console
+    }
+  };
+
   if (!gameState.gameStarted) {
     return (
       <div className="waiting-room">
         <h2>Room: {roomId}</h2>
-        <p>Share this room ID with your friends!</p>
+        <p>Share this link with your friends to join!</p>
+
+        <div className="shareable-link-container">
+          <input
+            type="text"
+            value={shareableLink}
+            readOnly
+            className="shareable-link-input"
+            onClick={(e) => e.target.select()}
+          />
+          <button onClick={copyLinkToClipboard} className="btn-copy">
+            {copySuccess ? '✓ Copied!' : 'Copy Link'}
+          </button>
+        </div>
+
+        <p className="or-text">
+          Or share the room code: <strong>{roomId}</strong>
+        </p>
 
         <div className="players-waiting">
           <h3>
