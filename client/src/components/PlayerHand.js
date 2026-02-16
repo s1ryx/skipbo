@@ -1,11 +1,13 @@
 import React from 'react';
 import Card from './Card';
 import './PlayerHand.css';
+import { useTranslation } from '../i18n';
 
 function PlayerHand({ hand, selectedCard, selectedSource, onCardSelect, disabled }) {
+  const { t } = useTranslation();
   return (
     <div className="player-hand">
-      <div className="hand-label">Your Hand</div>
+      <div className="hand-label">{t('hand.title')}</div>
       <div className="hand-cards">
         {hand && hand.length > 0 ? (
           hand.map((card, index) => (
@@ -18,7 +20,7 @@ function PlayerHand({ hand, selectedCard, selectedSource, onCardSelect, disabled
             </div>
           ))
         ) : (
-          <div className="empty-hand">No cards in hand</div>
+          <div className="empty-hand">{t('hand.empty')}</div>
         )}
       </div>
     </div>

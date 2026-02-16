@@ -1,7 +1,9 @@
 import React from 'react';
 import './Card.css';
+import { useTranslation } from '../i18n';
 
 function Card({ value, isVisible, size = 'normal' }) {
+  const { t } = useTranslation();
   const displayValue = value === 'SKIP-BO' ? 'SB' : value;
 
   // Determine color class based on value
@@ -21,7 +23,7 @@ function Card({ value, isVisible, size = 'normal' }) {
           <div className="card-corner card-corner-top">{displayValue}</div>
           <div className="card-value-center">{displayValue}</div>
           <div className="card-corner card-corner-bottom">{displayValue}</div>
-          {value === 'SKIP-BO' && <div className="wild-indicator">WILD</div>}
+          {value === 'SKIP-BO' && <div className="wild-indicator">{t('card.wild')}</div>}
         </div>
       ) : (
         <div className="card-back">

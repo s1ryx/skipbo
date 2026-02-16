@@ -3,6 +3,7 @@ import './GameBoard.css';
 import Card from './Card';
 import PlayerHand from './PlayerHand';
 import Chat from './Chat';
+import { useTranslation } from '../i18n';
 
 function GameBoard({
   gameState,
@@ -19,6 +20,7 @@ function GameBoard({
   onMarkMessagesRead,
   stablePlayerId,
 }) {
+  const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
   const [discardMode, setDiscardMode] = useState(false);
@@ -29,7 +31,7 @@ function GameBoard({
   const [copySuccess, setCopySuccess] = useState(false);
 
   if (!gameState) {
-    return <div className="loading">Loading game...</div>;
+    return <div className="loading">{t('game.loadingGame')}</div>;
   }
 
   const isMyTurn = gameState.currentPlayerId === playerId;
@@ -129,8 +131,8 @@ function GameBoard({
   if (!gameState.gameStarted) {
     return (
       <div className="waiting-room">
-        <h2>Room: {roomId}</h2>
-        <p>Share this link with your friends to join!</p>
+        <h2>{t('game.room', { roomId })}</h2>
+        <p>{t('game.shareLink')}</p>
 
         <div className="shareable-link-container">
           <input
@@ -141,22 +143,25 @@ function GameBoard({
             onClick={(e) => e.target.select()}
           />
           <button onClick={copyLinkToClipboard} className="btn-copy">
-            {copySuccess ? '✓ Copied!' : 'Copy Link'}
+            {copySuccess ? t('game.copied') : t('game.copyLink')}
           </button>
         </div>
 
         <p className="or-text">
-          Or share the room code: <strong>{roomId}</strong>
+          {t('game.orShareCode')} <strong>{roomId}</strong>
         </p>
 
         <div className="players-waiting">
           <h3>
-            Players ({gameState.players.length}/{gameState.players.length}):
+            {t('game.playersCount', {
+              current: gameState.players.length,
+              max: gameState.players.length,
+            })}
           </h3>
           <ul>
             {gameState.players.map((player) => (
               <li key={player.id}>
-                {player.name} {player.id === playerId ? '(You)' : ''}
+                {player.name} {player.id === playerId ? t('game.you') : ''}
               </li>
             ))}
           </ul>
@@ -164,11 +169,11 @@ function GameBoard({
 
         {gameState.players.length >= 2 && (
           <button onClick={onStartGame} className="btn-primary">
-            Start Game
+            {t('game.startGame')}
           </button>
         )}
 
-        {gameState.players.length < 2 && <p>Waiting for more players to join...</p>}
+        {gameState.players.length < 2 && <p>{t('game.waitingForPlayers')}</p>}
       </div>
     );
   }
@@ -176,18 +181,18 @@ function GameBoard({
   return (
     <div className="game-board">
       <div className="game-header">
-        <h3>Room: {roomId}</h3>
+        <h3>{t('game.room', { roomId })}</h3>
         <div className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
-          {isMyTurn ? 'Your Turn!' : 'Waiting for other player...'}
+          {isMyTurn ? t('game.yourTurn') : t('game.waitingTurn')}
         </div>
         <button onClick={onLeaveGame} className="btn-leave-game">
-          Leave Game
+          {t('game.leaveGame')}
         </button>
         {discardMode && (
           <div className="discard-instruction">
-            Click on one of your discard piles to end your turn
+            {t('game.discardInstruction')}
             <button onClick={handleCancelDiscard} className="btn-cancel-discard">
-              Cancel
+              {t('game.cancel')}
             </button>
           </div>
         )}
@@ -204,18 +209,20 @@ function GameBoard({
             >
               <h4>
                 {player.name}
-                {gameState.currentPlayerId === player.id && ' (Playing)'}
+                {gameState.currentPlayerId === player.id && ' ' + t('game.playing')}
                 {player.disconnected && (
-                  <span className="disconnected-indicator"> (Disconnected)</span>
+                  <span className="disconnected-indicator"> {t('game.disconnected')}</span>
                 )}
               </h4>
               <div className="opponent-cards">
                 <div className="card-pile">
-                  <div className="pile-label">Stockpile: {player.stockpileCount}</div>
+                  <div className="pile-label">
+                    {t('game.stockpile', { count: player.stockpileCount })}
+                  </div>
                   {player.stockpileTop && <Card value={player.stockpileTop} isVisible={true} />}
                 </div>
                 <div className="card-pile">
-                  <div className="pile-label">Hand: {player.handCount}</div>
+                  <div className="pile-label">{t('game.hand', { count: player.handCount })}</div>
                   <div className="opponent-hand-stack">
                     {Array.from({ length: Math.min(player.handCount, 5) }).map((_, idx) => (
                       <div
@@ -231,7 +238,9 @@ function GameBoard({
                 <div className="discard-piles-opponent">
                   {player.discardPiles.map((pile, idx) => (
                     <div key={idx} className="card-pile-small">
-                      <div className="pile-label-small">D{idx + 1}</div>
+                      <div className="pile-label-small">
+                        {t('game.discardShort', { index: idx + 1 })}
+                      </div>
                       {pile.length > 0 ? (
                         <div className="discard-pile-stack-small">
                           {pile.map((card, cardIndex) => (
@@ -257,7 +266,7 @@ function GameBoard({
 
       {/* Building Piles (Center) */}
       <div className="building-piles">
-        <h3>Building Piles</h3>
+        <h3>{t('game.buildingPiles')}</h3>
         <div className="piles-container">
           {gameState.buildingPiles.map((pile, index) => (
             <div
@@ -266,21 +275,23 @@ function GameBoard({
               onClick={() => handleBuildingPileClick(index)}
             >
               <div className="pile-info">
-                Pile {index + 1}
+                {t('game.pile', { index: index + 1 })}
                 {pile.length > 0 && (
-                  <span className="next-card">Next: {getNextCardForPile(pile) || 'Complete'}</span>
+                  <span className="next-card">
+                    {getNextCardForPile(pile)
+                      ? t('game.nextCard', { value: getNextCardForPile(pile) })
+                      : t('game.pileComplete')}
+                  </span>
                 )}
               </div>
               {pile.length > 0 ? (
                 <div className="pile-stack">
                   <Card value={pile[pile.length - 1]} isVisible={true} />
-                  <div className="pile-count">
-                    {pile.length} {pile.length === 1 ? 'card' : 'cards'}
-                  </div>
+                  <div className="pile-count">{t('game.cards', { count: pile.length })}</div>
                 </div>
               ) : (
                 <div className="empty-pile">
-                  <div className="empty-pile-text">Start with 1</div>
+                  <div className="empty-pile-text">{t('game.startWith1')}</div>
                 </div>
               )}
             </div>
@@ -291,12 +302,14 @@ function GameBoard({
       {/* Current Player Area */}
       {playerState && (
         <div className={`player-area ${!isMyTurn ? 'inactive' : ''}`}>
-          <h3>Your Area</h3>
+          <h3>{t('game.yourArea')}</h3>
 
           <div className="player-piles">
             {/* Stockpile */}
             <div className="stockpile-section">
-              <div className="pile-label">Your Stockpile ({playerState.stockpile.length})</div>
+              <div className="pile-label">
+                {t('game.yourStockpile', { count: playerState.stockpile.length })}
+              </div>
               {playerState.stockpileTop ? (
                 <div
                   className={`card-clickable ${selectedCard === playerState.stockpileTop && selectedSource === 'stockpile' ? 'selected' : ''}`}
@@ -305,13 +318,13 @@ function GameBoard({
                   <Card value={playerState.stockpileTop} isVisible={true} />
                 </div>
               ) : (
-                <div className="empty-message">Empty! You win!</div>
+                <div className="empty-message">{t('game.emptyWin')}</div>
               )}
             </div>
 
             {/* Discard Piles */}
             <div className="discard-piles-section">
-              <div className="pile-label">Your Discard Piles</div>
+              <div className="pile-label">{t('game.yourDiscardPiles')}</div>
               <div className="discard-piles-container">
                 {playerState.discardPiles.map((pile, index) => (
                   <div
@@ -319,7 +332,7 @@ function GameBoard({
                     className={`discard-pile ${discardMode ? 'discard-mode' : ''}`}
                     onClick={() => handleDiscardPileClick(index)}
                   >
-                    <div className="pile-label-small">Pile {index + 1}</div>
+                    <div className="pile-label-small">{t('game.pile', { index: index + 1 })}</div>
                     {pile.length > 0 ? (
                       <div className="discard-pile-stack">
                         {pile.map((card, cardIndex) => (
@@ -350,7 +363,7 @@ function GameBoard({
                       </div>
                     ) : (
                       <div className="empty-pile-small">
-                        {discardMode ? 'Click to discard' : 'Empty'}
+                        {discardMode ? t('game.clickToDiscard') : t('game.empty')}
                       </div>
                     )}
                   </div>
@@ -372,19 +385,19 @@ function GameBoard({
           <div className="actions">
             {isMyTurn && !discardMode && (
               <button onClick={handleEndTurn} className="btn-end-turn">
-                End Turn (Discard a Card)
+                {t('game.endTurn')}
               </button>
             )}
             {selectedCard && (
               <div className="selected-card-info">
-                Selected: <Card value={selectedCard} isVisible={true} size="small" />
+                {t('game.selected')} <Card value={selectedCard} isVisible={true} size="small" />
                 <button
                   onClick={() => {
                     setSelectedCard(null);
                     setSelectedSource(null);
                   }}
                 >
-                  Cancel
+                  {t('game.cancel')}
                 </button>
               </div>
             )}
@@ -395,7 +408,7 @@ function GameBoard({
                   checked={quickDiscardEnabled}
                   onChange={toggleQuickDiscard}
                 />
-                Quick Discard (click discard pile with selected card)
+                {t('game.quickDiscard')}
               </label>
             </div>
           </div>
@@ -405,8 +418,8 @@ function GameBoard({
       {gameState.gameOver && (
         <div className="game-over-overlay">
           <div className="game-over-message">
-            <h2>Game Over!</h2>
-            <p>Winner: {gameState.winner?.name}</p>
+            <h2>{t('game.gameOver')}</h2>
+            <p>{t('game.winner', { name: gameState.winner?.name })}</p>
           </div>
         </div>
       )}
