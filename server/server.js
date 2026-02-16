@@ -331,6 +331,43 @@ io.on('connection', (socket) => {
     console.log(`Chat message in room ${roomId} from ${player.name}: ${message}`);
   });
 
+  // Handle leave lobby (pre-game only — removes the player without aborting)
+  socket.on('leaveLobby', () => {
+    const roomId = playerRooms.get(socket.id);
+    if (!roomId) return;
+
+    const game = games.get(roomId);
+    if (!game || game.gameStarted) return;
+
+    console.log(`Player ${socket.id} is leaving lobby ${roomId}`);
+
+    game.removePlayer(socket.id);
+    socket.leave(roomId);
+    playerRooms.delete(socket.id);
+
+    if (game.players.length === 0) {
+      if (pendingDeletions.size >= MAX_PENDING_ROOMS) {
+        games.delete(roomId);
+        console.log(`Empty lobby ${roomId} deleted immediately (pending limit reached)`);
+      } else {
+        const timeoutId = setTimeout(() => {
+          games.delete(roomId);
+          pendingDeletions.delete(roomId);
+          console.log(`Empty lobby ${roomId} deleted after grace period`);
+        }, LOBBY_GRACE_PERIOD_MS);
+        pendingDeletions.set(roomId, timeoutId);
+        console.log(
+          `Empty lobby ${roomId} scheduled for deletion in ${LOBBY_GRACE_PERIOD_MS / 1000}s`
+        );
+      }
+    } else {
+      io.to(roomId).emit('playerLeft', {
+        playerId: socket.id,
+        gameState: game.getGameState(),
+      });
+    }
+  });
+
   // Handle leave game
   socket.on('leaveGame', () => {
     console.log(`Player ${socket.id} is leaving the game`);
