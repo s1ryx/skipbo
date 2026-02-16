@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "keywords": [
     "skip-bo",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "eslint": "^8.57.0",
+    "jest": "^30.2.0",
     "nodemon": "^3.0.1"
   }
 }
