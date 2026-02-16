@@ -134,6 +134,11 @@ function App() {
       }
     });
 
+    newSocket.on('playerLeft', ({ gameState }) => {
+      console.log('Player left lobby');
+      setGameState(gameState);
+    });
+
     newSocket.on('reconnected', ({ roomId, playerId, gameState, playerState }) => {
       console.log('Successfully reconnected to room:', roomId);
       setRoomId(roomId);
