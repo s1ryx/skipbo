@@ -134,6 +134,11 @@ function App() {
       }
     });
 
+    newSocket.on('playerLeft', ({ gameState }) => {
+      console.log('Player left lobby');
+      setGameState(gameState);
+    });
+
     newSocket.on('reconnected', ({ roomId, playerId, gameState, playerState }) => {
       console.log('Successfully reconnected to room:', roomId);
       setRoomId(roomId);
@@ -278,6 +283,17 @@ function App() {
     }
   };
 
+  const leaveLobby = () => {
+    if (socket) {
+      socket.emit('leaveLobby');
+      localStorage.removeItem('skipBoSession');
+      setGameState(null);
+      setPlayerState(null);
+      setRoomId(null);
+      setInLobby(true);
+    }
+  };
+
   const leaveGame = () => {
     if (socket) {
       // Clear chat messages from localStorage before leaving
@@ -318,6 +334,7 @@ function App() {
           onPlayCard={playCard}
           onDiscardCard={discardCard}
           onEndTurn={endTurn}
+          onLeaveLobby={leaveLobby}
           onLeaveGame={leaveGame}
           chatMessages={chatMessages}
           onSendChatMessage={sendChatMessage}

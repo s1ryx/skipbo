@@ -53,6 +53,15 @@ class SkipBoGame {
     return true;
   }
 
+  removePlayer(playerId) {
+    const index = this.players.findIndex((p) => p.id === playerId);
+    if (index === -1) {
+      return false;
+    }
+    this.players.splice(index, 1);
+    return true;
+  }
+
   startGame() {
     if (this.players.length < 2) {
       return false;
