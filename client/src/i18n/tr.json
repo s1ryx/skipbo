@@ -37,6 +37,8 @@
   "game.yourTurn": "Sıra Sende!",
   "game.waitingTurn": "Diğer oyuncu bekleniyor...",
   "game.leaveGame": "Oyundan Ayrıl",
+  "game.leaveConfirm": "Oyundan ayrılmak istediğine emin misin?",
+  "game.leaveYes": "Ayrıl",
   "game.discardInstruction": "Sıranı bitirmek için seçtiğin kartı ıskartaya çıkar",
   "game.playing": "(Oynuyor)",
   "game.disconnected": "(Bağlantı Kesildi)",
