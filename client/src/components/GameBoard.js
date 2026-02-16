@@ -29,6 +29,7 @@ function GameBoard({
     return saved === 'true';
   });
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   if (!gameState) {
     return <div className="loading">{t('game.loadingGame')}</div>;
@@ -185,7 +186,7 @@ function GameBoard({
         <div className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
           {isMyTurn ? t('game.yourTurn') : t('game.waitingTurn')}
         </div>
-        <button onClick={onLeaveGame} className="btn-leave-game">
+        <button onClick={() => setShowLeaveConfirm(true)} className="btn-leave-game">
           {t('game.leaveGame')}
         </button>
         {discardMode && (
@@ -410,6 +411,22 @@ function GameBoard({
                 />
                 {t('game.quickDiscard')}
               </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveConfirm && (
+        <div className="leave-confirm-overlay">
+          <div className="leave-confirm-dialog">
+            <p>{t('game.leaveConfirm')}</p>
+            <div className="leave-confirm-buttons">
+              <button onClick={onLeaveGame} className="btn-leave-confirm">
+                {t('game.leaveYes')}
+              </button>
+              <button onClick={() => setShowLeaveConfirm(false)} className="btn-leave-cancel">
+                {t('game.cancel')}
+              </button>
             </div>
           </div>
         </div>

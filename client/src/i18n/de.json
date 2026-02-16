@@ -37,6 +37,8 @@
   "game.yourTurn": "Du bist dran!",
   "game.waitingTurn": "Warte auf anderen Spieler...",
   "game.leaveGame": "Spiel verlassen",
+  "game.leaveConfirm": "Möchtest du das Spiel wirklich verlassen?",
+  "game.leaveYes": "Verlassen",
   "game.discardInstruction": "Lege eine Karte auf einen deiner Hilfsstapel ab, um deinen Zug zu beenden",
   "game.playing": "(Spielt)",
   "game.disconnected": "(Getrennt)",
