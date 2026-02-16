@@ -184,19 +184,15 @@ function GameBoard({
       <div className="game-header">
         <h3>{t('game.room', { roomId })}</h3>
         <div className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
-          {isMyTurn ? t('game.yourTurn') : t('game.waitingTurn')}
+          {isMyTurn
+            ? discardMode
+              ? t('game.discardInstruction')
+              : t('game.yourTurn')
+            : t('game.waitingTurn')}
         </div>
         <button onClick={() => setShowLeaveConfirm(true)} className="btn-leave-game">
           {t('game.leaveGame')}
         </button>
-        {discardMode && (
-          <div className="discard-instruction">
-            {t('game.discardInstruction')}
-            <button onClick={handleCancelDiscard} className="btn-cancel-discard">
-              {t('game.cancel')}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Other Players */}
@@ -387,6 +383,11 @@ function GameBoard({
             {isMyTurn && !discardMode && (
               <button onClick={handleEndTurn} className="btn-end-turn">
                 {t('game.endTurn')}
+              </button>
+            )}
+            {isMyTurn && discardMode && (
+              <button onClick={handleCancelDiscard} className="btn-cancel-discard">
+                {t('game.cancel')}
               </button>
             )}
             {selectedCard && (
