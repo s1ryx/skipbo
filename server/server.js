@@ -109,6 +109,36 @@ io.on('connection', (socket) => {
     const player = game.players.find((p) => p.id === oldPlayerId);
 
     if (!player) {
+      // Player was removed (e.g. lobby disconnect) — rejoin if game hasn't started
+      if (!game.gameStarted) {
+        const added = game.addPlayer(socket.id, playerName);
+        if (!added) {
+          socket.emit('reconnectFailed', { message: 'error.roomFull' });
+          return;
+        }
+
+        playerRooms.set(socket.id, roomId);
+        socket.join(roomId);
+
+        // Send reconnected to the rejoining player (restores lobby view)
+        socket.emit('reconnected', {
+          roomId,
+          playerId: socket.id,
+          gameState: game.getGameState(),
+          playerState: game.getPlayerState(socket.id),
+        });
+
+        // Notify other players in the room
+        socket.to(roomId).emit('playerJoined', {
+          playerId: socket.id,
+          playerName,
+          gameState: game.getGameState(),
+        });
+
+        console.log(`${playerName} rejoined lobby: ${roomId}`);
+        return;
+      }
+
       socket.emit('reconnectFailed', { message: 'error.playerNotFound' });
       return;
     }
