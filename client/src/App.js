@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 import './App.css';
 import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
+import { useTranslation } from './i18n';
 
 // When REACT_APP_SERVER_URL is not set or empty, use undefined to connect to same origin
 // This allows Socket.IO to connect to the domain where the app is hosted
@@ -27,6 +28,7 @@ const getStablePlayerId = () => {
 };
 
 function App() {
+  const { t, language, setLanguage, supportedLanguages } = useTranslation();
   const [socket, setSocket] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [playerState, setPlayerState] = useState(null);
@@ -299,10 +301,10 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Skip-Bo Card Game</h1>
+        <h1>{t('app.title')}</h1>
       </header>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="error-message">{t(error)}</div>}
 
       {inLobby ? (
         <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} initialRoomId={roomIdFromUrl} />
@@ -329,6 +331,17 @@ function App() {
           v{VERSION}
           {COMMIT_HASH && ` (${COMMIT_HASH})`}
         </span>
+        <select
+          className="language-selector"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+        >
+          {supportedLanguages.map((lang) => (
+            <option key={lang} value={lang}>
+              {t(`language.${lang}`)}
+            </option>
+          ))}
+        </select>
       </footer>
     </div>
   );
