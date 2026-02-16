@@ -30,6 +30,10 @@ app.get('/health', (req, res) => {
 // Store active games
 const games = new Map();
 const playerRooms = new Map(); // Track which room each player is in
+const pendingDeletions = new Map(); // roomId → timeoutId for grace period cleanup
+
+const LOBBY_GRACE_PERIOD_MS = 30000; // 30 seconds before deleting empty lobbies
+const MAX_PENDING_ROOMS = 50; // Cap to prevent abuse from abandoned rooms
 
 io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
@@ -62,6 +66,8 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'error.roomNotFound' });
       return;
     }
+
+    cancelPendingDeletion(roomId);
 
     if (game.gameStarted) {
       socket.emit('error', { message: 'error.gameAlreadyStarted' });
@@ -97,10 +103,42 @@ io.on('connection', (socket) => {
       return;
     }
 
+    cancelPendingDeletion(roomId);
+
     // Find the player by old ID
     const player = game.players.find((p) => p.id === oldPlayerId);
 
     if (!player) {
+      // Player was removed (e.g. lobby disconnect) — rejoin if game hasn't started
+      if (!game.gameStarted) {
+        const added = game.addPlayer(socket.id, playerName);
+        if (!added) {
+          socket.emit('reconnectFailed', { message: 'error.roomFull' });
+          return;
+        }
+
+        playerRooms.set(socket.id, roomId);
+        socket.join(roomId);
+
+        // Send reconnected to the rejoining player (restores lobby view)
+        socket.emit('reconnected', {
+          roomId,
+          playerId: socket.id,
+          gameState: game.getGameState(),
+          playerState: game.getPlayerState(socket.id),
+        });
+
+        // Notify other players in the room
+        socket.to(roomId).emit('playerJoined', {
+          playerId: socket.id,
+          playerName,
+          gameState: game.getGameState(),
+        });
+
+        console.log(`${playerName} rejoined lobby: ${roomId}`);
+        return;
+      }
+
       socket.emit('reconnectFailed', { message: 'error.playerNotFound' });
       return;
     }
@@ -293,6 +331,43 @@ io.on('connection', (socket) => {
     console.log(`Chat message in room ${roomId} from ${player.name}: ${message}`);
   });
 
+  // Handle leave lobby (pre-game only — removes the player without aborting)
+  socket.on('leaveLobby', () => {
+    const roomId = playerRooms.get(socket.id);
+    if (!roomId) return;
+
+    const game = games.get(roomId);
+    if (!game || game.gameStarted) return;
+
+    console.log(`Player ${socket.id} is leaving lobby ${roomId}`);
+
+    game.removePlayer(socket.id);
+    socket.leave(roomId);
+    playerRooms.delete(socket.id);
+
+    if (game.players.length === 0) {
+      if (pendingDeletions.size >= MAX_PENDING_ROOMS) {
+        games.delete(roomId);
+        console.log(`Empty lobby ${roomId} deleted immediately (pending limit reached)`);
+      } else {
+        const timeoutId = setTimeout(() => {
+          games.delete(roomId);
+          pendingDeletions.delete(roomId);
+          console.log(`Empty lobby ${roomId} deleted after grace period`);
+        }, LOBBY_GRACE_PERIOD_MS);
+        pendingDeletions.set(roomId, timeoutId);
+        console.log(
+          `Empty lobby ${roomId} scheduled for deletion in ${LOBBY_GRACE_PERIOD_MS / 1000}s`
+        );
+      }
+    } else {
+      io.to(roomId).emit('playerLeft', {
+        playerId: socket.id,
+        gameState: game.getGameState(),
+      });
+    }
+  });
+
   // Handle leave game
   socket.on('leaveGame', () => {
     console.log(`Player ${socket.id} is leaving the game`);
@@ -310,6 +385,7 @@ io.on('connection', (socket) => {
         });
 
         // Delete the game
+        cancelPendingDeletion(roomId);
         games.delete(roomId);
 
         console.log(`Game in room ${roomId} has been aborted`);
@@ -325,14 +401,38 @@ io.on('connection', (socket) => {
     if (roomId) {
       const game = games.get(roomId);
       if (game) {
-        // Notify other players
-        io.to(roomId).emit('playerDisconnected', {
-          playerId: socket.id,
-        });
-
-        // If game hasn't started, remove the game
         if (!game.gameStarted) {
-          games.delete(roomId);
+          // Pre-game lobby: remove only the disconnected player
+          game.removePlayer(socket.id);
+          if (game.players.length === 0) {
+            // Schedule deletion after grace period (allows app-switch reconnection)
+            if (pendingDeletions.size >= MAX_PENDING_ROOMS) {
+              // Too many pending rooms — delete immediately to prevent abuse
+              games.delete(roomId);
+              console.log(`Empty lobby ${roomId} deleted immediately (pending limit reached)`);
+            } else {
+              const timeoutId = setTimeout(() => {
+                games.delete(roomId);
+                pendingDeletions.delete(roomId);
+                console.log(`Empty lobby ${roomId} deleted after grace period`);
+              }, LOBBY_GRACE_PERIOD_MS);
+              pendingDeletions.set(roomId, timeoutId);
+              console.log(
+                `Empty lobby ${roomId} scheduled for deletion in ${LOBBY_GRACE_PERIOD_MS / 1000}s`
+              );
+            }
+          } else {
+            // Notify remaining players
+            io.to(roomId).emit('playerLeft', {
+              playerId: socket.id,
+              gameState: game.getGameState(),
+            });
+          }
+        } else {
+          // Mid-game: notify others, allow reconnection
+          io.to(roomId).emit('playerDisconnected', {
+            playerId: socket.id,
+          });
         }
       }
 
@@ -340,6 +440,16 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// Cancel a pending lobby deletion (e.g. when a player joins before the grace period expires)
+function cancelPendingDeletion(roomId) {
+  const timeoutId = pendingDeletions.get(roomId);
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+    pendingDeletions.delete(roomId);
+    console.log(`Cancelled pending deletion for lobby ${roomId}`);
+  }
+}
 
 // Helper function to generate random room ID
 // Uses only easily distinguishable characters to avoid confusion
