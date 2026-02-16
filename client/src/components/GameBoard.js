@@ -14,6 +14,7 @@ function GameBoard({
   onPlayCard,
   onDiscardCard,
   onEndTurn, // eslint-disable-line no-unused-vars
+  onLeaveLobby,
   onLeaveGame,
   chatMessages,
   onSendChatMessage,
@@ -174,6 +175,10 @@ function GameBoard({
         )}
 
         {gameState.players.length < 2 && <p>{t('game.waitingForPlayers')}</p>}
+
+        <button onClick={onLeaveLobby} className="btn-leave-lobby">
+          {t('game.leaveGame')}
+        </button>
       </div>
     );
   }
