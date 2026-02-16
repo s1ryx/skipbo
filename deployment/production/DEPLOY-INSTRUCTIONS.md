@@ -1,22 +1,16 @@
-# Deployment Instructions for example.com
+# Production Deployment Instructions
 
 ## Overview
 
-This directory contains configuration files for deploying Skip-Bo to example.com with HTTPS.
+Deploy Skip-Bo with automatic HTTPS using Docker and Caddy. Caddy handles LetsEncrypt certificate provisioning and renewal automatically.
 
-## Files
+## Prerequisites
 
-- `docker-compose.override.yml` - Overrides for HTTPS and certificate mounting
-- `nginx-https.conf` - HTTPS nginx configuration with LetsEncrypt
-- `deploy-to-server.sh` - Automated deployment script
+- A server with Docker and Docker Compose installed
+- A domain name with DNS A record pointing to the server's IP
+- Ports 80 and 443 open (required for LetsEncrypt HTTP challenge)
 
-## Prerequisites on Server
-
-- Docker and Docker Compose installed
-- LetsEncrypt certificate at `/etc/letsencrypt/live/example.com/`
-- Ports 80 and 443 available (bare metal nginx will be stopped)
-
-## Deployment Steps
+## Quick Start
 
 ### 1. Clone the repository
 
@@ -24,104 +18,104 @@ This directory contains configuration files for deploying Skip-Bo to example.com
 git clone https://github.com/your-org/skip-bo-game.git
 cd skip-bo-game
 
-# Copy override file to docker directory
-cp deployment/production/docker-compose.override.yml deployment/docker/
+# Option A: Run the deploy script (prompts for domain and email)
+chmod +x deployment/deploy.sh
+./deployment/deploy.sh
 
-# Make deploy script executable
-chmod +x deployment/production/deploy-to-server.sh
-
-# Run deployment
-./deployment/production/deploy-to-server.sh
+# Option B: Manual setup
+cd deployment/docker
+cp .env.example .env
+# Edit .env with your domain and email
+REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD) docker compose build
+docker compose up -d
 ```
 
-### 2. Manual deployment (alternative)
+That's it. Caddy will automatically obtain a LetsEncrypt certificate on the first request.
 
-If you prefer manual control:
+### 2. Verify
 
 ```bash
-# Stop nginx
-sudo systemctl stop nginx
+# Check service status
+docker compose ps
 
-# Navigate to deployment directory
-cd deployment/docker
+# View logs
+docker compose logs -f
 
-# Copy override file
-cp ../production/docker-compose.override.yml ./
-
-# Build and start (commit hash is shown in the game footer)
-REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD) docker-compose build
-docker-compose up -d
-
-# Check status
-docker-compose ps
-docker-compose logs -f
+# Test HTTPS
+curl -I https://your-domain.com/health
 ```
 
-## Testing
+## Configuration
 
-1. Visit https://example.com
-2. Create a game room
-3. Test WebSocket connection (check browser console)
-4. Join from another device/browser
+The only file you need to edit is `deployment/docker/.env`:
+
+```env
+DOMAIN=skipbo.example.com
+ACME_EMAIL=admin@example.com
+```
+
+## Architecture
+
+```
+Port 80  → Caddy → HTTP to HTTPS redirect
+Port 443 → Caddy → /              → client:80 (React app)
+                  → /socket.io/   → server:3001 (WebSocket)
+                  → /api/*        → server:3001 (REST API, /api/ prefix stripped)
+                  → /health       → 200 OK
+```
 
 ## Troubleshooting
 
 **View logs:**
 
 ```bash
-docker-compose logs -f nginx
-docker-compose logs -f server
-docker-compose logs -f client
+docker compose logs -f caddy
+docker compose logs -f server
+docker compose logs -f client
 ```
 
-**Check container health:**
+**Certificate issues:**
 
-```bash
-docker-compose ps
-```
+Caddy obtains certificates automatically. If it fails:
 
-**Test nginx config:**
-
-```bash
-docker-compose exec nginx nginx -t
-```
+- Verify DNS A record points to this server: `dig your-domain.com`
+- Ensure ports 80 and 443 are open and not used by another process
+- Check Caddy logs: `docker compose logs caddy`
+- Caddy retries automatically with backoff if the first attempt fails
 
 **WebSocket not connecting:**
 
 - Check browser console for errors
-- Verify CORS_ORIGIN in docker-compose.override.yml
-- Check nginx logs: `docker-compose logs nginx`
-
-**SSL errors:**
-
-- Verify certificate path: `ls -la /etc/letsencrypt/live/example.com/`
-- Check certificate permissions
-- Ensure certificate is not expired
+- Verify CORS_ORIGIN matches your domain in `docker compose config`
+- Check Caddy logs for proxy errors
 
 **Stale build after code changes:**
 
 Docker layer caching correctly invalidates when source files change,
-so a normal `docker-compose build` is sufficient after `git pull`.
+so a normal `docker compose build` is sufficient after `git pull`.
 If you suspect a stale cache, force a clean rebuild:
 
 ```bash
-docker-compose build --no-cache
+docker compose build --no-cache
 ```
 
-## Rollback
-
-To restore bare metal nginx:
+## Useful Commands
 
 ```bash
-docker-compose down
-sudo systemctl start nginx
+docker compose ps          # Service status
+docker compose logs -f     # Follow all logs
+docker compose restart     # Restart services
+docker compose down        # Stop all services
+docker compose up -d       # Start services
+docker compose build       # Rebuild images
 ```
 
-## Port Mapping
+## Updating
 
-- Port 80: HTTP → HTTPS redirect
-- Port 443: HTTPS traffic
-  - `/` → React client
-  - `/socket.io/` → WebSocket server
-  - `/api/` → REST API
-  - `/health` → Health check
+```bash
+cd /path/to/skip-bo-game
+git pull
+cd deployment/docker
+REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD) docker compose build
+docker compose up -d
+```
