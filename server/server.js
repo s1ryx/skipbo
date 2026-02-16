@@ -325,14 +325,24 @@ io.on('connection', (socket) => {
     if (roomId) {
       const game = games.get(roomId);
       if (game) {
-        // Notify other players
-        io.to(roomId).emit('playerDisconnected', {
-          playerId: socket.id,
-        });
-
-        // If game hasn't started, remove the game
         if (!game.gameStarted) {
-          games.delete(roomId);
+          // Pre-game lobby: remove only the disconnected player
+          game.removePlayer(socket.id);
+          if (game.players.length === 0) {
+            games.delete(roomId);
+            console.log(`Empty lobby ${roomId} deleted`);
+          } else {
+            // Notify remaining players
+            io.to(roomId).emit('playerLeft', {
+              playerId: socket.id,
+              gameState: game.getGameState(),
+            });
+          }
+        } else {
+          // Mid-game: notify others, allow reconnection
+          io.to(roomId).emit('playerDisconnected', {
+            playerId: socket.id,
+          });
         }
       }
 
