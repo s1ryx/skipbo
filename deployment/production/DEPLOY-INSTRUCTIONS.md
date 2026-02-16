@@ -60,8 +60,8 @@ cd deployment/docker
 # Copy override file
 cp ../production/docker-compose.override.yml ./
 
-# Build and start
-docker-compose build
+# Build and start (commit hash is shown in the game footer)
+REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD) docker-compose build
 docker-compose up -d
 
 # Check status

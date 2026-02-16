@@ -44,6 +44,9 @@ echo ""
 # Navigate to docker directory
 cd "$(dirname "$0")/docker"
 
+# Embed git commit hash in the client build (shown in footer)
+export REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
 # Build and start services
 echo "🏗️  Building Docker images (this may take a few minutes)..."
 docker-compose build
