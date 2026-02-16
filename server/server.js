@@ -30,6 +30,10 @@ app.get('/health', (req, res) => {
 // Store active games
 const games = new Map();
 const playerRooms = new Map(); // Track which room each player is in
+const pendingDeletions = new Map(); // roomId → timeoutId for grace period cleanup
+
+const LOBBY_GRACE_PERIOD_MS = 30000; // 30 seconds before deleting empty lobbies
+const MAX_PENDING_ROOMS = 50; // Cap to prevent abuse from abandoned rooms
 
 io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
@@ -62,6 +66,8 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'error.roomNotFound' });
       return;
     }
+
+    cancelPendingDeletion(roomId);
 
     if (game.gameStarted) {
       socket.emit('error', { message: 'error.gameAlreadyStarted' });
@@ -96,6 +102,8 @@ io.on('connection', (socket) => {
       socket.emit('reconnectFailed', { message: 'error.roomNoLongerExists' });
       return;
     }
+
+    cancelPendingDeletion(roomId);
 
     // Find the player by old ID
     const player = game.players.find((p) => p.id === oldPlayerId);
@@ -310,6 +318,7 @@ io.on('connection', (socket) => {
         });
 
         // Delete the game
+        cancelPendingDeletion(roomId);
         games.delete(roomId);
 
         console.log(`Game in room ${roomId} has been aborted`);
@@ -329,8 +338,22 @@ io.on('connection', (socket) => {
           // Pre-game lobby: remove only the disconnected player
           game.removePlayer(socket.id);
           if (game.players.length === 0) {
-            games.delete(roomId);
-            console.log(`Empty lobby ${roomId} deleted`);
+            // Schedule deletion after grace period (allows app-switch reconnection)
+            if (pendingDeletions.size >= MAX_PENDING_ROOMS) {
+              // Too many pending rooms — delete immediately to prevent abuse
+              games.delete(roomId);
+              console.log(`Empty lobby ${roomId} deleted immediately (pending limit reached)`);
+            } else {
+              const timeoutId = setTimeout(() => {
+                games.delete(roomId);
+                pendingDeletions.delete(roomId);
+                console.log(`Empty lobby ${roomId} deleted after grace period`);
+              }, LOBBY_GRACE_PERIOD_MS);
+              pendingDeletions.set(roomId, timeoutId);
+              console.log(
+                `Empty lobby ${roomId} scheduled for deletion in ${LOBBY_GRACE_PERIOD_MS / 1000}s`
+              );
+            }
           } else {
             // Notify remaining players
             io.to(roomId).emit('playerLeft', {
@@ -350,6 +373,16 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// Cancel a pending lobby deletion (e.g. when a player joins before the grace period expires)
+function cancelPendingDeletion(roomId) {
+  const timeoutId = pendingDeletions.get(roomId);
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+    pendingDeletions.delete(roomId);
+    console.log(`Cancelled pending deletion for lobby ${roomId}`);
+  }
+}
 
 // Helper function to generate random room ID
 // Uses only easily distinguishable characters to avoid confusion
