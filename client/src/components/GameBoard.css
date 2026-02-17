@@ -149,6 +149,8 @@
 .opponent-cards {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -178,7 +180,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 .card-in-hand {
@@ -214,7 +216,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 25px;
 }
 
 .card-in-pile-small {
@@ -233,7 +235,7 @@
   color: #999;
   text-align: center;
   padding: 5px;
-  margin-top: 10px;
+  margin-top: 25px;
 }
 
 .building-piles {
@@ -711,6 +713,15 @@
     height: 96px;
     font-size: 0.8rem;
   }
+
+  .opponent-hand-stack {
+    margin-top: 13px;
+  }
+
+  .discard-pile-stack-small,
+  .empty-pile-small {
+    margin-top: 18px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -812,6 +823,15 @@
     width: 60px;
     height: 82px;
     font-size: 0.75rem;
+  }
+
+  .opponent-hand-stack {
+    margin-top: 10px;
+  }
+
+  .discard-pile-stack-small,
+  .empty-pile-small {
+    margin-top: 15px;
   }
 }
 
