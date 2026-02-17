@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import GameBoard from './GameBoard';
 import { LanguageProvider } from '../i18n';
 
@@ -71,6 +71,73 @@ describe('GameBoard', () => {
     it('shows loading when gameState is null', () => {
       renderGameBoard({ gameState: null });
       expect(screen.getByText('Loading game...')).toBeInTheDocument();
+    });
+  });
+
+  describe('waiting room (game not started)', () => {
+    const waitingProps = {
+      gameState: makeGameState({ gameStarted: false }),
+      playerState: null,
+    };
+
+    it('renders room ID', () => {
+      renderGameBoard(waitingProps);
+      expect(screen.getByText('Room: TESTROOM')).toBeInTheDocument();
+    });
+
+    it('renders shareable link input', () => {
+      renderGameBoard(waitingProps);
+      const linkInput = screen.getByDisplayValue(/\?room=TESTROOM/);
+      expect(linkInput).toBeInTheDocument();
+    });
+
+    it('renders player list', () => {
+      renderGameBoard(waitingProps);
+      expect(screen.getByText(/Alice/)).toBeInTheDocument();
+      expect(screen.getByText(/Bob/)).toBeInTheDocument();
+    });
+
+    it('shows start game button when 2+ players', () => {
+      renderGameBoard(waitingProps);
+      expect(screen.getByText('Start Game')).toBeInTheDocument();
+    });
+
+    it('calls onStartGame when start button is clicked', () => {
+      const onStartGame = jest.fn();
+      renderGameBoard({ ...waitingProps, onStartGame });
+      fireEvent.click(screen.getByText('Start Game'));
+      expect(onStartGame).toHaveBeenCalled();
+    });
+
+    it('shows waiting message when fewer than 2 players', () => {
+      renderGameBoard({
+        gameState: makeGameState({
+          gameStarted: false,
+          players: [
+            {
+              id: 'p1',
+              name: 'Alice',
+              stockpileCount: 0,
+              handCount: 0,
+              discardPiles: [[], [], [], []],
+            },
+          ],
+        }),
+        playerState: null,
+      });
+      expect(screen.getByText('Waiting for more players to join...')).toBeInTheDocument();
+    });
+
+    it('renders leave button', () => {
+      renderGameBoard(waitingProps);
+      expect(screen.getByText('Leave Game')).toBeInTheDocument();
+    });
+
+    it('calls onLeaveLobby when leave button is clicked', () => {
+      const onLeaveLobby = jest.fn();
+      renderGameBoard({ ...waitingProps, onLeaveLobby });
+      fireEvent.click(screen.getByText('Leave Game'));
+      expect(onLeaveLobby).toHaveBeenCalled();
     });
   });
 });
