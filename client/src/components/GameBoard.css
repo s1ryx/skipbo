@@ -124,6 +124,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   flex: 1;
   min-width: 200px;
+  overflow: hidden;
   transition:
     opacity 0.3s,
     filter 0.3s;
@@ -157,6 +158,12 @@
 
 .opponent-cards > .discard-piles-opponent {
   flex-shrink: 0;
+}
+
+.opponent-cards .pile-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-pile {
