@@ -208,4 +208,17 @@ describe('GameBoard', () => {
       expect(screen.getByText('Are you sure you want to leave the game?')).toBeInTheDocument();
     });
   });
+
+  describe('game over', () => {
+    it('shows game over overlay with winner name', () => {
+      renderGameBoard({
+        gameState: makeGameState({
+          gameOver: true,
+          winner: { name: 'Alice' },
+        }),
+      });
+      expect(screen.getByText('Game Over!')).toBeInTheDocument();
+      expect(screen.getByText('Winner: Alice')).toBeInTheDocument();
+    });
+  });
 });
