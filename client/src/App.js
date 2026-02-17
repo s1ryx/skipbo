@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
+import WaitingRoom from './components/WaitingRoom';
 import { useTranslation } from './i18n';
 import useGameSocket from './hooks/useGameSocket';
 
@@ -48,7 +49,6 @@ function App() {
     startGame,
     playCard,
     discardCard,
-    endTurn,
     leaveLobby,
     leaveGame,
     sendChatMessage,
@@ -65,17 +65,22 @@ function App() {
 
       {inLobby ? (
         <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} initialRoomId={roomIdFromUrl} />
+      ) : !gameState?.gameStarted ? (
+        <WaitingRoom
+          gameState={gameState}
+          playerId={playerId}
+          roomId={roomId}
+          onStartGame={startGame}
+          onLeaveLobby={leaveLobby}
+        />
       ) : (
         <GameBoard
           gameState={gameState}
           playerState={playerState}
           playerId={playerId}
           roomId={roomId}
-          onStartGame={startGame}
           onPlayCard={playCard}
           onDiscardCard={discardCard}
-          onEndTurn={endTurn}
-          onLeaveLobby={leaveLobby}
           onLeaveGame={leaveGame}
           chatMessages={chatMessages}
           onSendChatMessage={sendChatMessage}
