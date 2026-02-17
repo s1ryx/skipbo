@@ -432,12 +432,19 @@
 }
 
 .empty-message {
-  padding: 20px;
+  width: 80px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
   background: #4caf50;
   color: white;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 0.85rem;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .actions {
@@ -677,6 +684,12 @@
   .next-card {
     font-size: 0.8rem;
   }
+
+  .empty-message {
+    width: 70px;
+    height: 96px;
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -765,6 +778,12 @@
   }
 
   .empty-pile-text {
+    font-size: 0.75rem;
+  }
+
+  .empty-message {
+    width: 60px;
+    height: 82px;
     font-size: 0.75rem;
   }
 }
@@ -893,6 +912,13 @@
   .selected-card-info button {
     padding: 6px 12px;
     font-size: 0.85rem;
+  }
+
+  .empty-message {
+    width: 55px;
+    height: 75px;
+    font-size: 0.7rem;
+    padding: 4px;
   }
 
   /* Even more aggressive overlap for smallest screens */
