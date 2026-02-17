@@ -337,4 +337,119 @@ describe('SkipBoGame', () => {
       expect(result.error).toBe('error.cardNotFound');
     });
   });
+
+  describe('discardCard', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+    });
+
+    it('discards a card from hand to discard pile', () => {
+      const player = game.players[0];
+      player.hand = [3, 5, 7, 9, 11];
+
+      const result = game.discardCard('p1', 5, 1);
+      expect(result.success).toBe(true);
+      expect(player.discardPiles[1]).toEqual([5]);
+      expect(player.hand).toEqual([3, 7, 9, 11]);
+    });
+
+    it('rejects when not your turn', () => {
+      game.players[1].hand = [1, 2, 3, 4, 5];
+      const result = game.discardCard('p2', 1, 0);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.notYourTurn');
+    });
+
+    it('rejects invalid discard pile index', () => {
+      game.players[0].hand = [1, 2, 3, 4, 5];
+      expect(game.discardCard('p1', 1, -1).error).toBe('error.invalidDiscardPile');
+      expect(game.discardCard('p1', 1, 4).error).toBe('error.invalidDiscardPile');
+    });
+
+    it('rejects card not in hand', () => {
+      game.players[0].hand = [2, 3, 4, 5, 6];
+      const result = game.discardCard('p1', 1, 0);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.cardNotInHand');
+    });
+  });
+
+  describe('drawCards', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+    });
+
+    it('fills hand to 5 cards', () => {
+      const player = game.players[0];
+      player.hand = [1, 2]; // Only 2 cards
+
+      game.drawCards('p1');
+      expect(player.hand).toHaveLength(5);
+    });
+
+    it('does not overdraw when hand is already full', () => {
+      const player = game.players[0];
+      player.hand = [1, 2, 3, 4, 5];
+
+      game.drawCards('p1');
+      expect(player.hand).toHaveLength(5);
+    });
+
+    it('handles low deck gracefully', () => {
+      const player = game.players[0];
+      player.hand = [];
+      game.deck = [1, 2]; // Only 2 cards left
+
+      const result = game.drawCards('p1');
+      expect(result.success).toBe(true);
+      expect(player.hand).toHaveLength(2);
+    });
+
+    it('returns error for unknown player', () => {
+      const result = game.drawCards('unknown');
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.playerNotFoundDraw');
+    });
+  });
+
+  describe('endTurn', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+    });
+
+    it('advances to next player', () => {
+      const result = game.endTurn('p1');
+      expect(result.success).toBe(true);
+      expect(result.nextPlayer).toBe('p2');
+      expect(game.currentPlayerIndex).toBe(1);
+    });
+
+    it('wraps around to first player', () => {
+      game.endTurn('p1'); // Now p2's turn
+      const result = game.endTurn('p2');
+      expect(result.success).toBe(true);
+      expect(result.nextPlayer).toBe('p1');
+      expect(game.currentPlayerIndex).toBe(0);
+    });
+
+    it('draws cards for next player', () => {
+      // Empty p2's hand to verify draw happens
+      game.players[1].hand = [];
+
+      game.endTurn('p1');
+      expect(game.players[1].hand).toHaveLength(5);
+    });
+
+    it('rejects when not your turn', () => {
+      const result = game.endTurn('p2');
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.notYourTurn');
+    });
+  });
 });
