@@ -452,4 +452,70 @@ describe('SkipBoGame', () => {
       expect(result.error).toBe('error.notYourTurn');
     });
   });
+
+  describe('getGameState', () => {
+    it('returns the expected shape', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+
+      const state = game.getGameState();
+      expect(state).toEqual(
+        expect.objectContaining({
+          roomId: 'TESTROOM',
+          currentPlayerIndex: 0,
+          gameStarted: true,
+          gameOver: false,
+          winner: null,
+        })
+      );
+      expect(state.players).toHaveLength(2);
+      expect(state.buildingPiles).toHaveLength(4);
+      expect(typeof state.deckCount).toBe('number');
+    });
+
+    it('exposes stockpile count and top card but not full stockpile', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+
+      const state = game.getGameState();
+      const playerState = state.players[0];
+      expect(playerState).toHaveProperty('stockpileCount');
+      expect(playerState).toHaveProperty('stockpileTop');
+      expect(playerState).toHaveProperty('handCount');
+      expect(playerState).not.toHaveProperty('hand');
+      expect(playerState).not.toHaveProperty('stockpile');
+    });
+
+    it('includes currentPlayerId', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+
+      const state = game.getGameState();
+      expect(state.currentPlayerId).toBe('p1');
+    });
+  });
+
+  describe('getPlayerState', () => {
+    it('returns hand, stockpile, and discard piles for a player', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+
+      const state = game.getPlayerState('p1');
+      expect(state).toHaveProperty('hand');
+      expect(state).toHaveProperty('stockpile');
+      expect(state).toHaveProperty('stockpileTop');
+      expect(state).toHaveProperty('discardPiles');
+      expect(state.hand).toHaveLength(5);
+      expect(state.stockpile).toHaveLength(30);
+      expect(state.discardPiles).toHaveLength(4);
+    });
+
+    it('returns null for unknown player', () => {
+      expect(game.getPlayerState('unknown')).toBeNull();
+    });
+  });
 });
