@@ -240,4 +240,101 @@ describe('SkipBoGame', () => {
       expect(game.canPlayCard('SKIP-BO', 0)).toBe(false);
     });
   });
+
+  describe('playCard', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+    });
+
+    it('plays a card from hand to building pile', () => {
+      const player = game.players[0];
+      // Force a known hand for testing
+      player.hand = [1, 3, 5, 7, 9];
+
+      const result = game.playCard('p1', 1, 'hand', 0);
+      expect(result.success).toBe(true);
+      expect(game.buildingPiles[0]).toEqual([1]);
+      expect(player.hand).not.toContain(1);
+    });
+
+    it('rejects playing when not your turn', () => {
+      game.players[1].hand = [1, 2, 3, 4, 5];
+      const result = game.playCard('p2', 1, 'hand', 0);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.notYourTurn');
+    });
+
+    it('rejects invalid card placement', () => {
+      const player = game.players[0];
+      player.hand = [5, 6, 7, 8, 9];
+      const result = game.playCard('p1', 5, 'hand', 0);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.invalidMove');
+    });
+
+    it('plays from stockpile top', () => {
+      const player = game.players[0];
+      player.stockpile = [3, 2, 1]; // 1 is on top
+      const result = game.playCard('p1', 1, 'stockpile', 0);
+      expect(result.success).toBe(true);
+      expect(player.stockpile).toEqual([3, 2]);
+    });
+
+    it('rejects playing card not on top of stockpile', () => {
+      const player = game.players[0];
+      player.stockpile = [1, 3]; // 3 is on top, 1 is buried
+      // Pile needs 1, but stockpile top is 3 — card not found
+      const result = game.playCard('p1', 1, 'stockpile', 0);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.cardNotFound');
+    });
+
+    it('plays from discard pile top', () => {
+      const player = game.players[0];
+      player.discardPiles[2] = [5, 1]; // 1 is on top
+      const result = game.playCard('p1', 1, 'discard2', 0);
+      expect(result.success).toBe(true);
+      expect(player.discardPiles[2]).toEqual([5]);
+    });
+
+    it('clears completed building pile and shuffles back into deck', () => {
+      game.buildingPiles[0] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+      const player = game.players[0];
+      player.hand = [12, 3, 4, 5, 6];
+      const deckBefore = game.deck.length;
+
+      const result = game.playCard('p1', 12, 'hand', 0);
+      expect(result.success).toBe(true);
+      expect(game.buildingPiles[0]).toEqual([]); // Pile cleared
+      expect(game.deck.length).toBe(deckBefore + 12); // 12 cards returned
+    });
+
+    it('auto-draws 5 cards when hand is empty after playing', () => {
+      const player = game.players[0];
+      player.hand = [1]; // Only 1 card left
+
+      game.playCard('p1', 1, 'hand', 0);
+      expect(player.hand).toHaveLength(5); // Auto-drew
+    });
+
+    it('triggers win when stockpile is emptied', () => {
+      const player = game.players[0];
+      player.stockpile = [1]; // Last card
+      player.hand = [2, 3, 4, 5, 6];
+
+      game.playCard('p1', 1, 'stockpile', 0);
+      expect(game.gameOver).toBe(true);
+      expect(game.winner).toBe(player);
+    });
+
+    it('returns error for card not found in hand', () => {
+      const player = game.players[0];
+      player.hand = [2, 3, 4, 5, 6];
+      const result = game.playCard('p1', 1, 'hand', 0);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('error.cardNotFound');
+    });
+  });
 });
