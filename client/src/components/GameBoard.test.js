@@ -207,6 +207,68 @@ describe('GameBoard', () => {
       fireEvent.click(screen.getByText('Leave Game'));
       expect(screen.getByText('Are you sure you want to leave the game?')).toBeInTheDocument();
     });
+
+    it('shows top card on non-empty building pile', () => {
+      renderGameBoard({
+        gameState: makeGameState({
+          buildingPiles: [[1, 2, 3], [], [], []],
+        }),
+      });
+      // 3 empty piles show "Start with 1", the filled pile does not
+      expect(screen.getAllByText('Start with 1')).toHaveLength(3);
+      // Next card hint appears for the non-empty pile
+      expect(screen.getByText('Next: 4')).toBeInTheDocument();
+    });
+
+    it('shows discard instruction after clicking End Turn', () => {
+      renderGameBoard();
+      fireEvent.click(screen.getByText('End Turn (Discard a Card)'));
+      expect(
+        screen.getByText('Place a card on one of your discard piles to end your turn')
+      ).toBeInTheDocument();
+    });
+
+    it('shows disconnected indicator for opponent', () => {
+      renderGameBoard({
+        gameState: makeGameState({
+          players: [
+            {
+              id: 'p1',
+              name: 'Alice',
+              stockpileCount: 30,
+              stockpileTop: 5,
+              handCount: 5,
+              discardPiles: [[], [], [], []],
+            },
+            {
+              id: 'p2',
+              name: 'Bob',
+              stockpileCount: 30,
+              stockpileTop: 3,
+              handCount: 5,
+              discardPiles: [[], [], [], []],
+              disconnected: true,
+            },
+          ],
+        }),
+      });
+      expect(screen.getByText('(Disconnected)')).toBeInTheDocument();
+    });
+
+    it('renders quick discard checkbox', () => {
+      renderGameBoard();
+      expect(screen.getByRole('checkbox')).toBeInTheDocument();
+      expect(
+        screen.getByText('Quick Discard (click discard pile with selected card)')
+      ).toBeInTheDocument();
+    });
+
+    it('renders stockpile card in player area', () => {
+      renderGameBoard();
+      expect(screen.getByText(/Your Stockpile/)).toBeInTheDocument();
+      // stockpileTop is 5, so there should be a visible card rendered
+      expect(screen.getByText('Your Stockpile (30)')).toBeInTheDocument();
+    });
   });
 
   describe('game over', () => {
