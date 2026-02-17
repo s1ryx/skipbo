@@ -121,4 +121,73 @@ describe('App', () => {
       expect(screen.getByText('Room no longer exists')).toBeInTheDocument();
     });
   });
+
+  describe('socket event handling', () => {
+    const fakeGameState = {
+      roomId: 'ABCD12',
+      players: [
+        {
+          id: 'p1',
+          name: 'Alice',
+          stockpileCount: 0,
+          handCount: 0,
+          discardPiles: [[], [], [], []],
+        },
+      ],
+      buildingPiles: [[], [], [], []],
+      currentPlayerIndex: 0,
+      currentPlayerId: 'p1',
+      deckCount: 100,
+      gameStarted: false,
+      gameOver: false,
+      winner: null,
+    };
+
+    it('shows game board after room creation', () => {
+      renderApp();
+      act(() => {
+        mockSocket._trigger('roomCreated', {
+          roomId: 'ABCD12',
+          playerId: 'p1',
+          gameState: fakeGameState,
+        });
+      });
+      expect(screen.queryByText('Create a New Game')).not.toBeInTheDocument();
+      expect(screen.getByText('Room: ABCD12')).toBeInTheDocument();
+    });
+
+    it('returns to lobby after game abort', () => {
+      renderApp();
+      act(() => {
+        mockSocket._trigger('roomCreated', {
+          roomId: 'ABCD12',
+          playerId: 'p1',
+          gameState: fakeGameState,
+        });
+      });
+      expect(screen.queryByText('Create a New Game')).not.toBeInTheDocument();
+      act(() => {
+        mockSocket._trigger('gameAborted');
+      });
+      expect(screen.getByText('Create a New Game')).toBeInTheDocument();
+    });
+
+    it('attempts reconnection when saved session exists', () => {
+      localStorage.setItem(
+        'skipBoSession',
+        JSON.stringify({ roomId: 'OLD123', playerId: 'old-p1', playerName: 'Alice' })
+      );
+      const emitSpy = jest.spyOn(mockSocket, 'emit');
+      renderApp();
+      act(() => {
+        mockSocket._trigger('connect');
+      });
+      expect(emitSpy).toHaveBeenCalledWith('reconnect', {
+        roomId: 'OLD123',
+        oldPlayerId: 'old-p1',
+        playerName: 'Alice',
+      });
+      emitSpy.mockRestore();
+    });
+  });
 });
