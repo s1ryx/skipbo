@@ -140,4 +140,72 @@ describe('GameBoard', () => {
       expect(onLeaveLobby).toHaveBeenCalled();
     });
   });
+
+  describe('active game', () => {
+    it('renders room ID in game header', () => {
+      renderGameBoard();
+      expect(screen.getByText('Room: TESTROOM')).toBeInTheDocument();
+    });
+
+    it('shows "Your Turn" when it is the player turn', () => {
+      renderGameBoard();
+      expect(screen.getByText('Your Turn!')).toBeInTheDocument();
+    });
+
+    it('shows waiting message when it is not the player turn', () => {
+      renderGameBoard({
+        gameState: makeGameState({ currentPlayerId: 'p2' }),
+      });
+      expect(screen.getByText('Waiting for other player...')).toBeInTheDocument();
+    });
+
+    it('renders building piles section', () => {
+      renderGameBoard();
+      expect(screen.getByText('Building Piles')).toBeInTheDocument();
+    });
+
+    it('renders 4 empty building piles with "Start with 1" text', () => {
+      renderGameBoard();
+      const startTexts = screen.getAllByText('Start with 1');
+      expect(startTexts).toHaveLength(4);
+    });
+
+    it('renders opponent info', () => {
+      renderGameBoard();
+      expect(screen.getByText(/Bob/)).toBeInTheDocument();
+    });
+
+    it('renders player area', () => {
+      renderGameBoard();
+      expect(screen.getByText('Your Area')).toBeInTheDocument();
+    });
+
+    it('renders player hand', () => {
+      renderGameBoard();
+      expect(screen.getByText('Your Hand')).toBeInTheDocument();
+    });
+
+    it('renders end turn button on player turn', () => {
+      renderGameBoard();
+      expect(screen.getByText('End Turn (Discard a Card)')).toBeInTheDocument();
+    });
+
+    it('does not render end turn button when not player turn', () => {
+      renderGameBoard({
+        gameState: makeGameState({ currentPlayerId: 'p2' }),
+      });
+      expect(screen.queryByText('End Turn (Discard a Card)')).not.toBeInTheDocument();
+    });
+
+    it('renders leave game button', () => {
+      renderGameBoard();
+      expect(screen.getByText('Leave Game')).toBeInTheDocument();
+    });
+
+    it('shows leave confirmation dialog on leave click', () => {
+      renderGameBoard();
+      fireEvent.click(screen.getByText('Leave Game'));
+      expect(screen.getByText('Are you sure you want to leave the game?')).toBeInTheDocument();
+    });
+  });
 });
