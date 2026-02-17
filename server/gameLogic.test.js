@@ -105,4 +105,77 @@ describe('SkipBoGame', () => {
       expect(game.players).toHaveLength(1);
     });
   });
+
+  describe('startGame', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+    });
+
+    it('starts a game with 2 players', () => {
+      const result = game.startGame();
+      expect(result).toBe(true);
+      expect(game.gameStarted).toBe(true);
+      expect(game.currentPlayerIndex).toBe(0);
+    });
+
+    it('rejects with fewer than 2 players', () => {
+      const soloGame = new SkipBoGame('SOLO', 2, null);
+      soloGame.addPlayer('p1', 'Alone');
+      expect(soloGame.startGame()).toBe(false);
+      expect(soloGame.gameStarted).toBe(false);
+    });
+
+    it('rejects starting an already-started game', () => {
+      game.startGame();
+      expect(game.startGame()).toBe(false);
+    });
+
+    it('deals 30-card stockpiles for 2 players (default)', () => {
+      game.startGame();
+      expect(game.players[0].stockpile).toHaveLength(30);
+      expect(game.players[1].stockpile).toHaveLength(30);
+    });
+
+    it('deals 5-card hands to each player', () => {
+      game.startGame();
+      expect(game.players[0].hand).toHaveLength(5);
+      expect(game.players[1].hand).toHaveLength(5);
+    });
+
+    it('uses default 20-card stockpiles for 5+ players', () => {
+      const bigGame = new SkipBoGame('BIG', 6, null);
+      for (let i = 0; i < 6; i++) {
+        bigGame.addPlayer(`p${i}`, `Player ${i}`);
+      }
+      bigGame.startGame();
+      bigGame.players.forEach((p) => {
+        expect(p.stockpile).toHaveLength(20);
+      });
+    });
+
+    it('respects custom stockpile size', () => {
+      const customGame = new SkipBoGame('CUSTOM', 2, 15);
+      customGame.addPlayer('p1', 'Alice');
+      customGame.addPlayer('p2', 'Bob');
+      customGame.startGame();
+      expect(customGame.players[0].stockpile).toHaveLength(15);
+      expect(customGame.players[1].stockpile).toHaveLength(15);
+    });
+
+    it('caps stockpile size at max allowed', () => {
+      const overGame = new SkipBoGame('OVER', 2, 50);
+      overGame.addPlayer('p1', 'Alice');
+      overGame.addPlayer('p2', 'Bob');
+      overGame.startGame();
+      // Max for ≤4 players is 30
+      expect(overGame.players[0].stockpile).toHaveLength(30);
+    });
+
+    it('reduces deck size after dealing', () => {
+      game.startGame();
+      // 162 total - (2 players × 30 stockpile) - (2 players × 5 hand) = 92
+      expect(game.deck).toHaveLength(92);
+    });
+  });
 });
