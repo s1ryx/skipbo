@@ -147,8 +147,16 @@
 
 .opponent-cards {
   display: flex;
+  justify-content: space-between;
   gap: 10px;
-  flex-wrap: wrap;
+}
+
+.opponent-cards > .card-pile {
+  min-width: 0;
+}
+
+.opponent-cards > .discard-piles-opponent {
+  flex-shrink: 0;
 }
 
 .card-pile {
@@ -218,7 +226,7 @@
   color: #999;
   text-align: center;
   padding: 5px;
-  margin: 10px auto 0;
+  margin-top: 10px;
 }
 
 .building-piles {
