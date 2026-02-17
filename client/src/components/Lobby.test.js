@@ -98,6 +98,71 @@ describe('Lobby', () => {
     });
   });
 
+  describe('game settings', () => {
+    it('passes custom maxPlayers to onCreateRoom', () => {
+      const onCreateRoom = jest.fn();
+      renderLobby({ onCreateRoom });
+
+      fireEvent.change(screen.getByPlaceholderText('Enter your name'), {
+        target: { value: 'Alice' },
+      });
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: '4' },
+      });
+      fireEvent.click(screen.getByText('Create Room'));
+
+      expect(onCreateRoom).toHaveBeenCalledWith('Alice', 4, 30);
+    });
+
+    it('passes custom stockpileSize to onCreateRoom', () => {
+      const onCreateRoom = jest.fn();
+      renderLobby({ onCreateRoom });
+
+      fireEvent.change(screen.getByPlaceholderText('Enter your name'), {
+        target: { value: 'Alice' },
+      });
+      fireEvent.change(screen.getByRole('slider'), {
+        target: { value: '15' },
+      });
+      fireEvent.click(screen.getByText('Create Room'));
+
+      expect(onCreateRoom).toHaveBeenCalledWith('Alice', 2, 15);
+    });
+
+    it('caps stockpile size when maxPlayers increases to 5+', () => {
+      const onCreateRoom = jest.fn();
+      renderLobby({ onCreateRoom });
+
+      fireEvent.change(screen.getByPlaceholderText('Enter your name'), {
+        target: { value: 'Alice' },
+      });
+      // Default stockpile is 30, then switch to 6 players (max 20)
+      fireEvent.change(screen.getByRole('combobox'), {
+        target: { value: '6' },
+      });
+      fireEvent.click(screen.getByText('Create Room'));
+
+      expect(onCreateRoom).toHaveBeenCalledWith('Alice', 6, 20);
+    });
+  });
+
+  describe('join form validation', () => {
+    it('does not call onJoinRoom with empty room ID', () => {
+      const onJoinRoom = jest.fn();
+      renderLobby({ onJoinRoom });
+
+      fireEvent.click(screen.getByText('Join Existing Room'));
+
+      fireEvent.change(screen.getByPlaceholderText('Enter your name'), {
+        target: { value: 'Bob' },
+      });
+      // Leave room ID empty, click join
+      fireEvent.click(screen.getByText('Join Room'));
+
+      expect(onJoinRoom).not.toHaveBeenCalled();
+    });
+  });
+
   describe('initialRoomId', () => {
     it('shows join form when initialRoomId is provided', () => {
       renderLobby({ initialRoomId: 'ABCD12' });
