@@ -178,4 +178,66 @@ describe('SkipBoGame', () => {
       expect(game.deck).toHaveLength(92);
     });
   });
+
+  describe('getCurrentPlayer', () => {
+    it('returns the player at currentPlayerIndex', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+      expect(game.getCurrentPlayer().id).toBe('p1');
+    });
+  });
+
+  describe('getNextCardValue', () => {
+    it('returns 1 for empty pile', () => {
+      expect(game.getNextCardValue([])).toBe(1);
+    });
+
+    it('returns next number in sequence', () => {
+      expect(game.getNextCardValue([1])).toBe(2);
+      expect(game.getNextCardValue([1, 2, 3])).toBe(4);
+    });
+
+    it('returns null for completed pile (ends at 12)', () => {
+      const pile = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+      expect(game.getNextCardValue(pile)).toBe(null);
+    });
+
+    it('resolves SKIP-BO cards in sequence', () => {
+      // SKIP-BO on top of [1] counts as 2, so next is 3
+      expect(game.getNextCardValue([1, 'SKIP-BO'])).toBe(3);
+    });
+  });
+
+  describe('canPlayCard', () => {
+    it('allows 1 on empty pile', () => {
+      expect(game.canPlayCard(1, 0)).toBe(true);
+    });
+
+    it('rejects non-1 on empty pile', () => {
+      expect(game.canPlayCard(5, 0)).toBe(false);
+    });
+
+    it('allows next number in sequence', () => {
+      game.buildingPiles[0] = [1, 2, 3];
+      expect(game.canPlayCard(4, 0)).toBe(true);
+    });
+
+    it('rejects wrong number', () => {
+      game.buildingPiles[0] = [1, 2, 3];
+      expect(game.canPlayCard(5, 0)).toBe(false);
+    });
+
+    it('allows SKIP-BO on any non-complete pile', () => {
+      expect(game.canPlayCard('SKIP-BO', 0)).toBe(true);
+      game.buildingPiles[1] = [1, 2, 3];
+      expect(game.canPlayCard('SKIP-BO', 1)).toBe(true);
+    });
+
+    it('rejects on completed pile', () => {
+      game.buildingPiles[0] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+      expect(game.canPlayCard(1, 0)).toBe(false);
+      expect(game.canPlayCard('SKIP-BO', 0)).toBe(false);
+    });
+  });
 });
