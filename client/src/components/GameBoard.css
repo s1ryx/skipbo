@@ -303,10 +303,11 @@
 }
 
 .empty-pile {
+  width: 80px;
+  height: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 120px;
   border: 3px dashed #ccc;
   border-radius: 8px;
   color: #999;
@@ -685,6 +686,11 @@
     font-size: 0.8rem;
   }
 
+  .empty-pile {
+    width: 70px;
+    height: 96px;
+  }
+
   .empty-message {
     width: 70px;
     height: 96px;
@@ -774,7 +780,8 @@
   }
 
   .empty-pile {
-    min-height: 100px;
+    width: 60px;
+    height: 82px;
   }
 
   .empty-pile-text {
@@ -828,7 +835,8 @@
   }
 
   .empty-pile {
-    min-height: 90px;
+    width: 55px;
+    height: 75px;
     font-size: 0.7rem;
   }
 
