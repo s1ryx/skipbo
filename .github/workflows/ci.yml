@@ -1,4 +1,4 @@
-name: Lint & Format Check
+name: CI
 
 on:
   push:
@@ -33,3 +33,24 @@ jobs:
 
       - name: Lint server
         run: cd server && npx eslint .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install server dependencies
+        run: cd server && npm ci
+
+      - name: Run server tests
+        run: cd server && npm test
+
+      - name: Install client dependencies
+        run: cd client && npm ci
+
+      - name: Run client tests
+        run: cd client && npm test -- --watchAll=false
