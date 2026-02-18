@@ -887,6 +887,7 @@
   }
 
   .piles-container {
+    grid-template-columns: repeat(auto-fit, minmax(65px, 1fr));
     max-width: 100%;
     gap: 5px;
   }
@@ -1004,5 +1005,11 @@
 
   .other-players {
     margin-bottom: 5px;
+  }
+}
+
+@media (max-width: 300px) {
+  .piles-container {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
