@@ -14,8 +14,37 @@
   }
 }
 
-.btn-leave-lobby {
+.lobby-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
   margin-top: 20px;
+}
+
+.btn-start-game {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-start-game:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a4296 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-start-game:active {
+  transform: translateY(0);
+}
+
+.btn-leave-lobby {
   padding: 8px 16px;
   background: #e53e3e;
   color: white;

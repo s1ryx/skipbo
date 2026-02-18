@@ -124,6 +124,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   flex: 1;
   min-width: 200px;
+  overflow: hidden;
   transition:
     opacity 0.3s,
     filter 0.3s;
@@ -147,8 +148,24 @@
 
 .opponent-cards {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: flex-start;
   flex-wrap: wrap;
+  gap: 10px;
+}
+
+.opponent-cards > .card-pile {
+  min-width: 0;
+}
+
+.opponent-cards > .discard-piles-opponent {
+  flex-shrink: 0;
+}
+
+.opponent-cards .pile-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-pile {
@@ -163,7 +180,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 .card-in-hand {
@@ -199,7 +216,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 25px;
 }
 
 .card-in-pile-small {
@@ -218,7 +235,7 @@
   color: #999;
   text-align: center;
   padding: 5px;
-  margin: 10px auto 0;
+  margin-top: 25px;
 }
 
 .building-piles {
@@ -303,10 +320,11 @@
 }
 
 .empty-pile {
+  width: 80px;
+  height: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 120px;
   border: 3px dashed #ccc;
   border-radius: 8px;
   color: #999;
@@ -365,6 +383,9 @@
   flex: 1;
   min-width: 90px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .discard-pile.discard-mode {
@@ -432,12 +453,19 @@
 }
 
 .empty-message {
-  padding: 20px;
+  width: 80px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
   background: #4caf50;
   color: white;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 0.85rem;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .actions {
@@ -677,6 +705,26 @@
   .next-card {
     font-size: 0.8rem;
   }
+
+  .empty-pile {
+    width: 70px;
+    height: 96px;
+  }
+
+  .empty-message {
+    width: 70px;
+    height: 96px;
+    font-size: 0.8rem;
+  }
+
+  .opponent-hand-stack {
+    margin-top: 13px;
+  }
+
+  .discard-pile-stack-small,
+  .empty-pile-small {
+    margin-top: 18px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -761,11 +809,32 @@
   }
 
   .empty-pile {
-    min-height: 100px;
+    width: 60px;
+    height: 82px;
+  }
+
+  .empty-pile-small {
+    width: 45px;
+    height: 62px;
   }
 
   .empty-pile-text {
     font-size: 0.75rem;
+  }
+
+  .empty-message {
+    width: 60px;
+    height: 82px;
+    font-size: 0.75rem;
+  }
+
+  .opponent-hand-stack {
+    margin-top: 10px;
+  }
+
+  .discard-pile-stack-small,
+  .empty-pile-small {
+    margin-top: 15px;
   }
 }
 
@@ -809,11 +878,19 @@
   }
 
   .empty-pile {
-    min-height: 90px;
+    width: 55px;
+    height: 75px;
     font-size: 0.7rem;
   }
 
+  .empty-pile-small {
+    width: 40px;
+    height: 55px;
+    font-size: 0.6rem;
+  }
+
   .piles-container {
+    grid-template-columns: repeat(auto-fit, minmax(65px, 1fr));
     max-width: 100%;
     gap: 5px;
   }
@@ -895,6 +972,13 @@
     font-size: 0.85rem;
   }
 
+  .empty-message {
+    width: 55px;
+    height: 75px;
+    font-size: 0.7rem;
+    padding: 4px;
+  }
+
   /* Even more aggressive overlap for smallest screens */
   .card-in-pile {
     margin-top: -38px !important;
@@ -924,5 +1008,11 @@
 
   .other-players {
     margin-bottom: 5px;
+  }
+}
+
+@media (max-width: 300px) {
+  .piles-container {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
