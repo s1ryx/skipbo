@@ -2,16 +2,16 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
   z-index: 1000;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-container.collapsed {
   width: 60px;
   height: 60px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   overflow: visible;
 }
 
@@ -23,13 +23,13 @@
 .chat-container.expanded {
   width: 350px;
   height: 500px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
 }
 
 .chat-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   color: white;
   font-weight: 600;
   cursor: pointer;
@@ -38,24 +38,24 @@
   align-items: center;
   user-select: none;
   position: relative;
-  transition: all 0.3s ease;
+  transition: all var(--transition-normal) ease;
 }
 
 .chat-container.collapsed .chat-header {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   padding: 0;
 }
 
 .chat-container.expanded .chat-header {
   padding: 15px;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   justify-content: space-between;
 }
 
 .chat-header:hover {
-  background: linear-gradient(135deg, #5a6fd6 0%, #6a4296 100%);
+  background: var(--gradient-primary-hover);
 }
 
 .chat-header-content {
@@ -81,9 +81,9 @@
   position: absolute;
   top: -2px;
   right: -2px;
-  background: #e53e3e;
+  background: var(--color-danger);
   color: white;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   min-width: 20px;
   height: 20px;
   display: flex;
@@ -115,7 +115,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 15px;
-  background: #f5f5f5;
+  background: var(--color-surface-alt);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -130,27 +130,27 @@
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #999;
+  background: var(--color-text-muted);
   border-radius: 3px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--color-text-secondary);
 }
 
 .no-messages {
   text-align: center;
-  color: #999;
+  color: var(--color-text-muted);
   font-style: italic;
   margin-top: 20px;
 }
 
 .chat-message {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   max-width: 80%;
   word-wrap: break-word;
-  animation: slideIn 0.3s ease;
+  animation: slideIn var(--transition-normal) ease;
 }
 
 @keyframes slideIn {
@@ -166,14 +166,14 @@
 
 .chat-message.own-message {
   align-self: flex-end;
-  background: #667eea;
+  background: var(--color-primary);
   color: white;
 }
 
 .chat-message.other-message {
   align-self: flex-start;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 .message-header {
@@ -203,11 +203,11 @@
 }
 
 .other-message .message-author {
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .message-time {
-  color: #999;
+  color: var(--color-text-muted);
   font-size: 0.7rem;
 }
 
@@ -219,35 +219,35 @@
 .chat-input-form {
   display: flex;
   padding: 12px;
-  background: white;
-  border-radius: 0 0 12px 12px;
-  border-top: 1px solid #e0e0e0;
+  background: var(--color-surface);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  border-top: 1px solid var(--color-border);
 }
 
 .chat-input {
   flex: 1;
   padding: 10px 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-pill);
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.3s;
+  transition: border-color var(--transition-normal);
 }
 
 .chat-input:focus {
-  border-color: #667eea;
+  border-color: var(--color-primary);
 }
 
 .chat-send-button {
   margin-left: 8px;
   padding: 10px 20px;
-  background: #667eea;
+  background: var(--color-primary);
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all var(--transition-normal);
 }
 
 .chat-send-button:hover:not(:disabled) {
@@ -256,7 +256,7 @@
 }
 
 .chat-send-button:disabled {
-  background: #ccc;
+  background: var(--color-border-placeholder);
   cursor: not-allowed;
 }
 
