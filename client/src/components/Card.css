@@ -155,6 +155,32 @@
   transform: scale(1.05);
 }
 
+/* Responsive card dimension token overrides */
+@media (max-width: 768px) {
+  :root {
+    --card-width: 70px;
+    --card-height: 96px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --card-width: 60px;
+    --card-height: 82px;
+    --card-width-sm: 45px;
+    --card-height-sm: 62px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --card-width: 55px;
+    --card-height: 75px;
+    --card-width-sm: 40px;
+    --card-height-sm: 55px;
+  }
+}
+
 /* Responsive card sizing for mobile */
 @media (max-width: 768px) {
   .card.normal {
