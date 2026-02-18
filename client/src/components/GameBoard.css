@@ -8,31 +8,31 @@
 }
 
 .game-header {
-  background: white;
+  background: var(--color-surface);
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .game-header h3 {
-  color: #333;
+  color: var(--color-text-primary);
   margin: 0;
 }
 
 .turn-indicator {
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-weight: 600;
-  background: #e0e0e0;
-  color: #555;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 .turn-indicator.my-turn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   color: white;
   animation: pulse 2s infinite;
 }
@@ -48,10 +48,10 @@
 }
 
 .discard-instruction {
-  background: #ff9800;
+  background: var(--color-warning);
   color: white;
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-weight: 600;
   animation: blink 1s infinite;
   display: flex;
@@ -61,20 +61,20 @@
 
 .btn-cancel-discard {
   padding: 14px 28px;
-  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+  background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-hover) 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-danger-md);
 }
 
 .btn-cancel-discard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(229, 62, 62, 0.6);
+  box-shadow: var(--shadow-danger-lg);
 }
 
 @keyframes blink {
@@ -89,21 +89,21 @@
 
 .btn-leave-game {
   padding: 8px 16px;
-  background: #e53e3e;
+  background: var(--color-danger);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-base);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-danger-sm);
 }
 
 .btn-leave-game:hover {
-  background: #c53030;
+  background: var(--color-danger-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+  box-shadow: var(--shadow-danger-md);
 }
 
 .btn-leave-game:active {
@@ -118,16 +118,16 @@
 }
 
 .opponent-info {
-  background: white;
+  background: var(--color-surface);
   padding: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   flex: 1;
   min-width: 200px;
   overflow: hidden;
   transition:
-    opacity 0.3s,
-    filter 0.3s;
+    opacity var(--transition-normal),
+    filter var(--transition-normal);
 }
 
 .opponent-info.inactive {
@@ -137,11 +137,11 @@
 
 .opponent-info h4 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .disconnected-indicator {
-  color: #ff6b6b;
+  color: var(--color-danger-disconnect);
   font-weight: 600;
   font-size: 0.9em;
 }
@@ -185,12 +185,12 @@
 
 .card-in-hand {
   position: relative;
-  transition: transform 0.2s;
+  transition: transform var(--transition-fast);
 }
 
 .pile-label {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
@@ -208,7 +208,7 @@
 
 .pile-label-small {
   font-size: 0.7rem;
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 .discard-pile-stack-small {
@@ -224,32 +224,32 @@
 }
 
 .empty-pile-small {
-  width: 50px;
-  height: 70px;
-  border: 2px dashed #ccc;
-  border-radius: 6px;
+  width: var(--card-width-sm);
+  height: var(--card-height-sm);
+  border: 2px dashed var(--color-border-placeholder);
+  border-radius: var(--radius-base);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.7rem;
-  color: #999;
+  color: var(--color-text-muted);
   text-align: center;
   padding: 5px;
   margin-top: 25px;
 }
 
 .building-piles {
-  background: white;
+  background: var(--color-surface);
   padding: 15px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   flex: 1;
 }
 
 .building-piles h3 {
   margin: 0 0 10px 0;
-  color: #333;
+  color: var(--color-text-primary);
   text-align: center;
   font-size: 1.2rem;
 }
@@ -271,9 +271,9 @@
 }
 
 .building-pile {
-  background: #f5f5f5;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 10px;
   text-align: center;
   min-height: 160px;
@@ -281,31 +281,31 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  transition: all 0.3s;
+  transition: all var(--transition-normal);
   width: 100%;
 }
 
 .building-pile.clickable {
   cursor: pointer;
-  border-color: #667eea;
+  border-color: var(--color-primary);
 }
 
 .building-pile.clickable:hover {
-  background: #f0f0ff;
+  background: var(--color-surface-primary-hover);
   transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-primary-glow);
 }
 
 .pile-info {
   font-weight: 600;
-  color: #555;
+  color: var(--color-text-secondary);
   margin-bottom: 10px;
 }
 
 .next-card {
   display: block;
   font-size: 0.85rem;
-  color: #667eea;
+  color: var(--color-primary);
   margin-top: 5px;
 }
 
@@ -316,18 +316,18 @@
 .pile-count {
   margin-top: 10px;
   font-size: 0.85rem;
-  color: #999;
+  color: var(--color-text-muted);
 }
 
 .empty-pile {
-  width: 80px;
-  height: 110px;
+  width: var(--card-width);
+  height: var(--card-height);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 3px dashed #ccc;
-  border-radius: 8px;
-  color: #999;
+  border: 3px dashed var(--color-border-placeholder);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 
@@ -336,13 +336,13 @@
 }
 
 .player-area {
-  background: white;
+  background: var(--color-surface);
   padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   transition:
-    opacity 0.3s,
-    filter 0.3s;
+    opacity var(--transition-normal),
+    filter var(--transition-normal);
 }
 
 .player-area.inactive {
@@ -352,7 +352,7 @@
 
 .player-area h3 {
   margin: 0 0 10px 0;
-  color: #333;
+  color: var(--color-text-primary);
   font-size: 1.2rem;
 }
 
@@ -413,8 +413,8 @@
 
 .card-in-pile {
   transition:
-    transform 0.2s,
-    filter 0.2s;
+    transform var(--transition-fast),
+    filter var(--transition-fast);
   position: relative;
 }
 
@@ -434,7 +434,7 @@
 
 .card-clickable {
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform var(--transition-fast);
   display: inline-block;
 }
 
@@ -453,19 +453,19 @@
 }
 
 .empty-message {
-  width: 80px;
-  height: 110px;
+  width: var(--card-width);
+  height: var(--card-height);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 8px;
-  background: #4caf50;
+  background: var(--color-success);
   color: white;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 0.85rem;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm-heavy);
 }
 
 .actions {
@@ -479,20 +479,20 @@
 
 .btn-end-turn {
   padding: 14px 28px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-primary-md);
 }
 
 .btn-end-turn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+  box-shadow: var(--shadow-primary-lg);
 }
 
 .selected-card-info {
@@ -500,39 +500,39 @@
   align-items: center;
   gap: 10px;
   padding: 10px 20px;
-  background: #f5f5ff;
-  border: 2px solid #667eea;
-  border-radius: 8px;
+  background: var(--color-surface-primary-tint);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
 }
 
 .selected-card-info button {
   padding: 8px 16px;
-  background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
-  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-base);
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.3s;
+  transition: all var(--transition-normal);
 }
 
 .selected-card-info button:hover {
-  background: #667eea;
+  background: var(--color-primary);
   color: white;
 }
 
 .settings-toggle {
   padding: 10px 20px;
-  background: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
-  transition: all 0.3s;
+  transition: all var(--transition-normal);
 }
 
 .settings-toggle:hover {
-  border-color: #667eea;
+  border-color: var(--color-primary);
 }
 
 .settings-toggle label {
@@ -540,7 +540,7 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: #555;
+  color: var(--color-text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
   margin: 0;
@@ -550,7 +550,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--color-primary);
 }
 
 .leave-confirm-overlay {
@@ -559,7 +559,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-overlay-medium);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -567,16 +567,16 @@
 }
 
 .leave-confirm-dialog {
-  background: white;
+  background: var(--color-surface);
   padding: 30px 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg-heavy);
 }
 
 .leave-confirm-dialog p {
   font-size: 1.1rem;
-  color: #333;
+  color: var(--color-text-primary);
   margin-bottom: 20px;
 }
 
@@ -587,33 +587,33 @@
 }
 
 .btn-leave-confirm {
-  background: #e53e3e;
+  background: var(--color-danger);
   color: white;
   border: none;
   padding: 10px 24px;
-  border-radius: 6px;
+  border-radius: var(--radius-base);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
 }
 
 .btn-leave-confirm:hover {
-  background: #c53030;
+  background: var(--color-danger-hover);
 }
 
 .btn-leave-cancel {
-  background: #e2e8f0;
-  color: #333;
+  background: var(--color-btn-neutral);
+  color: var(--color-text-primary);
   border: none;
   padding: 10px 24px;
-  border-radius: 6px;
+  border-radius: var(--radius-base);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
 }
 
 .btn-leave-cancel:hover {
-  background: #cbd5e0;
+  background: var(--color-btn-neutral-hover);
 }
 
 .game-over-overlay {
@@ -622,7 +622,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--color-overlay-heavy);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -630,21 +630,21 @@
 }
 
 .game-over-message {
-  background: white;
+  background: var(--color-surface);
   padding: 60px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg-heavy);
 }
 
 .game-over-message h2 {
-  color: #333;
+  color: var(--color-text-primary);
   font-size: 3rem;
   margin-bottom: 20px;
 }
 
 .game-over-message p {
-  color: #667eea;
+  color: var(--color-primary);
   font-size: 1.5rem;
   font-weight: 600;
 }
@@ -706,14 +706,7 @@
     font-size: 0.8rem;
   }
 
-  .empty-pile {
-    width: 70px;
-    height: 96px;
-  }
-
   .empty-message {
-    width: 70px;
-    height: 96px;
     font-size: 0.8rem;
   }
 
@@ -808,23 +801,11 @@
     font-size: 0.75rem;
   }
 
-  .empty-pile {
-    width: 60px;
-    height: 82px;
-  }
-
-  .empty-pile-small {
-    width: 45px;
-    height: 62px;
-  }
-
   .empty-pile-text {
     font-size: 0.75rem;
   }
 
   .empty-message {
-    width: 60px;
-    height: 82px;
     font-size: 0.75rem;
   }
 
@@ -878,14 +859,10 @@
   }
 
   .empty-pile {
-    width: 55px;
-    height: 75px;
     font-size: 0.7rem;
   }
 
   .empty-pile-small {
-    width: 40px;
-    height: 55px;
     font-size: 0.6rem;
   }
 
@@ -973,8 +950,6 @@
   }
 
   .empty-message {
-    width: 55px;
-    height: 75px;
     font-size: 0.7rem;
     padding: 4px;
   }
