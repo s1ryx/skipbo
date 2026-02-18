@@ -6,7 +6,7 @@
 set -e
 
 echo "╔════════════════════════════════════════════════════╗"
-echo "║      Skip-Bo Card Game - Docker Deployment        ║"
+echo "║       Skip-Bo Card Game - Docker Deployment        ║"
 echo "╚════════════════════════════════════════════════════╝"
 echo ""
 
@@ -63,7 +63,7 @@ sleep 5
 if docker-compose ps | grep -q "Up"; then
     echo ""
     echo "╔════════════════════════════════════════════════════╗"
-    echo "║             ✅ Deployment Successful!              ║"
+    echo "║              ✅ Deployment Successful!             ║"
     echo "╚════════════════════════════════════════════════════╝"
     echo ""
     echo "🎮 Access the game at:"
