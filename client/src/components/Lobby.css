@@ -126,7 +126,7 @@
   top: 50%;
   width: 40%;
   height: 1px;
-  background: #ddd;
+  background: #e0e0e0;
 }
 
 .divider::before {
