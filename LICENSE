@@ -1,0 +1,24 @@
+Copyright © 2026 Skip-Bo Game
+
+All Rights Reserved.
+
+This source code is made publicly visible for viewing purposes only.
+No license is granted for use, modification, distribution, or derivative works.
+
+---
+
+## Trademarks
+
+"Skip-Bo" is a registered trademark of Mattel, Inc. This project is not affiliated with, endorsed by, or sponsored by Mattel, Inc. All rights to the Skip-Bo name and brand belong to Mattel, Inc.
+
+---
+
+## Third-Party Assets
+
+### Git-Flow Branching Model Diagram
+
+The git-flow branching model diagram located at `docs/images/git-flow-model.png` is:
+- © Vincent Driessen
+- Licensed under Creative Commons Attribution-ShareAlike (CC BY-SA)
+- Original source: https://nvie.com/posts/a-successful-git-branching-model/
+- Original diagram: https://nvie.com/files/Git-branching-model.pdf

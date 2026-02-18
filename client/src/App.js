@@ -1,15 +1,34 @@
+/* eslint-disable no-console */
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import './App.css';
 import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
+import { useTranslation } from './i18n';
 
 // When REACT_APP_SERVER_URL is not set or empty, use undefined to connect to same origin
 // This allows Socket.IO to connect to the domain where the app is hosted
 const SOCKET_SERVER_URL = process.env.REACT_APP_SERVER_URL || undefined;
-const VERSION = process.env.REACT_APP_VERSION || require('../package.json').version;
+const VERSION = require('../package.json').version;
+const COMMIT_HASH = process.env.REACT_APP_COMMIT_HASH;
+
+// Generate a stable unique player identifier
+const generatePlayerUniqueId = () => {
+  return 'player_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+};
+
+// Get or create stable player ID
+const getStablePlayerId = () => {
+  let stableId = localStorage.getItem('skipBoStablePlayerId');
+  if (!stableId) {
+    stableId = generatePlayerUniqueId();
+    localStorage.setItem('skipBoStablePlayerId', stableId);
+  }
+  return stableId;
+};
 
 function App() {
+  const { t, language, setLanguage, supportedLanguages } = useTranslation();
   const [socket, setSocket] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [playerState, setPlayerState] = useState(null);
@@ -17,6 +36,42 @@ function App() {
   const [roomId, setRoomId] = useState(null);
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
+  const [roomIdFromUrl, setRoomIdFromUrl] = useState(null);
+  const [chatMessages, setChatMessages] = useState(() => {
+    // Load chat messages from localStorage on initialization
+    const savedSession = localStorage.getItem('skipBoSession');
+    if (savedSession) {
+      try {
+        const { roomId } = JSON.parse(savedSession);
+        const savedMessages = localStorage.getItem(`skipBoChat_${roomId}`);
+        if (savedMessages) {
+          return JSON.parse(savedMessages);
+        }
+      } catch (error) {
+        console.error('Failed to load chat messages:', error);
+      }
+    }
+    return [];
+  });
+  const [stablePlayerId] = useState(getStablePlayerId());
+
+  // Extract room ID from URL parameters on load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if (roomParam) {
+      setRoomIdFromUrl(roomParam.toUpperCase());
+      // Clean up URL after extracting the parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // Save chat messages to localStorage whenever they change
+  useEffect(() => {
+    if (roomId && chatMessages.length > 0) {
+      localStorage.setItem(`skipBoChat_${roomId}`, JSON.stringify(chatMessages));
+    }
+  }, [chatMessages, roomId]);
 
   useEffect(() => {
     const newSocket = io(SOCKET_SERVER_URL);
@@ -25,6 +80,19 @@ function App() {
     newSocket.on('connect', () => {
       console.log('Connected to server');
       setPlayerId(newSocket.id);
+
+      // Check for existing session and attempt reconnection
+      const savedSession = localStorage.getItem('skipBoSession');
+      if (savedSession) {
+        try {
+          const { roomId, playerId, playerName } = JSON.parse(savedSession);
+          console.log('Attempting to reconnect to room:', roomId);
+          newSocket.emit('reconnect', { roomId, oldPlayerId: playerId, playerName });
+        } catch (error) {
+          console.error('Failed to parse saved session:', error);
+          localStorage.removeItem('skipBoSession');
+        }
+      }
     });
 
     newSocket.on('roomCreated', ({ roomId, playerId, gameState }) => {
@@ -33,11 +101,71 @@ function App() {
       setPlayerId(playerId);
       setGameState(gameState);
       setInLobby(false);
+
+      // Save session data
+      const player = gameState.players.find((p) => p.id === playerId);
+      if (player) {
+        localStorage.setItem(
+          'skipBoSession',
+          JSON.stringify({
+            roomId,
+            playerId,
+            playerName: player.name,
+          })
+        );
+      }
     });
 
     newSocket.on('playerJoined', ({ gameState }) => {
       console.log('Player joined');
       setGameState(gameState);
+
+      // Save session data when joining
+      const currentPlayer = gameState.players.find((p) => p.id === newSocket.id);
+      if (currentPlayer) {
+        localStorage.setItem(
+          'skipBoSession',
+          JSON.stringify({
+            roomId: gameState.roomId,
+            playerId: newSocket.id,
+            playerName: currentPlayer.name,
+          })
+        );
+      }
+    });
+
+    newSocket.on('playerLeft', ({ gameState }) => {
+      console.log('Player left lobby');
+      setGameState(gameState);
+    });
+
+    newSocket.on('reconnected', ({ roomId, playerId, gameState, playerState }) => {
+      console.log('Successfully reconnected to room:', roomId);
+      setRoomId(roomId);
+      setPlayerId(playerId);
+      setGameState(gameState);
+      setPlayerState(playerState);
+      setInLobby(false);
+
+      // Update session with new socket ID
+      const player = gameState.players.find((p) => p.id === playerId);
+      if (player) {
+        localStorage.setItem(
+          'skipBoSession',
+          JSON.stringify({
+            roomId,
+            playerId,
+            playerName: player.name,
+          })
+        );
+      }
+    });
+
+    newSocket.on('reconnectFailed', ({ message }) => {
+      console.log('Reconnection failed:', message);
+      localStorage.removeItem('skipBoSession');
+      setError(message);
+      setTimeout(() => setError(null), 5000);
     });
 
     newSocket.on('gameStarted', ({ gameState, playerState }) => {
@@ -55,13 +183,56 @@ function App() {
       console.log('Turn changed to:', currentPlayerId);
     });
 
-    newSocket.on('gameOver', ({ winner, gameState }) => {
+    newSocket.on('gameOver', ({ gameState }) => {
       setGameState(gameState);
-      alert(`Game Over! Winner: ${winner.name}`);
+      // Clear session and chat when game ends
+      const savedSession = localStorage.getItem('skipBoSession');
+      if (savedSession) {
+        try {
+          const { roomId } = JSON.parse(savedSession);
+          localStorage.removeItem(`skipBoChat_${roomId}`);
+        } catch (error) {
+          console.error('Failed to clear chat messages:', error);
+        }
+      }
+      localStorage.removeItem('skipBoSession');
     });
 
-    newSocket.on('playerDisconnected', ({ message }) => {
-      alert(message);
+    newSocket.on('playerDisconnected', ({ playerId }) => {
+      // Update game state to mark player as disconnected
+      setGameState((prevState) => {
+        if (!prevState) return prevState;
+        return {
+          ...prevState,
+          players: prevState.players.map((p) =>
+            p.id === playerId ? { ...p, disconnected: true } : p
+          ),
+        };
+      });
+    });
+
+    newSocket.on('gameAborted', () => {
+      console.log('Game aborted by a player');
+      // Clear session, chat and return to lobby
+      const savedSession = localStorage.getItem('skipBoSession');
+      if (savedSession) {
+        try {
+          const { roomId } = JSON.parse(savedSession);
+          localStorage.removeItem(`skipBoChat_${roomId}`);
+        } catch (error) {
+          console.error('Failed to clear chat messages:', error);
+        }
+      }
+      localStorage.removeItem('skipBoSession');
+      setGameState(null);
+      setPlayerState(null);
+      setRoomId(null);
+      setInLobby(true);
+      setChatMessages([]);
+    });
+
+    newSocket.on('chatMessage', (messageData) => {
+      setChatMessages((prevMessages) => [...prevMessages, messageData]);
     });
 
     newSocket.on('error', ({ message }) => {
@@ -74,9 +245,9 @@ function App() {
     };
   }, []);
 
-  const createRoom = (playerName, maxPlayers) => {
+  const createRoom = (playerName, maxPlayers, stockpileSize) => {
     if (socket) {
-      socket.emit('createRoom', { playerName, maxPlayers });
+      socket.emit('createRoom', { playerName, maxPlayers, stockpileSize });
     }
   };
 
@@ -112,23 +283,47 @@ function App() {
     }
   };
 
+  const leaveLobby = () => {
+    if (socket) {
+      socket.emit('leaveLobby');
+      localStorage.removeItem('skipBoSession');
+      setGameState(null);
+      setPlayerState(null);
+      setRoomId(null);
+      setInLobby(true);
+    }
+  };
+
+  const leaveGame = () => {
+    if (socket) {
+      // Clear chat messages from localStorage before leaving
+      if (roomId) {
+        localStorage.removeItem(`skipBoChat_${roomId}`);
+      }
+      socket.emit('leaveGame');
+    }
+  };
+
+  const sendChatMessage = (message) => {
+    if (socket) {
+      socket.emit('sendChatMessage', { message, stablePlayerId });
+    }
+  };
+
+  const markMessagesAsRead = () => {
+    setChatMessages((prevMessages) => prevMessages.map((msg) => ({ ...msg, read: true })));
+  };
+
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Skip-Bo Card Game</h1>
+        <h1>{t('app.title')}</h1>
       </header>
 
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{t(error)}</div>}
 
       {inLobby ? (
-        <Lobby
-          onCreateRoom={createRoom}
-          onJoinRoom={joinRoom}
-        />
+        <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} initialRoomId={roomIdFromUrl} />
       ) : (
         <GameBoard
           gameState={gameState}
@@ -139,11 +334,31 @@ function App() {
           onPlayCard={playCard}
           onDiscardCard={discardCard}
           onEndTurn={endTurn}
+          onLeaveLobby={leaveLobby}
+          onLeaveGame={leaveGame}
+          chatMessages={chatMessages}
+          onSendChatMessage={sendChatMessage}
+          onMarkMessagesRead={markMessagesAsRead}
+          stablePlayerId={stablePlayerId}
         />
       )}
 
       <footer className="App-footer">
-        <span className="version">v{VERSION}</span>
+        <span className="version">
+          v{VERSION}
+          {COMMIT_HASH && ` (${COMMIT_HASH})`}
+        </span>
+        <select
+          className="language-selector"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+        >
+          {supportedLanguages.map((lang) => (
+            <option key={lang} value={lang}>
+              {t(`language.${lang}`)}
+            </option>
+          ))}
+        </select>
       </footer>
     </div>
   );
