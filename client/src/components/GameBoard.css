@@ -28,7 +28,7 @@
   border-radius: 8px;
   font-weight: 600;
   background: #e0e0e0;
-  color: #666;
+  color: #555;
 }
 
 .turn-indicator.my-turn {
@@ -190,7 +190,7 @@
 
 .pile-label {
   font-size: 0.85rem;
-  color: #666;
+  color: #555;
   font-weight: 500;
 }
 
@@ -208,7 +208,7 @@
 
 .pile-label-small {
   font-size: 0.7rem;
-  color: #666;
+  color: #555;
 }
 
 .discard-pile-stack-small {
