@@ -1,6 +1,6 @@
 {
   "name": "skip-bo-client",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
@@ -9,15 +9,24 @@
     "socket.io-client": "^4.6.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD) react-scripts start",
+    "build": "REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD) react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
       "react-app"
-    ]
+    ],
+    "rules": {
+      "no-console": "warn",
+      "no-unused-vars": [
+        "warn",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ]
+    }
   },
   "browserslist": {
     "production": [

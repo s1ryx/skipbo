@@ -5,6 +5,11 @@
 
 set -e
 
+# Navigate to project root (parent directory of scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 echo "========================================="
 echo "Skip-Bo Network Game Setup"
 echo "========================================="
@@ -19,11 +24,13 @@ echo ""
 # Check if .env files exist
 if [ ! -f server/.env ]; then
     echo "ERROR: server/.env not found!"
+    echo "Please create server/.env (see server/.env.example)"
     exit 1
 fi
 
 if [ ! -f client/.env ]; then
     echo "ERROR: client/.env not found!"
+    echo "Please create client/.env (see client/.env.example)"
     exit 1
 fi
 
@@ -66,8 +73,9 @@ echo ""
 echo "NEXT STEPS:"
 echo ""
 echo "1. On Windows (as Administrator), run:"
+echo "   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass"
 echo "   cd $(pwd | sed 's|/mnt/c|C:|' | sed 's|/|\\|g')"
-echo "   powershell -ExecutionPolicy Bypass -File setup-wsl-portforward.ps1"
+echo "   powershell -ExecutionPolicy Bypass -File scripts\\setup-wsl-portforward.ps1"
 echo ""
 echo "2. Then start the server (in this terminal):"
 echo "   cd server && npm start"

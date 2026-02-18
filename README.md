@@ -5,11 +5,13 @@ A multiplayer Skip-Bo card game built with React and Node.js using Socket.IO for
 ## Tech Stack
 
 ### Backend
+
 - **Node.js** - Server runtime
 - **Express** - Web framework
 - **Socket.IO** - Real-time bidirectional communication
 
 ### Frontend
+
 - **React** - UI library
 - **Socket.IO Client** - Real-time communication client
 - **CSS3** - Styling with animations
@@ -17,9 +19,11 @@ A multiplayer Skip-Bo card game built with React and Node.js using Socket.IO for
 ## Game Rules
 
 ### Objective
+
 Be the first player to play all cards from your stockpile.
 
 ### Setup
+
 - 2-6 players
 - Each player receives a stockpile (30 cards for 2-4 players, 20 cards for 5-6 players)
 - Each player gets 5 cards in hand
@@ -27,6 +31,7 @@ Be the first player to play all cards from your stockpile.
 - Each player has 4 discard piles
 
 ### Gameplay
+
 1. **Turn Start**: Each turn begins by drawing cards from the deck until you have 5 cards in hand
 2. **Building Piles**: Must be built sequentially from 1 to 12
 3. **Skip-Bo Cards**: Wild cards that can represent any number
@@ -39,6 +44,7 @@ Be the first player to play all cards from your stockpile.
 ## Installation & Setup
 
 ### Prerequisites
+
 - Node.js (v14 or higher)
 - npm or yarn
 
@@ -70,6 +76,7 @@ npm start
 The server will run on `http://localhost:3001`
 
 For development with auto-reload:
+
 ```bash
 npm run dev
 ```
@@ -94,17 +101,21 @@ To play with multiple users on your local network (WiFi/LAN), follow these steps
 ### Step 1: Find Your IP Address
 
 **On Windows:**
+
 ```bash
 ipconfig
 ```
+
 Look for "IPv4 Address" under your active network adapter (usually starts with `192.168.x.x` or `10.0.x.x`)
 
 **On macOS/Linux:**
+
 ```bash
 hostname -I
 # or
 ifconfig | grep "inet "
 ```
+
 Look for an address that starts with `192.168.x.x` or `10.0.x.x`
 
 **Example:** Your IP might be `192.168.1.5`
@@ -112,12 +123,14 @@ Look for an address that starts with `192.168.x.x` or `10.0.x.x`
 ### Step 2: Configure the Server
 
 1. Create a `.env` file in the `server` directory:
+
 ```bash
 cd server
 cp .env.example .env
 ```
 
 2. Edit `server/.env`:
+
 ```env
 PORT=3001
 HOST=0.0.0.0
@@ -130,15 +143,18 @@ CORS_ORIGIN=*
 ### Step 3: Configure the Client
 
 1. Create a `.env` file in the `client` directory:
+
 ```bash
 cd client
 cp .env.example .env
 ```
 
 2. Edit `client/.env` and replace with your IP address:
+
 ```env
 REACT_APP_SERVER_URL=http://192.168.1.5:3001
 ```
+
 **Important:** Replace `192.168.1.5` with YOUR actual IP address from Step 1!
 
 ### Step 4: Start the Server
@@ -149,6 +165,7 @@ npm start
 ```
 
 You should see:
+
 ```
 Skip-Bo server running on http://0.0.0.0:3001
 For local network access, use your machine's IP address instead of 0.0.0.0
@@ -188,19 +205,26 @@ The client will be available at `http://YOUR_IP:3000` (e.g., `http://192.168.1.5
 If players can't connect, you may need to allow connections through your firewall:
 
 **Windows Firewall:**
+
 ```powershell
 # Run as Administrator
+# First, allow script execution (required for setup scripts):
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# Then add firewall rules:
 netsh advfirewall firewall add rule name="Skip-Bo Server" dir=in action=allow protocol=TCP localport=3001
 netsh advfirewall firewall add rule name="Skip-Bo Client" dir=in action=allow protocol=TCP localport=3000
 ```
 
 **macOS:**
+
 ```bash
 # System Preferences → Security & Privacy → Firewall → Firewall Options
 # Allow incoming connections for Node
 ```
 
 **Linux (ufw):**
+
 ```bash
 sudo ufw allow 3001/tcp
 sudo ufw allow 3000/tcp
@@ -222,6 +246,7 @@ sudo ufw allow 3000/tcp
 ### Troubleshooting Local Network Play
 
 **Players can't connect:**
+
 - ✅ Verify all devices are on the same WiFi network
 - ✅ Check firewall settings (see above)
 - ✅ Ensure the server is running and showing the correct IP
@@ -229,11 +254,13 @@ sudo ufw allow 3000/tcp
 - ✅ Make sure you're using `http://` not `https://`
 
 **Game is slow or laggy:**
+
 - ✅ Check WiFi signal strength
 - ✅ Move closer to the router
 - ✅ Restart the router if needed
 
 **Connection drops:**
+
 - ✅ Some routers have WiFi isolation enabled - check router settings
 - ✅ Ensure devices aren't going to sleep mode
 
@@ -244,37 +271,44 @@ sudo ufw allow 3000/tcp
 For production deployment or easy internet play, use Docker for containerized deployment with optimized performance and security.
 
 ### Prerequisites
+
 - [Docker](https://docs.docker.com/get-docker/) (v20.10+)
 - [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+)
 
 ### Quick Start with Docker
 
 1. **Clone or navigate to the project**:
+
 ```bash
 cd skip-bo-game
 ```
 
 2. **Build and start all services**:
+
 ```bash
 cd deployment/docker
 docker-compose up -d
 ```
 
 This will:
+
 - Build the client and server Docker images
 - Start nginx reverse proxy on port 80
 - Configure all networking and health checks automatically
 
 3. **Access the game**:
+
 - Local: `http://localhost`
 - Network: `http://YOUR_IP_ADDRESS` (find IP with `hostname -I` or `ipconfig`)
 
 4. **View logs**:
+
 ```bash
 docker-compose logs -f
 ```
 
 5. **Stop the services**:
+
 ```bash
 docker-compose down
 ```
@@ -282,6 +316,7 @@ docker-compose down
 ### Architecture
 
 The Docker setup includes:
+
 - **Client**: React app served by nginx (optimized production build)
 - **Server**: Node.js Socket.IO server with health checks
 - **Nginx Reverse Proxy**: Routes traffic and handles WebSocket connections
@@ -303,6 +338,7 @@ nginx (port 80)
 For production deployment, create environment files:
 
 **Server** (`server/.env.production`):
+
 ```env
 NODE_ENV=production
 PORT=3001
@@ -311,6 +347,7 @@ CORS_ORIGIN=*  # Change to your domain in production
 ```
 
 **Client** (`client/.env.production`):
+
 ```env
 # Leave empty for same-origin Socket.IO connection (recommended)
 REACT_APP_SERVER_URL=
@@ -322,10 +359,12 @@ To use a custom domain:
 
 1. Point your domain's DNS A record to your server's IP
 2. Update `CORS_ORIGIN` in `docker-compose.yml`:
+
 ```yaml
 environment:
   - CORS_ORIGIN=https://yourdomain.com
 ```
+
 3. For HTTPS, add SSL certificates to nginx configuration
 
 ### Deployment Platforms
@@ -335,6 +374,7 @@ environment:
 The Docker setup works with any container platform:
 
 **Railway.app**:
+
 ```bash
 # Install Railway CLI
 npm install -g @railway/cli
@@ -346,12 +386,14 @@ railway up
 ```
 
 **Render.com**:
+
 - Connect your GitHub repository
 - Select "Docker" as environment
 - Set root directory to `deployment/docker`
 - Render will auto-detect `docker-compose.yml`
 
 **Fly.io**:
+
 ```bash
 # Install flyctl
 curl -L https://fly.io/install.sh | sh
@@ -362,6 +404,7 @@ fly deploy
 ```
 
 **DigitalOcean/AWS/GCP**:
+
 - Deploy to any VPS with Docker installed
 - Use docker-compose as shown above
 - Configure firewall to allow port 80/443
@@ -378,12 +421,14 @@ fly deploy
 ### Troubleshooting Docker Deployment
 
 **Build fails:**
+
 ```bash
 # Clear Docker cache and rebuild
 docker-compose build --no-cache
 ```
 
 **Services won't start:**
+
 ```bash
 # Check logs for specific service
 docker-compose logs server
@@ -392,12 +437,14 @@ docker-compose logs nginx
 ```
 
 **Can't connect:**
+
 - ✅ Verify all containers are running: `docker-compose ps`
 - ✅ Check health status: `docker-compose ps` (should show "healthy")
 - ✅ Ensure port 80 is not in use: `sudo lsof -i :80`
 - ✅ Check firewall allows port 80: `sudo ufw status`
 
 **WebSocket connection fails:**
+
 - ✅ Verify nginx is proxying correctly: `docker-compose logs nginx`
 - ✅ Check browser console for connection errors
 - ✅ Ensure CORS_ORIGIN is set correctly
@@ -475,11 +522,13 @@ skip-bo-game/
 ## Game Architecture
 
 ### Server-Side
+
 - **Game State Management**: All game logic runs on server
 - **Room System**: Multiple concurrent games in different rooms
 - **Event Handling**: Validates moves and broadcasts updates
 
 ### Client-Side
+
 - **Socket.IO Connection**: Communicates with server
 - **React State**: Manages local UI state
 - **Component-Based**: Modular, reusable components
@@ -487,6 +536,7 @@ skip-bo-game/
 ## Socket.IO Events
 
 ### Client → Server
+
 - `createRoom` - Create a new game room
 - `joinRoom` - Join an existing room
 - `startGame` - Start the game
@@ -495,6 +545,7 @@ skip-bo-game/
 - `endTurn` - End current turn
 
 ### Server → Client
+
 - `roomCreated` - Room successfully created
 - `playerJoined` - New player joined
 - `gameStarted` - Game has started
@@ -516,15 +567,18 @@ skip-bo-game/
 ## Troubleshooting
 
 ### Connection Issues
+
 - Ensure server is running before starting client
 - Check that ports 3000 and 3001 are available
 - Verify firewall settings for local connections
 
 ### Game Not Starting
+
 - Need at least 2 players to start
 - Ensure all players are connected
 
 ### Cards Not Playing
+
 - Verify it's your turn
 - Check card follows sequence rules
 - Ensure building pile isn't complete (hasn't reached 12)
@@ -548,6 +602,7 @@ MIT License - Feel free to use and modify!
 ## Quick Reference
 
 ### Local Development
+
 ```bash
 # Terminal 1 - Start server
 cd server && npm start
@@ -557,6 +612,7 @@ cd client && npm start
 ```
 
 ### Local Network Testing
+
 ```bash
 # 1. Find your IP
 hostname -I  # Linux/Mac
@@ -577,6 +633,7 @@ serve -s build -l 3000
 ```
 
 ### Essential Commands
+
 ```bash
 # Install dependencies (run once)
 cd server && npm install
@@ -598,6 +655,7 @@ ip addr show        # Linux alternative
 ```
 
 ### Docker Deployment
+
 ```bash
 # Navigate to deployment directory
 cd deployment/docker

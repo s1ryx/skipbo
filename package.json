@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.5.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,json,css,md}": "prettier --write",
+    "client/src/**/*.{js,jsx}": "./client/node_modules/.bin/eslint --fix --max-warnings=0",
+    "server/**/*.js": "./server/node_modules/.bin/eslint --fix --max-warnings=0"
+  }
+}

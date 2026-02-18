@@ -1,7 +1,8 @@
 class SkipBoGame {
-  constructor(roomId, playerCount) {
+  constructor(roomId, playerCount, stockpileSize) {
     this.roomId = roomId;
     this.playerCount = playerCount;
+    this.stockpileSize = stockpileSize; // Custom stockpile size
     this.players = [];
     this.deck = [];
     this.buildingPiles = [[], [], [], []]; // 4 building piles
@@ -52,20 +53,38 @@ class SkipBoGame {
     return true;
   }
 
+  removePlayer(playerId) {
+    const index = this.players.findIndex((p) => p.id === playerId);
+    if (index === -1) {
+      return false;
+    }
+    this.players.splice(index, 1);
+    return true;
+  }
+
   startGame() {
     if (this.players.length < 2) {
       return false;
     }
 
+    // Prevent starting an already-started game
+    if (this.gameStarted) {
+      return false;
+    }
+
     this.deck = this.createDeck();
 
-    // Determine stockpile size based on player count
-    const stockpileSize = this.players.length <= 4 ? 30 : 20;
+    // Use custom stockpile size if provided, otherwise use default based on player count
+    const stockpileSize = this.stockpileSize || (this.players.length <= 4 ? 30 : 20);
+
+    // Validate stockpile size against game rules
+    const maxAllowed = this.players.length <= 4 ? 30 : 20;
+    const actualStockpileSize = Math.min(stockpileSize, maxAllowed);
 
     // Deal stockpiles and hands to each player
-    this.players.forEach(player => {
+    this.players.forEach((player) => {
       // Deal stockpile (face down)
-      for (let i = 0; i < stockpileSize; i++) {
+      for (let i = 0; i < actualStockpileSize; i++) {
         player.stockpile.push(this.deck.pop());
       }
 
@@ -90,7 +109,8 @@ class SkipBoGame {
     }
 
     const lastCard = pileCards[pileCards.length - 1];
-    const lastValue = lastCard === 'SKIP-BO' ? this.getActualValue(pileCards, pileCards.length - 1) : lastCard;
+    const lastValue =
+      lastCard === 'SKIP-BO' ? this.getActualValue(pileCards, pileCards.length - 1) : lastCard;
 
     if (lastValue === 12) {
       return null; // Pile is complete
@@ -127,16 +147,16 @@ class SkipBoGame {
     return card === nextValue;
   }
 
-  playCard(playerId, card, source, buildingPileIndex, discardIndex = null) {
-    const player = this.players.find(p => p.id === playerId);
+  playCard(playerId, card, source, buildingPileIndex, _discardIndex = null) {
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'Not your turn' };
+      return { success: false, error: 'error.notYourTurn' };
     }
 
     // Validate the move
     if (!this.canPlayCard(card, buildingPileIndex)) {
-      return { success: false, error: 'Invalid move' };
+      return { success: false, error: 'error.invalidMove' };
     }
 
     // Remove card from source
@@ -162,7 +182,7 @@ class SkipBoGame {
     }
 
     if (!cardRemoved) {
-      return { success: false, error: 'Card not found in source' };
+      return { success: false, error: 'error.cardNotFound' };
     }
 
     // Add card to building pile
@@ -175,6 +195,11 @@ class SkipBoGame {
     );
 
     if (pileValue === 12) {
+      // Shuffle completed pile back into deck
+      const completedPile = this.buildingPiles[buildingPileIndex];
+      this.deck = this.deck.concat(completedPile);
+      this.deck = this.shuffleDeck(this.deck);
+
       // Clear the completed pile
       this.buildingPiles[buildingPileIndex] = [];
     }
@@ -194,19 +219,19 @@ class SkipBoGame {
   }
 
   discardCard(playerId, card, discardPileIndex) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'Not your turn' };
+      return { success: false, error: 'error.notYourTurn' };
     }
 
     if (discardPileIndex < 0 || discardPileIndex > 3) {
-      return { success: false, error: 'Invalid discard pile' };
+      return { success: false, error: 'error.invalidDiscardPile' };
     }
 
     const cardIndex = player.hand.indexOf(card);
     if (cardIndex === -1) {
-      return { success: false, error: 'Card not in hand' };
+      return { success: false, error: 'error.cardNotInHand' };
     }
 
     // Remove from hand and add to discard pile
@@ -217,10 +242,10 @@ class SkipBoGame {
   }
 
   drawCards(playerId) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player) {
-      return { success: false, error: 'Player not found' };
+      return { success: false, error: 'error.playerNotFoundDraw' };
     }
 
     // Draw cards until hand has 5 cards
@@ -232,10 +257,10 @@ class SkipBoGame {
   }
 
   endTurn(playerId) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'Not your turn' };
+      return { success: false, error: 'error.notYourTurn' };
     }
 
     // Move to next player
@@ -251,13 +276,13 @@ class SkipBoGame {
   getGameState() {
     return {
       roomId: this.roomId,
-      players: this.players.map(p => ({
+      players: this.players.map((p) => ({
         id: p.id,
         name: p.name,
         stockpileCount: p.stockpile.length,
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
         handCount: p.hand.length,
-        discardPiles: p.discardPiles
+        discardPiles: p.discardPiles,
       })),
       buildingPiles: this.buildingPiles,
       currentPlayerIndex: this.currentPlayerIndex,
@@ -265,19 +290,20 @@ class SkipBoGame {
       deckCount: this.deck.length,
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
-      winner: this.winner
+      winner: this.winner,
     };
   }
 
   getPlayerState(playerId) {
-    const player = this.players.find(p => p.id === playerId);
+    const player = this.players.find((p) => p.id === playerId);
     if (!player) return null;
 
     return {
       hand: player.hand,
       stockpile: player.stockpile,
-      stockpileTop: player.stockpile.length > 0 ? player.stockpile[player.stockpile.length - 1] : null,
-      discardPiles: player.discardPiles
+      stockpileTop:
+        player.stockpile.length > 0 ? player.stockpile[player.stockpile.length - 1] : null,
+      discardPiles: player.discardPiles,
     };
   }
 }
