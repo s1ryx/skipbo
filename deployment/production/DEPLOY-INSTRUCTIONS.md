@@ -25,7 +25,7 @@ chmod +x deployment/deploy.sh
 # Option B: Manual setup
 cd deployment/docker
 cp .env.example .env
-# Edit .env with your domain and email
+# Edit .env with your domain (email is optional)
 REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD) docker compose build
 docker compose up -d
 ```
@@ -50,8 +50,11 @@ curl -I https://your-domain.com/health
 The only file you need to edit is `deployment/docker/.env`:
 
 ```env
+# Required
 DOMAIN=skipbo.example.com
-ACME_EMAIL=admin@example.com
+
+# Optional: email for LetsEncrypt certificate expiry notifications
+# ACME_EMAIL=admin@example.com
 ```
 
 ## Architecture
