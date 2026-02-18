@@ -53,6 +53,7 @@ docker-compose build
 
 echo ""
 echo "🚀 Starting services..."
+docker-compose down --remove-orphans 2>/dev/null || true
 docker-compose up -d
 
 echo ""
