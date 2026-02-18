@@ -130,7 +130,7 @@
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #999;
   border-radius: 3px;
 }
 

@@ -75,7 +75,7 @@
 }
 
 .form-group input::placeholder {
-  color: #aaa;
+  color: #999;
 }
 
 .btn-primary,
