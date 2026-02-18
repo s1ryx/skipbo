@@ -87,7 +87,8 @@ describe('App', () => {
 
   it('renders the version in the footer', () => {
     renderApp();
-    expect(screen.getByText(/v1\.0\.0/)).toBeInTheDocument();
+    const { version } = require('../package.json');
+    expect(screen.getByText(`v${version}`)).toBeInTheDocument();
   });
 
   describe('error handling', () => {
