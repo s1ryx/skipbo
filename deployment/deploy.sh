@@ -44,12 +44,12 @@ if [ ! -f ".env" ]; then
         echo ""
 
         read -p "Enter your domain name (e.g. skipbo.example.com): " DOMAIN
-        read -p "Enter your email for LetsEncrypt notifications: " ACME_EMAIL
+        read -p "Enter email for LetsEncrypt notifications (optional, press Enter to skip): " ACME_EMAIL
 
-        cat > .env <<EOF
-DOMAIN=$DOMAIN
-ACME_EMAIL=$ACME_EMAIL
-EOF
+        {
+            echo "DOMAIN=$DOMAIN"
+            [ -n "$ACME_EMAIL" ] && echo "ACME_EMAIL=$ACME_EMAIL"
+        } > .env
         echo ""
         echo "✅ Created .env with domain: $DOMAIN"
     else
