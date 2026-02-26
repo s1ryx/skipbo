@@ -9,11 +9,11 @@ export default function useGameConnection() {
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
   const [chatMessages, setChatMessages] = useState(() => {
-    const savedSession = localStorage.getItem('skipBoSession');
+    const savedSession = sessionStorage.getItem('skipBoSession');
     if (savedSession) {
       try {
         const { roomId } = JSON.parse(savedSession);
-        const savedMessages = localStorage.getItem(`skipBoChat_${roomId}`);
+        const savedMessages = sessionStorage.getItem(`skipBoChat_${roomId}`);
         if (savedMessages) {
           return JSON.parse(savedMessages);
         }
@@ -29,10 +29,10 @@ export default function useGameConnection() {
   const roomIdRef = useRef(null);
   const sessionTokenRef = useRef(null);
 
-  // Save chat messages to localStorage whenever they change
+  // Save chat messages to sessionStorage whenever they change
   useEffect(() => {
     if (roomId && chatMessages.length > 0) {
-      localStorage.setItem(`skipBoChat_${roomId}`, JSON.stringify(chatMessages));
+      sessionStorage.setItem(`skipBoChat_${roomId}`, JSON.stringify(chatMessages));
     }
   }, [chatMessages, roomId]);
 
@@ -50,7 +50,7 @@ export default function useGameConnection() {
 
         const player = gameState.players.find((p) => p.id === playerId);
         if (player) {
-          localStorage.setItem(
+          sessionStorage.setItem(
             'skipBoSession',
             JSON.stringify({ roomId, playerId, playerName: player.name, sessionToken })
           );
@@ -73,7 +73,7 @@ export default function useGameConnection() {
           setInLobby(false);
           const player = prev.players.find((p) => p.id === playerId);
           if (player) {
-            localStorage.setItem(
+            sessionStorage.setItem(
               'skipBoSession',
               JSON.stringify({
                 roomId: prev.roomId,
@@ -106,7 +106,7 @@ export default function useGameConnection() {
 
         const player = gameState.players.find((p) => p.id === playerId);
         if (player) {
-          localStorage.setItem(
+          sessionStorage.setItem(
             'skipBoSession',
             JSON.stringify({ roomId, playerId, playerName: player.name, sessionToken })
           );
@@ -116,7 +116,7 @@ export default function useGameConnection() {
       reconnectFailed: ({ message }) => {
         // eslint-disable-next-line no-console
         console.log('Reconnection failed:', message);
-        localStorage.removeItem('skipBoSession');
+        sessionStorage.removeItem('skipBoSession');
         setError(message);
         setTimeout(() => setError(null), 5000);
       },
@@ -135,17 +135,17 @@ export default function useGameConnection() {
 
       gameOver: ({ gameState }) => {
         setGameState(gameState);
-        const savedSession = localStorage.getItem('skipBoSession');
+        const savedSession = sessionStorage.getItem('skipBoSession');
         if (savedSession) {
           try {
             const { roomId } = JSON.parse(savedSession);
-            localStorage.removeItem(`skipBoChat_${roomId}`);
+            sessionStorage.removeItem(`skipBoChat_${roomId}`);
           } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to clear chat messages:', err);
           }
         }
-        localStorage.removeItem('skipBoSession');
+        sessionStorage.removeItem('skipBoSession');
       },
 
       playerDisconnected: ({ playerId }) => {
@@ -175,17 +175,17 @@ export default function useGameConnection() {
       gameAborted: () => {
         // eslint-disable-next-line no-console
         console.log('Game aborted by a player');
-        const savedSession = localStorage.getItem('skipBoSession');
+        const savedSession = sessionStorage.getItem('skipBoSession');
         if (savedSession) {
           try {
             const { roomId } = JSON.parse(savedSession);
-            localStorage.removeItem(`skipBoChat_${roomId}`);
+            sessionStorage.removeItem(`skipBoChat_${roomId}`);
           } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to clear chat messages:', err);
           }
         }
-        localStorage.removeItem('skipBoSession');
+        sessionStorage.removeItem('skipBoSession');
         roomIdRef.current = null;
         setGameState(null);
         setPlayerState(null);
@@ -211,7 +211,7 @@ export default function useGameConnection() {
         connectionIdRef.current = connectionId;
         setPlayerId(connectionId);
 
-        const savedSession = localStorage.getItem('skipBoSession');
+        const savedSession = sessionStorage.getItem('skipBoSession');
         if (savedSession) {
           try {
             const { roomId, playerName, sessionToken } = JSON.parse(savedSession);
@@ -221,7 +221,7 @@ export default function useGameConnection() {
           } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to parse saved session:', err);
-            localStorage.removeItem('skipBoSession');
+            sessionStorage.removeItem('skipBoSession');
           }
         }
       },
@@ -260,7 +260,7 @@ export default function useGameConnection() {
 
   const leaveLobby = useCallback(() => {
     transportRef.current?.send('leaveLobby');
-    localStorage.removeItem('skipBoSession');
+    sessionStorage.removeItem('skipBoSession');
     roomIdRef.current = null;
     setGameState(null);
     setPlayerState(null);
@@ -270,7 +270,7 @@ export default function useGameConnection() {
 
   const leaveGame = useCallback(() => {
     if (roomIdRef.current) {
-      localStorage.removeItem(`skipBoChat_${roomIdRef.current}`);
+      sessionStorage.removeItem(`skipBoChat_${roomIdRef.current}`);
     }
     transportRef.current?.send('leaveGame');
   }, []);
