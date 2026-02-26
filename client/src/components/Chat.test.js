@@ -11,7 +11,7 @@ const renderChat = (props = {}) => {
     messages: [],
     onSendMessage: jest.fn(),
     onMarkMessagesRead: jest.fn(),
-    stablePlayerId: 'my-stable-id',
+    playerId: 'my-stable-id',
   };
   return render(
     <LanguageProvider>
@@ -52,6 +52,21 @@ describe('Chat', () => {
     fireEvent.click(screen.getByText('Chat'));
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Hello world')).toBeInTheDocument();
+  });
+
+  it('identifies own messages using playerId matching stablePlayerId', () => {
+    const messages = [
+      {
+        playerName: 'Me',
+        message: 'My message',
+        stablePlayerId: 'my-stable-id',
+        timestamp: Date.now(),
+      },
+    ];
+    renderChat({ messages });
+    fireEvent.click(screen.getByText('Chat'));
+    const msgEl = screen.getByText('My message').closest('.chat-message');
+    expect(msgEl).toHaveClass('own-message');
   });
 
   it('calls onSendMessage on form submit', () => {

@@ -470,7 +470,6 @@ describe('GameCoordinator', () => {
       transport.sendToGroup.mockClear();
       handlers.onMessage('player1', 'sendChatMessage', {
         message: 'Hello!',
-        stablePlayerId: 'stable-1',
       });
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(
@@ -479,7 +478,7 @@ describe('GameCoordinator', () => {
         expect.objectContaining({
           playerId: expect.any(String),
           playerName: 'Alice',
-          stablePlayerId: 'stable-1',
+          stablePlayerId: expect.any(String),
           message: 'Hello!',
           timestamp: expect.any(Number),
         })

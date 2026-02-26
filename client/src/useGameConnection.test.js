@@ -84,17 +84,6 @@ describe('useGameConnection', () => {
       expect(result.current.chatMessages).toEqual([]);
     });
 
-    it('generates and persists a stablePlayerId', () => {
-      const { result } = renderHook(() => useGameConnection());
-      expect(result.current.stablePlayerId).toBeTruthy();
-      expect(localStorage.getItem('skipBoStablePlayerId')).toBe(result.current.stablePlayerId);
-    });
-
-    it('reuses existing stablePlayerId from localStorage', () => {
-      localStorage.setItem('skipBoStablePlayerId', 'existing-id');
-      const { result } = renderHook(() => useGameConnection());
-      expect(result.current.stablePlayerId).toBe('existing-id');
-    });
   });
 
   describe('connection', () => {
@@ -542,14 +531,13 @@ describe('useGameConnection', () => {
       expect(localStorage.getItem('skipBoChat_ROOM01')).toBeNull();
     });
 
-    it('sendChatMessage sends event with stablePlayerId', () => {
+    it('sendChatMessage sends event with message only', () => {
       const { result } = renderHook(() => useGameConnection());
       act(() => {
         result.current.sendChatMessage('Hello!');
       });
       expect(mockSocket.emit).toHaveBeenCalledWith('sendChatMessage', {
         message: 'Hello!',
-        stablePlayerId: result.current.stablePlayerId,
       });
     });
 

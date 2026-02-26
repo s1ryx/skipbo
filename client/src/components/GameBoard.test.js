@@ -52,7 +52,6 @@ const defaultProps = {
   chatMessages: [],
   onSendChatMessage: jest.fn(),
   onMarkMessagesRead: jest.fn(),
-  stablePlayerId: 'stable-p1',
 };
 
 const renderGameBoard = (props = {}) => {
