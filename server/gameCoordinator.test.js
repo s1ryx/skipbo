@@ -114,10 +114,11 @@ describe('GameCoordinator', () => {
       expect(call[2].gameState).toBeDefined();
     });
 
-    it('generates a 6-character room ID', () => {
+    it('generates a 6-character room ID using valid alphabet', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoom(coordinator);
       expect(roomId).toHaveLength(6);
+      expect(roomId).toMatch(/^[3467ACDEFGHJKMNPQRTUVWXY]+$/);
     });
 
     it('rejects non-string player name', () => {
