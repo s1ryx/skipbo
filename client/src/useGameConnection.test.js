@@ -371,4 +371,170 @@ describe('useGameConnection', () => {
       jest.useRealTimers();
     });
   });
+
+  describe('action functions', () => {
+    it('createRoom sends the correct event', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        result.current.createRoom('Alice', 4, 20);
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('createRoom', {
+        playerName: 'Alice',
+        maxPlayers: 4,
+        stockpileSize: 20,
+      });
+    });
+
+    it('joinRoom sends event and updates local state', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        result.current.joinRoom('ROOM01', 'Alice');
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('joinRoom', {
+        roomId: 'ROOM01',
+        playerName: 'Alice',
+      });
+      expect(result.current.roomId).toBe('ROOM01');
+      expect(result.current.inLobby).toBe(false);
+    });
+
+    it('startGame sends the correct event', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        result.current.startGame();
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('startGame', undefined);
+    });
+
+    it('playCard sends the correct event', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        result.current.playCard(5, 'hand', 0);
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('playCard', {
+        card: 5,
+        source: 'hand',
+        buildingPileIndex: 0,
+      });
+    });
+
+    it('discardCard sends the correct event', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        result.current.discardCard(3, 2);
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('discardCard', {
+        card: 3,
+        discardPileIndex: 2,
+      });
+    });
+
+    it('endTurn sends the correct event', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        result.current.endTurn();
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('endTurn', undefined);
+    });
+
+    it('leaveLobby sends event and resets state', () => {
+      const { result } = renderHook(() => useGameConnection());
+
+      // Enter a room first
+      act(() => {
+        result.current.joinRoom('ROOM01', 'Alice');
+      });
+      expect(result.current.inLobby).toBe(false);
+
+      act(() => {
+        result.current.leaveLobby();
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('leaveLobby', undefined);
+      expect(result.current.inLobby).toBe(true);
+      expect(result.current.gameState).toBeNull();
+      expect(result.current.roomId).toBeNull();
+      expect(localStorage.getItem('skipBoSession')).toBeNull();
+    });
+
+    it('leaveGame sends event and clears chat from localStorage', () => {
+      const { result } = renderHook(() => useGameConnection());
+
+      // Enter a room first (sets roomIdRef)
+      act(() => {
+        mockSocket._trigger('roomCreated', {
+          roomId: 'ROOM01',
+          playerId: 'p1',
+          gameState: fakeGameState,
+        });
+      });
+      localStorage.setItem('skipBoChat_ROOM01', JSON.stringify([{ message: 'hi' }]));
+
+      act(() => {
+        result.current.leaveGame();
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('leaveGame', undefined);
+      expect(localStorage.getItem('skipBoChat_ROOM01')).toBeNull();
+    });
+
+    it('sendChatMessage sends event with stablePlayerId', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        result.current.sendChatMessage('Hello!');
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('sendChatMessage', {
+        message: 'Hello!',
+        stablePlayerId: result.current.stablePlayerId,
+      });
+    });
+
+    it('markMessagesAsRead marks all messages as read', () => {
+      const { result } = renderHook(() => useGameConnection());
+
+      act(() => {
+        mockSocket._trigger('chatMessage', { message: 'hi', read: false });
+        mockSocket._trigger('chatMessage', { message: 'bye', read: false });
+      });
+      expect(result.current.chatMessages).toHaveLength(2);
+
+      act(() => {
+        result.current.markMessagesAsRead();
+      });
+      result.current.chatMessages.forEach((msg) => {
+        expect(msg.read).toBe(true);
+      });
+    });
+  });
+
+  describe('chat persistence', () => {
+    it('loads chat messages from localStorage on init', () => {
+      localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
+      localStorage.setItem(
+        'skipBoChat_ROOM01',
+        JSON.stringify([{ message: 'saved msg', read: true }])
+      );
+
+      const { result } = renderHook(() => useGameConnection());
+      expect(result.current.chatMessages).toEqual([{ message: 'saved msg', read: true }]);
+    });
+
+    it('saves chat messages to localStorage when they change', () => {
+      const { result } = renderHook(() => useGameConnection());
+
+      // Set roomId first
+      act(() => {
+        mockSocket._trigger('roomCreated', {
+          roomId: 'ROOM01',
+          playerId: 'p1',
+          gameState: fakeGameState,
+        });
+      });
+
+      act(() => {
+        mockSocket._trigger('chatMessage', { message: 'new msg' });
+      });
+
+      const saved = JSON.parse(localStorage.getItem('skipBoChat_ROOM01'));
+      expect(saved).toEqual([{ message: 'new msg' }]);
+    });
+  });
 });
