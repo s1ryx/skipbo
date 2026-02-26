@@ -73,47 +73,34 @@ export default function useGameConnection() {
         }
       },
 
-      playerJoined: ({ playerId, gameState }) => {
+      playerJoined: ({ gameState }) => {
         // eslint-disable-next-line no-console
         console.log('Player joined');
         setGameState(gameState);
+      },
 
-        const myId = connectionIdRef.current;
-        if (playerId === myId) {
-          roomIdRef.current = gameState.roomId;
-          setRoomId(gameState.roomId);
+      sessionToken: ({ playerId, sessionToken }) => {
+        sessionTokenRef.current = sessionToken;
+        setPlayerId(playerId);
+        setGameState((prev) => {
+          if (!prev) return prev;
+          roomIdRef.current = prev.roomId;
+          setRoomId(prev.roomId);
           setInLobby(false);
-        }
-
-        if (myId) {
-          const currentPlayer = gameState.players.find((p) => p.id === myId);
-          if (currentPlayer) {
+          const player = prev.players.find((p) => p.id === playerId);
+          if (player) {
             localStorage.setItem(
               'skipBoSession',
               JSON.stringify({
-                roomId: gameState.roomId,
-                playerId: myId,
-                playerName: currentPlayer.name,
-                sessionToken: sessionTokenRef.current,
+                roomId: prev.roomId,
+                playerId,
+                playerName: player.name,
+                sessionToken,
               })
             );
           }
-        }
-      },
-
-      sessionToken: ({ sessionToken }) => {
-        sessionTokenRef.current = sessionToken;
-        // Re-save session with token
-        const savedSession = localStorage.getItem('skipBoSession');
-        if (savedSession) {
-          try {
-            const session = JSON.parse(savedSession);
-            session.sessionToken = sessionToken;
-            localStorage.setItem('skipBoSession', JSON.stringify(session));
-          } catch (err) {
-            // ignore
-          }
-        }
+          return prev;
+        });
       },
 
       playerLeft: ({ gameState }) => {

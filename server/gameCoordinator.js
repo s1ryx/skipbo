@@ -110,7 +110,7 @@ class GameCoordinator {
 
     this.transport.send(connectionId, 'roomCreated', {
       roomId,
-      playerId: connectionId,
+      playerId: game.getPublicId(connectionId),
       sessionToken,
       gameState: game.getGameState(),
     });
@@ -153,12 +153,15 @@ class GameCoordinator {
     this.transport.addToGroup(connectionId, roomId);
 
     this.transport.sendToGroup(roomId, 'playerJoined', {
-      playerId: connectionId,
+      playerId: game.getPublicId(connectionId),
       playerName: validName,
       gameState: game.getGameState(),
     });
 
-    this.transport.send(connectionId, 'sessionToken', { sessionToken });
+    this.transport.send(connectionId, 'sessionToken', {
+      playerId: game.getPublicId(connectionId),
+      sessionToken,
+    });
 
     console.log(`${validName} joined room: ${roomId}`);
   }
@@ -207,16 +210,18 @@ class GameCoordinator {
         this.playerRooms.set(connectionId, roomId);
         this.transport.addToGroup(connectionId, roomId);
 
+        const publicId = game.getPublicId(connectionId);
+
         this.transport.send(connectionId, 'reconnected', {
           roomId,
-          playerId: connectionId,
+          playerId: publicId,
           sessionToken: newToken,
           gameState: game.getGameState(),
           playerState: game.getPlayerState(connectionId),
         });
 
         this.transport.sendToGroupExcept(roomId, connectionId, 'playerJoined', {
-          playerId: connectionId,
+          playerId: publicId,
           playerName: validName,
           gameState: game.getGameState(),
         });
@@ -242,14 +247,14 @@ class GameCoordinator {
 
     this.transport.send(connectionId, 'reconnected', {
       roomId,
-      playerId: connectionId,
+      playerId: player.publicId,
       sessionToken: newToken,
       gameState: game.getGameState(),
       playerState: game.getPlayerState(connectionId),
     });
 
     this.transport.sendToGroupExcept(roomId, connectionId, 'playerReconnected', {
-      playerId: connectionId,
+      playerId: player.publicId,
       playerName: player.name,
     });
 
@@ -345,7 +350,7 @@ class GameCoordinator {
     });
 
     this.transport.sendToGroup(roomId, 'turnChanged', {
-      currentPlayerId: endTurnResult.nextPlayer,
+      currentPlayerId: game.getPublicId(endTurnResult.nextPlayer),
     });
   }
 
@@ -364,7 +369,7 @@ class GameCoordinator {
     if (!player) return;
 
     this.transport.sendToGroup(roomId, 'chatMessage', {
-      playerId: connectionId,
+      playerId: player.publicId,
       playerName: player.name,
       stablePlayerId: stablePlayerId,
       message: sanitized,
@@ -381,6 +386,7 @@ class GameCoordinator {
     const game = this.games.get(roomId);
     if (!game || game.gameStarted) return;
 
+    const publicId = game.getPublicId(connectionId);
     console.log(`Player ${connectionId} is leaving lobby ${roomId}`);
 
     game.removePlayer(connectionId);
@@ -391,7 +397,7 @@ class GameCoordinator {
       this.scheduleRoomDeletion(roomId);
     } else {
       this.transport.sendToGroup(roomId, 'playerLeft', {
-        playerId: connectionId,
+        playerId: publicId,
         gameState: game.getGameState(),
       });
     }
@@ -432,6 +438,8 @@ class GameCoordinator {
       return;
     }
 
+    const publicId = game.getPublicId(connectionId);
+
     if (!game.gameStarted) {
       game.removePlayer(connectionId);
       this.transport.removeFromGroup(connectionId, roomId);
@@ -439,13 +447,13 @@ class GameCoordinator {
         this.scheduleRoomDeletion(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeft', {
-          playerId: connectionId,
+          playerId: publicId,
           gameState: game.getGameState(),
         });
       }
     } else {
       this.transport.sendToGroup(roomId, 'playerDisconnected', {
-        playerId: connectionId,
+        playerId: publicId,
       });
     }
 

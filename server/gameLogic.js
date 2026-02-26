@@ -47,6 +47,7 @@ class SkipBoGame {
 
     const player = {
       id: playerId,
+      publicId: crypto.randomUUID().slice(0, 8),
       name: playerName,
       stockpile: [],
       hand: [],
@@ -55,6 +56,11 @@ class SkipBoGame {
 
     this.players.push(player);
     return true;
+  }
+
+  getPublicId(connectionId) {
+    const player = this.players.find((p) => p.id === connectionId);
+    return player ? player.publicId : null;
   }
 
   removePlayer(playerId) {
@@ -289,7 +295,7 @@ class SkipBoGame {
     return {
       roomId: this.roomId,
       players: this.players.map((p) => ({
-        id: p.id,
+        id: p.publicId,
         name: p.name,
         stockpileCount: p.stockpile.length,
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
@@ -298,11 +304,11 @@ class SkipBoGame {
       })),
       buildingPiles: this.buildingPiles,
       currentPlayerIndex: this.currentPlayerIndex,
-      currentPlayerId: this.getCurrentPlayer()?.id,
+      currentPlayerId: this.getCurrentPlayer()?.publicId,
       deckCount: this.deck.length,
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
-      winner: this.winner,
+      winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
     };
   }
 
