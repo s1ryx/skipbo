@@ -170,6 +170,18 @@ export default function useGameConnection() {
         });
       },
 
+      playerReconnected: ({ playerId }) => {
+        setGameState((prevState) => {
+          if (!prevState) return prevState;
+          return {
+            ...prevState,
+            players: prevState.players.map((p) =>
+              p.id === playerId ? { ...p, disconnected: false } : p
+            ),
+          };
+        });
+      },
+
       gameAborted: () => {
         // eslint-disable-next-line no-console
         console.log('Game aborted by a player');

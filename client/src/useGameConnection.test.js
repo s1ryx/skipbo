@@ -349,6 +349,34 @@ describe('useGameConnection', () => {
     });
   });
 
+  describe('playerReconnected event', () => {
+    it('clears the disconnected flag for the player', () => {
+      const { result } = renderHook(() => useGameConnection());
+
+      // First set a game state with a disconnected player
+      act(() => {
+        mockSocket._trigger('roomCreated', {
+          roomId: 'ROOM01',
+          playerId: 'test-socket-id',
+          gameState: {
+            ...fakeGameState,
+            players: [
+              { ...fakeGameState.players[0] },
+              { id: 'player2', name: 'Bob', disconnected: true },
+            ],
+          },
+        });
+      });
+
+      act(() => {
+        mockSocket._trigger('playerReconnected', { playerId: 'player2' });
+      });
+
+      const bob = result.current.gameState.players.find((p) => p.id === 'player2');
+      expect(bob.disconnected).toBe(false);
+    });
+  });
+
   describe('gameAborted event', () => {
     it('resets to lobby state and clears session', () => {
       localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
