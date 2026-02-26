@@ -183,6 +183,49 @@ describe('GameCoordinator', () => {
         message: 'error.invalidPlayerName',
       });
     });
+    it('clamps maxPlayers to valid range', () => {
+      const { coordinator } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Too low
+      handlers.onMessage('p1', 'createRoom', { playerName: 'A', maxPlayers: 0 });
+      let game = [...coordinator.games.values()][0];
+      expect(game.playerCount).toBe(2);
+
+      // Too high
+      handlers.onMessage('p2', 'createRoom', { playerName: 'B', maxPlayers: 7 });
+      game = [...coordinator.games.values()][1];
+      expect(game.playerCount).toBe(2);
+
+      // NaN / float / string
+      handlers.onMessage('p3', 'createRoom', { playerName: 'C', maxPlayers: 2.5 });
+      game = [...coordinator.games.values()][2];
+      expect(game.playerCount).toBe(2);
+
+      // Valid
+      handlers.onMessage('p4', 'createRoom', { playerName: 'D', maxPlayers: 4 });
+      game = [...coordinator.games.values()][3];
+      expect(game.playerCount).toBe(4);
+    });
+
+    it('clamps stockpileSize to valid range', () => {
+      const { coordinator } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Invalid → undefined (uses game default)
+      handlers.onMessage('p1', 'createRoom', { playerName: 'A', maxPlayers: 2, stockpileSize: -1 });
+      let game = [...coordinator.games.values()][0];
+      expect(game.stockpileSize).toBeUndefined();
+
+      handlers.onMessage('p2', 'createRoom', { playerName: 'B', maxPlayers: 2, stockpileSize: 31 });
+      game = [...coordinator.games.values()][1];
+      expect(game.stockpileSize).toBeUndefined();
+
+      // Valid
+      handlers.onMessage('p3', 'createRoom', { playerName: 'C', maxPlayers: 2, stockpileSize: 10 });
+      game = [...coordinator.games.values()][2];
+      expect(game.stockpileSize).toBe(10);
+    });
   });
 
   describe('joinRoom', () => {
