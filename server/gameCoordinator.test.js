@@ -709,10 +709,12 @@ describe('GameCoordinator', () => {
   });
 
   describe('reconnect', () => {
-    it('reconnects a player to an active game', () => {
+    it('reconnects a player to an active game using session token', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createStartedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player2Token = game.players[1].sessionToken;
 
       // Simulate disconnect
       handlers.onDisconnect('player2');
@@ -721,7 +723,7 @@ describe('GameCoordinator', () => {
       transport.addToGroup.mockClear();
       handlers.onMessage('player2-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'player2',
+        sessionToken: player2Token,
         playerName: 'Bob',
       });
 
@@ -731,6 +733,7 @@ describe('GameCoordinator', () => {
         expect.objectContaining({
           roomId,
           playerId: 'player2-new',
+          sessionToken: expect.any(String),
           gameState: expect.any(Object),
           playerState: expect.any(Object),
         })
@@ -744,7 +747,25 @@ describe('GameCoordinator', () => {
       );
     });
 
-    it('rejoins lobby when player was removed pre-game', () => {
+    it('issues a new session token on reconnect', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const oldToken = game.players[1].sessionToken;
+
+      handlers.onDisconnect('player2');
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken: oldToken,
+        playerName: 'Bob',
+      });
+
+      // Token should have been rotated
+      expect(game.players[1].sessionToken).not.toBe(oldToken);
+    });
+
+    it('rejoins lobby when session token not found pre-game', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createRoom(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -752,7 +773,7 @@ describe('GameCoordinator', () => {
       transport.send.mockClear();
       handlers.onMessage('player2-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'player2-old',
+        sessionToken: 'unknown-token',
         playerName: 'Bob',
       });
 
@@ -775,7 +796,7 @@ describe('GameCoordinator', () => {
 
       handlers.onMessage('player1', 'reconnect', {
         roomId: 'GONE00',
-        oldPlayerId: 'old-id',
+        sessionToken: 'some-token',
         playerName: 'Alice',
       });
 
@@ -784,7 +805,7 @@ describe('GameCoordinator', () => {
       });
     });
 
-    it('fails when player not found and game already started', () => {
+    it('fails when session token not found and game already started', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createStartedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -792,7 +813,7 @@ describe('GameCoordinator', () => {
       transport.send.mockClear();
       handlers.onMessage('unknown-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'never-existed',
+        sessionToken: 'invalid-token',
         playerName: 'Eve',
       });
 
@@ -809,12 +830,28 @@ describe('GameCoordinator', () => {
       transport.send.mockClear();
       handlers.onMessage('player3-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'player3-old',
+        sessionToken: 'unknown-token',
         playerName: 'Eve',
       });
 
       expect(transport.send).toHaveBeenCalledWith('player3-new', 'reconnectFailed', {
         message: 'error.roomFull',
+      });
+    });
+
+    it('fails when session token is missing', () => {
+      const { coordinator, transport } = createCoordinator();
+      createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.send.mockClear();
+      handlers.onMessage('p1', 'reconnect', {
+        roomId: 'ABCDEF',
+        playerName: 'Alice',
+      });
+
+      expect(transport.send).toHaveBeenCalledWith('p1', 'reconnectFailed', {
+        message: 'error.invalidSession',
       });
     });
   });

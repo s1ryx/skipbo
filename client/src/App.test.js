@@ -176,7 +176,7 @@ describe('App', () => {
     it('attempts reconnection when saved session exists', () => {
       localStorage.setItem(
         'skipBoSession',
-        JSON.stringify({ roomId: 'OLD123', playerId: 'old-p1', playerName: 'Alice' })
+        JSON.stringify({ roomId: 'OLD123', playerName: 'Alice', sessionToken: 'tok-123' })
       );
       const emitSpy = jest.spyOn(mockSocket, 'emit');
       renderApp();
@@ -185,7 +185,7 @@ describe('App', () => {
       });
       expect(emitSpy).toHaveBeenCalledWith('reconnect', {
         roomId: 'OLD123',
-        oldPlayerId: 'old-p1',
+        sessionToken: 'tok-123',
         playerName: 'Alice',
       });
       emitSpy.mockRestore();

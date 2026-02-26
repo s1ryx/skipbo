@@ -109,7 +109,7 @@ describe('useGameConnection', () => {
     it('attempts reconnect when saved session exists', () => {
       localStorage.setItem(
         'skipBoSession',
-        JSON.stringify({ roomId: 'OLD01', playerId: 'old-id', playerName: 'Alice' })
+        JSON.stringify({ roomId: 'OLD01', playerName: 'Alice', sessionToken: 'tok-123' })
       );
       renderHook(() => useGameConnection());
       act(() => {
@@ -117,7 +117,7 @@ describe('useGameConnection', () => {
       });
       expect(mockSocket.emit).toHaveBeenCalledWith('reconnect', {
         roomId: 'OLD01',
-        oldPlayerId: 'old-id',
+        sessionToken: 'tok-123',
         playerName: 'Alice',
       });
     });
@@ -136,6 +136,7 @@ describe('useGameConnection', () => {
         mockSocket._trigger('roomCreated', {
           roomId: 'ROOM01',
           playerId: 'test-socket-id',
+          sessionToken: 'tok-abc',
           gameState: fakeGameState,
         });
       });
@@ -146,12 +147,13 @@ describe('useGameConnection', () => {
       expect(result.current.inLobby).toBe(false);
     });
 
-    it('saves session to localStorage', () => {
+    it('saves session with token to localStorage', () => {
       renderHook(() => useGameConnection());
       act(() => {
         mockSocket._trigger('roomCreated', {
           roomId: 'ROOM01',
           playerId: 'test-socket-id',
+          sessionToken: 'tok-abc',
           gameState: fakeGameState,
         });
       });
@@ -161,6 +163,7 @@ describe('useGameConnection', () => {
         roomId: 'ROOM01',
         playerId: 'test-socket-id',
         playerName: 'Alice',
+        sessionToken: 'tok-abc',
       });
     });
   });
@@ -224,31 +227,37 @@ describe('useGameConnection', () => {
       });
 
       const session = JSON.parse(localStorage.getItem('skipBoSession'));
-      expect(session).toEqual({
-        roomId: 'ROOM01',
-        playerId: 'test-socket-id',
-        playerName: 'Alice',
-      });
+      expect(session.roomId).toBe('ROOM01');
+      expect(session.playerId).toBe('test-socket-id');
+      expect(session.playerName).toBe('Alice');
     });
   });
 
   describe('reconnected event', () => {
-    it('restores full game state', () => {
+    it('restores full game state with new session token', () => {
+      const reconnectGameState = {
+        ...fakeGameState,
+        players: [{ ...fakeGameState.players[0], id: 'new-id' }],
+      };
       const { result } = renderHook(() => useGameConnection());
       act(() => {
         mockSocket._trigger('reconnected', {
           roomId: 'ROOM01',
           playerId: 'new-id',
-          gameState: fakeGameState,
+          sessionToken: 'new-tok',
+          gameState: reconnectGameState,
           playerState: fakePlayerState,
         });
       });
 
       expect(result.current.roomId).toBe('ROOM01');
       expect(result.current.playerId).toBe('new-id');
-      expect(result.current.gameState).toEqual(fakeGameState);
+      expect(result.current.gameState).toEqual(reconnectGameState);
       expect(result.current.playerState).toEqual(fakePlayerState);
       expect(result.current.inLobby).toBe(false);
+
+      const session = JSON.parse(localStorage.getItem('skipBoSession'));
+      expect(session.sessionToken).toBe('new-tok');
     });
   });
 
