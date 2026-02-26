@@ -227,6 +227,22 @@ describe('GameCoordinator', () => {
       game = [...coordinator.games.values()][2];
       expect(game.stockpileSize).toBe(10);
     });
+
+    it('rejects room creation when server is full', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Fill to max
+      for (let i = 0; i < 200; i++) {
+        coordinator.games.set(`room${i}`, {});
+      }
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 'Alice', maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.serverFull',
+      });
+      expect(coordinator.games.size).toBe(200);
+    });
   });
 
   describe('joinRoom', () => {
