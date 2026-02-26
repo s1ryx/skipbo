@@ -337,6 +337,17 @@ describe('SkipBoGame', () => {
       expect(result.error).toBe('error.cardNotFound');
     });
 
+    it('rejects invalid source values', () => {
+      const player = game.players[0];
+      player.hand = [1, 2, 3, 4, 5];
+
+      expect(game.playCard('p1', 1, 'constructor', 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, '__proto__', 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, '', 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, null, 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, 'discard5', 0).error).toBe('error.invalidSource');
+    });
+
     it('rejects invalid buildingPileIndex values', () => {
       const player = game.players[0];
       player.hand = [1, 2, 3, 4, 5];
