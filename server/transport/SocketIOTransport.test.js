@@ -118,7 +118,6 @@ describe('SocketIOTransport', () => {
         'startGame',
         'playCard',
         'discardCard',
-        'endTurn',
         'sendChatMessage',
         'leaveLobby',
         'leaveGame',

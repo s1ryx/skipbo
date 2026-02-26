@@ -101,7 +101,6 @@ describe('SocketIOClientTransport', () => {
         'reconnectFailed',
         'gameStarted',
         'gameStateUpdate',
-        'turnChanged',
         'gameOver',
         'playerDisconnected',
         'playerReconnected',

@@ -41,8 +41,6 @@ class GameCoordinator {
         return this.handlePlayCard(connectionId, data);
       case 'discardCard':
         return this.handleDiscardCard(connectionId, data);
-      case 'endTurn':
-        return this.handleEndTurn(connectionId);
       case 'sendChatMessage':
         return this.handleSendChatMessage(connectionId, data);
       case 'leaveLobby':
@@ -266,34 +264,6 @@ class GameCoordinator {
 
     this.transport.sendToGroup(roomId, 'turnChanged', {
       currentPlayerId: endTurnResult.nextPlayer,
-    });
-  }
-
-  handleEndTurn(connectionId) {
-    const roomId = this.playerRooms.get(connectionId);
-    const game = this.games.get(roomId);
-
-    if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
-      return;
-    }
-
-    const result = game.endTurn(connectionId);
-
-    if (!result.success) {
-      this.transport.send(connectionId, 'error', { message: result.error });
-      return;
-    }
-
-    game.players.forEach((player) => {
-      this.transport.send(player.id, 'gameStateUpdate', {
-        gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id),
-      });
-    });
-
-    this.transport.sendToGroup(roomId, 'turnChanged', {
-      currentPlayerId: result.nextPlayer,
     });
   }
 

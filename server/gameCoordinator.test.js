@@ -326,32 +326,6 @@ describe('GameCoordinator', () => {
     });
   });
 
-  describe('endTurn', () => {
-    it('sends error when room not found', () => {
-      const { coordinator, transport } = createCoordinator();
-      const handlers = coordinator.getTransportHandlers();
-
-      handlers.onMessage('unknown', 'endTurn', {});
-
-      expect(transport.send).toHaveBeenCalledWith('unknown', 'error', {
-        message: 'error.roomNotFound',
-      });
-    });
-
-    it('sends error when not the current player', () => {
-      const { coordinator, transport } = createCoordinator();
-      createStartedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-
-      transport.send.mockClear();
-      handlers.onMessage('player2', 'endTurn', {});
-
-      expect(transport.send).toHaveBeenCalledWith('player2', 'error', {
-        message: 'error.notYourTurn',
-      });
-    });
-  });
-
   describe('sendChatMessage', () => {
     it('broadcasts chat message to the room', () => {
       const { coordinator, transport } = createCoordinator();

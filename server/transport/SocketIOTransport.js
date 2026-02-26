@@ -8,7 +8,6 @@ const CLIENT_EVENTS = [
   'startGame',
   'playCard',
   'discardCard',
-  'endTurn',
   'sendChatMessage',
   'leaveLobby',
   'leaveGame',

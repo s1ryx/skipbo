@@ -429,14 +429,6 @@ describe('useGameConnection', () => {
       });
     });
 
-    it('endTurn sends the correct event', () => {
-      const { result } = renderHook(() => useGameConnection());
-      act(() => {
-        result.current.endTurn();
-      });
-      expect(mockSocket.emit).toHaveBeenCalledWith('endTurn', undefined);
-    });
-
     it('leaveLobby sends event and resets state', () => {
       const { result } = renderHook(() => useGameConnection());
 

@@ -137,11 +137,6 @@ export default function useGameConnection() {
         setPlayerState(playerState);
       },
 
-      turnChanged: ({ currentPlayerId }) => {
-        // eslint-disable-next-line no-console
-        console.log('Turn changed to:', currentPlayerId);
-      },
-
       gameOver: ({ gameState }) => {
         setGameState(gameState);
         const savedSession = localStorage.getItem('skipBoSession');
@@ -258,10 +253,6 @@ export default function useGameConnection() {
     transportRef.current?.send('discardCard', { card, discardPileIndex });
   }, []);
 
-  const endTurn = useCallback(() => {
-    transportRef.current?.send('endTurn');
-  }, []);
-
   const leaveLobby = useCallback(() => {
     transportRef.current?.send('leaveLobby');
     localStorage.removeItem('skipBoSession');
@@ -304,7 +295,6 @@ export default function useGameConnection() {
     startGame,
     playCard,
     discardCard,
-    endTurn,
     leaveLobby,
     leaveGame,
     sendChatMessage,
