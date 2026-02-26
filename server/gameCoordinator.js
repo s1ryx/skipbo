@@ -2,6 +2,14 @@ const SkipBoGame = require('./gameLogic');
 
 const LOBBY_GRACE_PERIOD_MS = 30000;
 const MAX_PENDING_ROOMS = 50;
+const MAX_PLAYER_NAME_LENGTH = 30;
+
+function validatePlayerName(name) {
+  if (typeof name !== 'string') return null;
+  const trimmed = name.trim().replace(/[\x00-\x1F]/g, '');
+  if (trimmed.length === 0 || trimmed.length > MAX_PLAYER_NAME_LENGTH) return null;
+  return trimmed;
+}
 
 class GameCoordinator {
   constructor() {
@@ -53,9 +61,15 @@ class GameCoordinator {
   }
 
   handleCreateRoom(connectionId, { playerName, maxPlayers, stockpileSize }) {
+    const validName = validatePlayerName(playerName);
+    if (!validName) {
+      this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
+      return;
+    }
+
     const roomId = generateRoomId();
     const game = new SkipBoGame(roomId, maxPlayers || 2, stockpileSize);
-    game.addPlayer(connectionId, playerName);
+    game.addPlayer(connectionId, validName);
 
     this.games.set(roomId, game);
     this.playerRooms.set(connectionId, roomId);
@@ -68,10 +82,16 @@ class GameCoordinator {
       gameState: game.getGameState(),
     });
 
-    console.log(`Room created: ${roomId} by ${playerName}`);
+    console.log(`Room created: ${roomId} by ${validName}`);
   }
 
   handleJoinRoom(connectionId, { roomId, playerName }) {
+    const validName = validatePlayerName(playerName);
+    if (!validName) {
+      this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
+      return;
+    }
+
     const game = this.games.get(roomId);
 
     if (!game) {
@@ -86,7 +106,7 @@ class GameCoordinator {
       return;
     }
 
-    const added = game.addPlayer(connectionId, playerName);
+    const added = game.addPlayer(connectionId, validName);
 
     if (!added) {
       this.transport.send(connectionId, 'error', { message: 'error.roomFull' });
@@ -98,14 +118,22 @@ class GameCoordinator {
 
     this.transport.sendToGroup(roomId, 'playerJoined', {
       playerId: connectionId,
-      playerName,
+      playerName: validName,
       gameState: game.getGameState(),
     });
 
-    console.log(`${playerName} joined room: ${roomId}`);
+    console.log(`${validName} joined room: ${roomId}`);
   }
 
   handleReconnect(connectionId, { roomId, oldPlayerId, playerName }) {
+    const validName = validatePlayerName(playerName);
+    if (!validName) {
+      this.transport.send(connectionId, 'reconnectFailed', {
+        message: 'error.invalidPlayerName',
+      });
+      return;
+    }
+
     const game = this.games.get(roomId);
 
     if (!game) {
@@ -122,7 +150,7 @@ class GameCoordinator {
     if (!player) {
       // Player was removed — rejoin if game hasn't started
       if (!game.gameStarted) {
-        const added = game.addPlayer(connectionId, playerName);
+        const added = game.addPlayer(connectionId, validName);
         if (!added) {
           this.transport.send(connectionId, 'reconnectFailed', { message: 'error.roomFull' });
           return;
