@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const SkipBoGame = require('./gameLogic');
 
 const LOBBY_GRACE_PERIOD_MS = 30000;
@@ -83,7 +84,11 @@ class GameCoordinator {
       ? stockpileSize
       : undefined;
 
-    const roomId = generateRoomId();
+    const roomId = generateRoomId(this.games);
+    if (!roomId) {
+      this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
+      return;
+    }
     const game = new SkipBoGame(roomId, validMaxPlayers, validStockpileSize);
     game.addPlayer(connectionId, validName);
 
@@ -439,15 +444,21 @@ class GameCoordinator {
 }
 
 // Exclude confusing characters: 0, O, I, 1, 5, S, 8, B, 2, Z
-function generateRoomId() {
+function generateRoomId(existingIds) {
   const chars = '3467ACDEFGHJKMNPQRTUVWXY';
-  let roomId = '';
+  const MAX_ATTEMPTS = 10;
 
-  for (let i = 0; i < 6; i++) {
-    roomId += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const bytes = crypto.randomBytes(6);
+    let roomId = '';
+    for (let i = 0; i < 6; i++) {
+      roomId += chars.charAt(bytes[i] % chars.length);
+    }
+    if (!existingIds || !existingIds.has(roomId)) {
+      return roomId;
+    }
   }
-
-  return roomId;
+  return null;
 }
 
 module.exports = GameCoordinator;
