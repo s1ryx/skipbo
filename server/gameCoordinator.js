@@ -35,6 +35,16 @@ class GameCoordinator {
         return this.handleJoinRoom(connectionId, data);
       case 'reconnect':
         return this.handleReconnect(connectionId, data);
+      case 'startGame':
+        return this.handleStartGame(connectionId);
+      case 'playCard':
+        return this.handlePlayCard(connectionId, data);
+      case 'discardCard':
+        return this.handleDiscardCard(connectionId, data);
+      case 'endTurn':
+        return this.handleEndTurn(connectionId);
+      case 'sendChatMessage':
+        return this.handleSendChatMessage(connectionId, data);
       case 'leaveLobby':
         return this.handleLeaveLobby(connectionId);
       case 'leaveGame':
@@ -165,6 +175,147 @@ class GameCoordinator {
     });
 
     console.log(`${playerName} reconnected to room: ${roomId}`);
+  }
+
+  handleStartGame(connectionId) {
+    const roomId = this.playerRooms.get(connectionId);
+    const game = this.games.get(roomId);
+
+    if (!game) {
+      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      return;
+    }
+
+    const started = game.startGame();
+
+    if (!started) {
+      this.transport.send(connectionId, 'error', { message: 'error.needMorePlayers' });
+      return;
+    }
+
+    game.players.forEach((player) => {
+      this.transport.send(player.id, 'gameStarted', {
+        gameState: game.getGameState(),
+        playerState: game.getPlayerState(player.id),
+      });
+    });
+
+    console.log(`Game started in room: ${roomId}`);
+  }
+
+  handlePlayCard(connectionId, { card, source, buildingPileIndex }) {
+    const roomId = this.playerRooms.get(connectionId);
+    const game = this.games.get(roomId);
+
+    if (!game) {
+      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      return;
+    }
+
+    const result = game.playCard(connectionId, card, source, buildingPileIndex);
+
+    if (!result.success) {
+      this.transport.send(connectionId, 'error', { message: result.error });
+      return;
+    }
+
+    game.players.forEach((player) => {
+      this.transport.send(player.id, 'gameStateUpdate', {
+        gameState: game.getGameState(),
+        playerState: game.getPlayerState(player.id),
+      });
+    });
+
+    if (game.gameOver) {
+      this.transport.sendToGroup(roomId, 'gameOver', {
+        winner: game.winner,
+        gameState: game.getGameState(),
+      });
+    }
+  }
+
+  handleDiscardCard(connectionId, { card, discardPileIndex }) {
+    const roomId = this.playerRooms.get(connectionId);
+    const game = this.games.get(roomId);
+
+    if (!game) {
+      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      return;
+    }
+
+    const result = game.discardCard(connectionId, card, discardPileIndex);
+
+    if (!result.success) {
+      this.transport.send(connectionId, 'error', { message: result.error });
+      return;
+    }
+
+    const endTurnResult = game.endTurn(connectionId);
+
+    if (!endTurnResult.success) {
+      this.transport.send(connectionId, 'error', { message: endTurnResult.error });
+      return;
+    }
+
+    game.players.forEach((player) => {
+      this.transport.send(player.id, 'gameStateUpdate', {
+        gameState: game.getGameState(),
+        playerState: game.getPlayerState(player.id),
+      });
+    });
+
+    this.transport.sendToGroup(roomId, 'turnChanged', {
+      currentPlayerId: endTurnResult.nextPlayer,
+    });
+  }
+
+  handleEndTurn(connectionId) {
+    const roomId = this.playerRooms.get(connectionId);
+    const game = this.games.get(roomId);
+
+    if (!game) {
+      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      return;
+    }
+
+    const result = game.endTurn(connectionId);
+
+    if (!result.success) {
+      this.transport.send(connectionId, 'error', { message: result.error });
+      return;
+    }
+
+    game.players.forEach((player) => {
+      this.transport.send(player.id, 'gameStateUpdate', {
+        gameState: game.getGameState(),
+        playerState: game.getPlayerState(player.id),
+      });
+    });
+
+    this.transport.sendToGroup(roomId, 'turnChanged', {
+      currentPlayerId: result.nextPlayer,
+    });
+  }
+
+  handleSendChatMessage(connectionId, { message, stablePlayerId }) {
+    const roomId = this.playerRooms.get(connectionId);
+    if (!roomId) return;
+
+    const game = this.games.get(roomId);
+    if (!game) return;
+
+    const player = game.players.find((p) => p.id === connectionId);
+    if (!player) return;
+
+    this.transport.sendToGroup(roomId, 'chatMessage', {
+      playerId: connectionId,
+      playerName: player.name,
+      stablePlayerId: stablePlayerId,
+      message: message.trim(),
+      timestamp: Date.now(),
+    });
+
+    console.log(`Chat message in room ${roomId} from ${player.name}: ${message}`);
   }
 
   handleLeaveLobby(connectionId) {
