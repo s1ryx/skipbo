@@ -2,6 +2,10 @@ const SkipBoGame = require('./gameLogic');
 
 const LOBBY_GRACE_PERIOD_MS = 30000;
 const MAX_PENDING_ROOMS = 50;
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 6;
+const MIN_STOCKPILE_SIZE = 1;
+const MAX_STOCKPILE_SIZE = 30;
 const MAX_PLAYER_NAME_LENGTH = 30;
 const MAX_CHAT_MESSAGE_LENGTH = 500;
 
@@ -72,8 +76,15 @@ class GameCoordinator {
       return;
     }
 
+    const validMaxPlayers = Number.isInteger(maxPlayers) && maxPlayers >= MIN_PLAYERS && maxPlayers <= MAX_PLAYERS
+      ? maxPlayers
+      : MIN_PLAYERS;
+    const validStockpileSize = Number.isInteger(stockpileSize) && stockpileSize >= MIN_STOCKPILE_SIZE && stockpileSize <= MAX_STOCKPILE_SIZE
+      ? stockpileSize
+      : undefined;
+
     const roomId = generateRoomId();
-    const game = new SkipBoGame(roomId, maxPlayers || 2, stockpileSize);
+    const game = new SkipBoGame(roomId, validMaxPlayers, validStockpileSize);
     game.addPlayer(connectionId, validName);
 
     this.games.set(roomId, game);
