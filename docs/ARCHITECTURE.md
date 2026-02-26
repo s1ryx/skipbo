@@ -8,40 +8,117 @@ through the system, and how the React component tree is structured.
 The application is a real-time multiplayer card game with two processes:
 
 - **Server** — Node.js + Express + Socket.IO
-  ([server/server.js](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js))
+  ([server/server.js](https://github.com/s1ryx/skipbo/blob/75194bc0bf82641168040336e87a6736a786fc90/server/server.js))
 - **Client** — React single-page app
-  ([client/src/App.js](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js))
+  ([client/src/App.js](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/App.js))
 
 All game state lives on the server. The client is a thin view layer that
-renders whatever the server tells it and forwards user actions back as
-Socket.IO events.
+renders whatever the server tells it and forwards user actions back through
+an abstracted transport layer.
 
 ```
-┌──────────────────┐      Socket.IO       ┌──────────────────┐
-│     Client        │◄───────────────────► │      Server      │
-│    (React)        │  events + JSON       │  (Node/Express)  │
-│                   │                      │                  │
-│  App.js           │                      │  server.js       │
-│  ├─ useGameSocket │                      │  └─ gameLogic.js │
-│  ├─ Lobby         │                      │     (SkipBoGame) │
-│  ├─ WaitingRoom   │                      │                  │
-│  └─ GameBoard     │                      │  In-memory Maps: │
-│     ├─ Card       │                      │  games, players  │
-│     ├─ PlayerHand │                      │  pendingDeletions│
-│     └─ Chat       │                      │                  │
-└──────────────────┘                       └──────────────────┘
+┌──────────────────────┐   Transport    ┌──────────────────────────┐
+│       Client          │◄────────────► │          Server           │
+│      (React)          │ events + JSON │      (Node/Express)       │
+│                       │               │                           │
+│  App.js               │               │  server.js (wiring)       │
+│  ├─ useGameConnection │               │  ├─ gameCoordinator.js    │
+│  │   └─ SocketIO-     │               │  │  └─ gameLogic.js       │
+│  │     ClientTransport│               │  │     (SkipBoGame)       │
+│  ├─ Lobby             │               │  └─ transport/            │
+│  ├─ WaitingRoom       │               │     └─ SocketIOTransport  │
+│  └─ GameBoard         │               │                           │
+│     ├─ Card           │               │  In-memory Maps:          │
+│     ├─ PlayerHand     │               │  games, playerRooms,      │
+│     └─ Chat           │               │  pendingDeletions         │
+└──────────────────────┘                └──────────────────────────┘
 ```
+
+## Transport Abstraction
+
+Game logic and UI are fully decoupled from the wire protocol. Both server
+and client communicate through transport adapters that expose a small,
+generic interface. Swapping Socket.IO for a different transport (e.g.,
+SSE + REST) requires only writing a new adapter — no changes to the
+game coordinator or React components.
+
+### Server Transport Interface
+
+[`SocketIOTransport`](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js)
+implements:
+
+| Method | Socket.IO equivalent | Line |
+|---|---|---|
+| `send(connectionId, event, data)` | `io.to(socketId).emit(event, data)` | [55-57](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js#L55-L57) |
+| `sendToGroup(groupId, event, data)` | `io.to(roomId).emit(event, data)` | [60-62](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js#L60-L62) |
+| `sendToGroupExcept(groupId, excludeId, event, data)` | `io.to(roomId).except(id).emit(...)` | [65-67](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js#L65-L67) |
+| `addToGroup(connectionId, groupId)` | `socket.join(roomId)` | [70-75](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js#L70-L75) |
+| `removeFromGroup(connectionId, groupId)` | `socket.leave(roomId)` | [78-83](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js#L78-L83) |
+
+The adapter accepts three handler callbacks on construction
+([SocketIOTransport.js:24-27](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js#L24-L27)):
+`onConnect(connectionId)`, `onDisconnect(connectionId)`,
+`onMessage(connectionId, event, data)`.
+
+All 10 known client events are forwarded through the single `onMessage`
+dispatcher
+([SocketIOTransport.js:4-15](https://github.com/s1ryx/skipbo/blob/7d064cf97611fe1eeedec1cf762fdd964c3332d3/server/transport/SocketIOTransport.js#L4-L15)).
+
+### Client Transport Interface
+
+[`SocketIOClientTransport`](https://github.com/s1ryx/skipbo/blob/760826fa15e14d031bccbcd18d89a48139873ed2/client/src/transport/SocketIOClientTransport.js)
+implements:
+
+| Method | Socket.IO equivalent | Line |
+|---|---|---|
+| `connect()` | `io(url)` | [34-51](https://github.com/s1ryx/skipbo/blob/760826fa15e14d031bccbcd18d89a48139873ed2/client/src/transport/SocketIOClientTransport.js#L34-L51) |
+| `send(event, data)` | `socket.emit(event, data)` | [54-58](https://github.com/s1ryx/skipbo/blob/760826fa15e14d031bccbcd18d89a48139873ed2/client/src/transport/SocketIOClientTransport.js#L54-L58) |
+| `disconnect()` | `socket.close()` | [61-66](https://github.com/s1ryx/skipbo/blob/760826fa15e14d031bccbcd18d89a48139873ed2/client/src/transport/SocketIOClientTransport.js#L61-L66) |
+
+All 14 known server events are forwarded through `onMessage(event, data)`
+([SocketIOClientTransport.js:4-19](https://github.com/s1ryx/skipbo/blob/760826fa15e14d031bccbcd18d89a48139873ed2/client/src/transport/SocketIOClientTransport.js#L4-L19)).
+
+### How a Future Transport Would Slot In
+
+No coordinator or game logic changes needed — only new adapter files:
+- **Server**: e.g. `SSETransport.js` — `GET /events?playerId=X` for SSE
+  stream, `POST /action` for client messages, in-memory group membership
+- **Client**: e.g. `SSEClientTransport.js` — `EventSource` for receiving,
+  `fetch POST` for sending
+- **Selection**: environment variable or config to choose which adapter to
+  instantiate in `server.js` and `useGameConnection.js`
 
 ## Server Architecture
+
+### Wiring
+
+[`server.js`](https://github.com/s1ryx/skipbo/blob/75194bc0bf82641168040336e87a6736a786fc90/server/server.js)
+(34 lines) is a thin entry point that creates the Express app, health
+endpoint, and wires the coordinator to the transport
+([server.js:23-28](https://github.com/s1ryx/skipbo/blob/75194bc0bf82641168040336e87a6736a786fc90/server/server.js#L23-L28)):
+
+```js
+const coordinator = new GameCoordinator();
+const transport = new SocketIOTransport(coordinator.getTransportHandlers());
+coordinator.setTransport(transport);
+transport.attach(server);
+```
+
+### Game Coordinator
+
+[`GameCoordinator`](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js)
+owns all game coordination state and handler logic. It receives events from
+the transport through `handleMessage()` and calls `this.transport.send()`
+/ `sendToGroup()` / etc. for outbound communication.
 
 ### Storage
 
 Three in-memory maps hold all state
-([server.js:31-33](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L31-L33)):
+([gameCoordinator.js:9-11](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L9-L11)):
 
 - **`games`** (`Map<roomId, SkipBoGame>`) — one game instance per room
-- **`playerRooms`** (`Map<socketId, roomId>`) — tracks which room each
-  connected socket belongs to
+- **`playerRooms`** (`Map<connectionId, roomId>`) — tracks which room each
+  connected player belongs to
 - **`pendingDeletions`** (`Map<roomId, timeoutId>`) — grace period timers
   for empty lobbies
 
@@ -79,23 +156,23 @@ The server exposes two projection methods to avoid leaking private data:
 Every state update sends both to the relevant player so opponents never see
 each other's hands.
 
-### Server Helpers
+### Coordinator Helpers
 
 - **`cancelPendingDeletion(roomId)`** — clears a grace period timer when a
   player joins before the timeout expires
-  ([server.js:415-424](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L415-L424))
-- **`scheduleEmptyLobbyDeletion(roomId)`** — schedules room deletion after
+  ([gameCoordinator.js:413-420](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L413-L420))
+- **`scheduleRoomDeletion(roomId)`** — schedules room deletion after
   `LOBBY_GRACE_PERIOD_MS` (30s), with a cap of `MAX_PENDING_ROOMS` (50)
   to prevent abuse
-  ([server.js:426-440](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L426-L440))
+  ([gameCoordinator.js:396-411](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L396-L411))
 - **`generateRoomId()`** — creates a 6-character room code using
   easily-distinguishable characters
-  ([server.js:442-454](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L442-L454))
+  ([gameCoordinator.js:424-433](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L424-L433))
 
 ### HTTP Endpoint
 
 A single REST endpoint exists for health checks
-([server.js:22-28](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L22-L28)):
+([server.js:15-21](https://github.com/s1ryx/skipbo/blob/75194bc0bf82641168040336e87a6736a786fc90/server/server.js#L15-L21)):
 
 ```
 GET /health → { status: "ok", version, timestamp }
@@ -109,8 +186,10 @@ GET /health → { status: "ok", version, timestamp }
 index.js
 └─ <StrictMode>
    └─ <LanguageProvider>          ← i18n context
-      └─ <App>                    ← routing, URL params, stable player ID
-         │  └─ useGameSocket()    ← Socket.IO connection, all server state
+      └─ <App>                    ← routing, URL params
+         │  └─ useGameConnection()
+         │     └─ SocketIOClientTransport
+         │        (connect / send / disconnect)
          │
          ├─ <Lobby>               ← room creation/joining forms
          │   (when inLobby=true)
@@ -133,26 +212,25 @@ index.js
 
 ### State Management
 
-All server-related state lives in the `useGameSocket` custom hook
-([hooks/useGameSocket.js:18-40](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L18-L40)):
+All server-related state lives in the `useGameConnection` custom hook
+([useGameConnection.js:20-46](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L20-L46)):
 
 | State          | Type    | Purpose                                  |
 | -------------- | ------- | ---------------------------------------- |
-| `socket`       | Socket  | Socket.IO connection instance            |
 | `gameState`    | object  | Public game state from server            |
 | `playerState`  | object  | Private player state (hand, stockpile)   |
-| `playerId`     | string  | Current socket ID                        |
+| `playerId`     | string  | Current connection ID                    |
 | `roomId`       | string  | Current room code                        |
 | `inLobby`      | boolean | Controls Lobby vs game rendering         |
 | `error`        | string  | Temporary error message (auto-clears)    |
 | `chatMessages` | array   | Chat history (persisted to localStorage) |
+| `stablePlayerId` | string | Persistent ID for chat attribution     |
 
 App-level state in `App.js`
-([App.js:26-28](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js#L26-L28)):
+([App.js:14](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/App.js#L14)):
 
 | State            | Type   | Purpose                                   |
 | ---------------- | ------ | ----------------------------------------- |
-| `stablePlayerId` | string | Persistent ID for chat attribution        |
 | `roomIdFromUrl`  | string | Room ID extracted from `?room=` URL param |
 
 The hook returns state and action functions. Components never manage
@@ -160,31 +238,31 @@ server-related state themselves — they receive data and call callbacks.
 
 ### Component Responsibilities
 
-**`App`** ([App.js](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js), 113 lines)
+**`App`** ([App.js](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/App.js), 100 lines)
 
 - Thin rendering shell that routes between Lobby, WaitingRoom, and GameBoard
 - Extracts `?room=` URL parameter on mount
-  ([App.js:30-37](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js#L30-L37))
-- Generates and persists a stable player ID for chat attribution
-  ([App.js:15-22](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js#L15-L22))
-- Calls `useGameSocket(stablePlayerId)` for all server interaction
-  ([App.js:39-57](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js#L39-L57))
+  ([App.js:16-23](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/App.js#L16-L23))
+- Calls `useGameConnection()` for all server interaction
+  ([App.js:25-43](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/App.js#L25-L43))
 - Three-way routing: `inLobby` → Lobby, `!gameStarted` → WaitingRoom,
   else → GameBoard
-  ([App.js:67-91](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js#L67-L91))
+  ([App.js:53-77](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/App.js#L53-L77))
 
-**`useGameSocket`** ([hooks/useGameSocket.js](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js), 285 lines)
+**`useGameConnection`** ([useGameConnection.js](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js), 314 lines)
 
-- Creates the Socket.IO connection on mount
-  ([useGameSocket.js:49-50](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L49-L50))
-- Registers all Socket.IO event listeners
-  ([useGameSocket.js:53-190](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L53-L190))
-- Defines 10 action functions that emit Socket.IO events
-  ([useGameSocket.js:198-264](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L198-L264))
-- Session persistence helpers: `clearSession()`, `saveSession()`
-  ([useGameSocket.js:7-16](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L7-L16))
+- Creates a `SocketIOClientTransport` and connects on mount
+  ([useGameConnection.js:204-233](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L204-L233))
+- Defines 14 message handlers for server events
+  ([useGameConnection.js:55-202](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L55-L202))
+- Defines 9 action functions that send events through the transport
+  ([useGameConnection.js:238-291](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L238-L291))
+- Uses `connectionIdRef` and `roomIdRef` to avoid stale closures in callbacks
+  ([useGameConnection.js:44-45](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L44-L45))
+- Generates and persists a stable player ID for chat attribution
+  ([useGameConnection.js:5-17](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L5-L17))
 - Chat message persistence to localStorage
-  ([useGameSocket.js:43-47](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L43-L47))
+  ([useGameConnection.js:48-52](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L48-L52))
 
 **`Lobby`** ([Lobby.js](https://github.com/s1ryx/skipbo/blob/d54aea5240e8a572c0892118406bdb2034913988/client/src/components/Lobby.js))
 
@@ -195,7 +273,7 @@ server-related state themselves — they receive data and call callbacks.
 - Enforces stockpile size limits based on player count
   ([Lobby.js:12-14](https://github.com/s1ryx/skipbo/blob/d54aea5240e8a572c0892118406bdb2034913988/client/src/components/Lobby.js#L12-L14))
 
-**`WaitingRoom`** ([WaitingRoom.js](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/components/WaitingRoom.js), 74 lines)
+**`WaitingRoom`** ([WaitingRoom.js](https://github.com/s1ryx/skipbo/blob/20466d1f7a5327147ad8b48f12ccd5201322b9f1/client/src/components/WaitingRoom.js), 74 lines)
 
 - Pre-game lobby view shown after room creation/join
 - Displays room ID, shareable link with copy button, and player list
@@ -244,7 +322,7 @@ onMarkMessagesRead, stablePlayerId }`
 - Collapsible panel that sits inside `GameBoard`
 - Tracks unread message count with a badge
   ([Chat.js:55-57](https://github.com/s1ryx/skipbo/blob/5290fba7a55afb2e295f4d897c6b8a39526fcf71/client/src/components/Chat.js#L55-L57))
-- Uses `stablePlayerId` (not socket ID) to identify own messages,
+- Uses `stablePlayerId` (not connection ID) to identify own messages,
   so authorship survives reconnections
   ([Chat.js:50-53](https://github.com/s1ryx/skipbo/blob/5290fba7a55afb2e295f4d897c6b8a39526fcf71/client/src/components/Chat.js#L50-L53))
 - Messages persist to localStorage per room
@@ -252,59 +330,59 @@ onMarkMessagesRead, stablePlayerId }`
 ### Session Persistence
 
 The hook saves session data to localStorage on room creation, join,
-and reconnection via `saveSession()`
-([useGameSocket.js:14-16](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L14-L16)):
+and reconnection (inline in each message handler, e.g.
+[useGameConnection.js:66-71](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L66-L71)):
 
 ```json
-skipBoSession: { "roomId": "ABC123", "playerId": "socket-id", "playerName": "Alice" }
+skipBoSession: { "roomId": "ABC123", "playerId": "connection-id", "playerName": "Alice" }
 ```
 
-On page reload, the `connect` handler checks for a saved session and
-emits `reconnect` to rejoin the room
-([useGameSocket.js:57-67](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L57-L67)).
-The server updates the player's socket ID to the new connection
-([server.js:147-151](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L147-L151)).
+On page reload, the `onConnect` handler checks for a saved session and
+sends `reconnect` to rejoin the room
+([useGameConnection.js:211-223](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L211-L223)).
+The server updates the player's connection ID to the new one
+([gameCoordinator.js:157-161](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L157-L161)).
 
-Session data is cleared via `clearSession()` on game over
-([useGameSocket.js:134-148](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L134-L148))
+Session data is cleared on game over
+([useGameConnection.js:145-158](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L145-L158))
 and game abort
-([useGameSocket.js:162-181](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L162-L181)).
+([useGameConnection.js:172-192](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L172-L192)).
 
-## Socket.IO Event Reference
+## Event Reference
 
 ### Client → Server (emitted by client)
 
-| Event             | Payload                                     | Emitted from                                                                                                                                 | Handler                                                                                                              |
-| ----------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `createRoom`      | `{ playerName, maxPlayers, stockpileSize }` | [useGameSocket.js:199](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L199) | [server.js:42](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L42)   |
-| `joinRoom`        | `{ roomId, playerName }`                    | [useGameSocket.js:205](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L205) | [server.js:62](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L62)   |
-| `reconnect`       | `{ roomId, oldPlayerId, playerName }`       | [useGameSocket.js:62](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L62)   | [server.js:98](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L98)   |
-| `startGame`       | _(none)_                                    | [useGameSocket.js:213](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L213) | [server.js:174](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L174) |
-| `playCard`        | `{ card, source, buildingPileIndex }`       | [useGameSocket.js:219](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L219) | [server.js:202](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L202) |
-| `discardCard`     | `{ card, discardPileIndex }`                | [useGameSocket.js:225](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L225) | [server.js:236](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L236) |
-| `endTurn`         | _(none)_                                    | [useGameSocket.js:231](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L231) | [server.js:275](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L275) |
-| `sendChatMessage` | `{ message, stablePlayerId }`               | [useGameSocket.js:257](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L257) | [server.js:305](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L305) |
-| `leaveLobby`      | _(none)_                                    | [useGameSocket.js:237](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L237) | [server.js:335](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L335) |
-| `leaveGame`       | _(none)_                                    | [useGameSocket.js:248](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L248) | [server.js:372](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L372) |
+| Event             | Payload                                     | Emitted from                                                                                                                                          | Handler                                                                                                                          |
+| ----------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `createRoom`      | `{ playerName, maxPlayers, stockpileSize }` | [useGameConnection.js:239](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L239)        | [gameCoordinator.js:57](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L57)   |
+| `joinRoom`        | `{ roomId, playerName }`                    | [useGameConnection.js:243](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L243)        | [gameCoordinator.js:76](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L76)   |
+| `reconnect`       | `{ roomId, oldPlayerId, playerName }`       | [useGameConnection.js:217](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L217)        | [gameCoordinator.js:110](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L110) |
+| `startGame`       | _(none)_                                    | [useGameConnection.js:250](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L250)        | [gameCoordinator.js:180](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L180) |
+| `playCard`        | `{ card, source, buildingPileIndex }`       | [useGameConnection.js:254](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L254)        | [gameCoordinator.js:206](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L206) |
+| `discardCard`     | `{ card, discardPileIndex }`                | [useGameConnection.js:258](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L258)        | [gameCoordinator.js:237](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L237) |
+| `endTurn`         | _(none)_                                    | [useGameConnection.js:262](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L262)        | [gameCoordinator.js:272](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L272) |
+| `sendChatMessage` | `{ message, stablePlayerId }`               | [useGameConnection.js:284](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L284)        | [gameCoordinator.js:300](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L300) |
+| `leaveLobby`      | _(none)_                                    | [useGameConnection.js:266](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L266)        | [gameCoordinator.js:321](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L321) |
+| `leaveGame`       | _(none)_                                    | [useGameConnection.js:279](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L279)        | [gameCoordinator.js:344](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L344) |
 
 ### Server → Client (emitted by server)
 
-| Event                | Payload                                                        | Emitted from                                                                                                             | Listener                                                                                                                                     |
-| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roomCreated`        | `{ roomId, playerId, gameState }`                              | [server.js:52](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L52)       | [useGameSocket.js:70](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L70)   |
-| `playerJoined`       | `{ playerId, playerName, gameState }`                          | [server.js:88](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L88)       | [useGameSocket.js:83](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L83)   |
-| `playerLeft`         | `{ playerId, gameState }`                                      | [server.js:352](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L352)     | [useGameSocket.js:93](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L93)   |
-| `reconnected`        | `{ roomId, playerId, gameState, playerState }`                 | [server.js:157](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L157)     | [useGameSocket.js:98](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L98)   |
-| `reconnectFailed`    | `{ message }`                                                  | [server.js:102,142](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L102) | [useGameSocket.js:112](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L112) |
-| `playerReconnected`  | `{ playerId, playerName }`                                     | [server.js:165](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L165)     | _(not handled)_                                                                                                                              |
-| `gameStarted`        | `{ gameState, playerState }`                                   | [server.js:192](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L192)     | [useGameSocket.js:119](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L119) |
-| `gameStateUpdate`    | `{ gameState, playerState }`                                   | [server.js:220,262](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L220) | [useGameSocket.js:125](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L125) |
-| `turnChanged`        | `{ currentPlayerId }`                                          | [server.js:269,300](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L269) | [useGameSocket.js:130](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L130) |
-| `gameOver`           | `{ winner, gameState }`                                        | [server.js:228](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L228)     | [useGameSocket.js:134](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L134) |
-| `playerDisconnected` | `{ playerId }`                                                 | [server.js:403](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L403)     | [useGameSocket.js:150](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L150) |
-| `gameAborted`        | _(none)_                                                       | [server.js:380](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L380)     | [useGameSocket.js:162](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L162) |
-| `chatMessage`        | `{ playerId, playerName, stablePlayerId, message, timestamp }` | [server.js:323](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L323)     | [useGameSocket.js:183](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L183) |
-| `error`              | `{ message }`                                                  | [various](https://github.com/s1ryx/skipbo/blob/5a448aeb5b3cf328eac51e5243b32f19f65d25e4/server/server.js#L66)            | [useGameSocket.js:187](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L187) |
+| Event                | Payload                                                        | Emitted from                                                                                                                                      | Listener                                                                                                                                          |
+| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roomCreated`        | `{ roomId, playerId, gameState }`                              | [gameCoordinator.js:67](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L67)              | [useGameConnection.js:56](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L56)      |
+| `playerJoined`       | `{ playerId, playerName, gameState }`                          | [gameCoordinator.js:101](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L101)            | [useGameConnection.js:74](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L74)      |
+| `playerLeft`         | `{ playerId, gameState }`                                      | [gameCoordinator.js:337](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L337)            | [useGameConnection.js:95](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L95)      |
+| `reconnected`        | `{ roomId, playerId, gameState, playerState }`                 | [gameCoordinator.js:165](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L165)            | [useGameConnection.js:101](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L101)    |
+| `reconnectFailed`    | `{ message }`                                                  | [gameCoordinator.js:114](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L114)            | [useGameConnection.js:120](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L120)    |
+| `playerReconnected`  | `{ playerId, playerName }`                                     | [gameCoordinator.js:172](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L172)            | _(not handled)_                                                                                                                                   |
+| `gameStarted`        | `{ gameState, playerState }`                                   | [gameCoordinator.js:197](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L197)            | [useGameConnection.js:128](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L128)    |
+| `gameStateUpdate`    | `{ gameState, playerState }`                                   | [gameCoordinator.js:223](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L223)            | [useGameConnection.js:135](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L135)    |
+| `turnChanged`        | `{ currentPlayerId }`                                          | [gameCoordinator.js:267](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L267)            | [useGameConnection.js:140](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L140)    |
+| `gameOver`           | `{ winner, gameState }`                                        | [gameCoordinator.js:230](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L230)            | [useGameConnection.js:145](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L145)    |
+| `playerDisconnected` | `{ playerId }`                                                 | [gameCoordinator.js:388](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L388)            | [useGameConnection.js:160](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L160)    |
+| `gameAborted`        | _(none)_                                                       | [gameCoordinator.js:353](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L353)            | [useGameConnection.js:172](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L172)    |
+| `chatMessage`        | `{ playerId, playerName, stablePlayerId, message, timestamp }` | [gameCoordinator.js:310](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L310)            | [useGameConnection.js:194](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L194)    |
+| `error`              | `{ message }`                                                  | [various](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L80)                            | [useGameConnection.js:198](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L198)    |
 
 ## Game Flow
 
@@ -312,27 +390,27 @@ and game abort
 
 ```
 Player A opens app
-  → App mounts, useGameSocket creates connection  (useGameSocket.js:49-50)
-  → Player fills out lobby form                   (Lobby.js)
-  → Lobby calls onCreateRoom(name, max, size)     (useGameSocket.js:198-202)
-  → Client emits 'createRoom'                     (useGameSocket.js:200)
-  → Server creates SkipBoGame instance            (server.js:44)
-  → Server stores in games Map                    (server.js:47)
-  → Server emits 'roomCreated' to creator         (server.js:52-56)
-  → Hook sets roomId, gameState, inLobby=false    (useGameSocket.js:70-80)
-  → App renders WaitingRoom                       (App.js:69-76)
+  → App mounts, useGameConnection creates transport  (useGameConnection.js:204-232)
+  → Player fills out lobby form                      (Lobby.js)
+  → Lobby calls onCreateRoom(name, max, size)        (useGameConnection.js:238-240)
+  → Client sends 'createRoom' via transport          (useGameConnection.js:239)
+  → Server creates SkipBoGame instance               (gameCoordinator.js:59)
+  → Server stores in games Map                       (gameCoordinator.js:62)
+  → Server sends 'roomCreated' to creator            (gameCoordinator.js:67-71)
+  → Hook sets roomId, gameState, inLobby=false       (useGameConnection.js:56-71)
+  → App renders WaitingRoom                          (App.js:55-62)
 ```
 
 ### 2. Joining a Room
 
 ```
 Player B opens app, enters room code
-  → Lobby calls onJoinRoom(roomId, name)          (useGameSocket.js:204-210)
-  → Client emits 'joinRoom'                       (useGameSocket.js:206)
-  → Server validates room exists, not full        (server.js:65-82)
-  → Server adds player to SkipBoGame              (server.js:77)
-  → Server emits 'playerJoined' to ALL in room    (server.js:88-92)
-  → Both clients update gameState                 (useGameSocket.js:83-91)
+  → Lobby calls onJoinRoom(roomId, name)             (useGameConnection.js:242-247)
+  → Client sends 'joinRoom' via transport            (useGameConnection.js:243)
+  → Server validates room exists, not full           (gameCoordinator.js:79-96)
+  → Server adds player to SkipBoGame                 (gameCoordinator.js:91)
+  → Server sends 'playerJoined' to ALL in room       (gameCoordinator.js:101-105)
+  → Both clients update gameState                    (useGameConnection.js:74-93)
   → Player list updates in WaitingRoom
 ```
 
@@ -340,100 +418,100 @@ Player B opens app, enters room code
 
 ```
 Any player clicks "Start Game"
-  → WaitingRoom calls onStartGame                 (WaitingRoom.js:62)
-  → Client emits 'startGame'                      (useGameSocket.js:214)
-  → Server calls game.startGame()                 (server.js:183)
-    → Deck created and shuffled                   (gameLogic.js:61)
-    → Stockpiles dealt (20-30 cards each)         (gameLogic.js:71-75)
-    → Hands dealt (5 cards each)                  (gameLogic.js:78-80)
-  → Server sends 'gameStarted' to EACH player    (server.js:191-196)
+  → WaitingRoom calls onStartGame                    (WaitingRoom.js)
+  → Client sends 'startGame' via transport           (useGameConnection.js:250)
+  → Server calls game.startGame()                    (gameCoordinator.js:189)
+    → Deck created and shuffled                      (gameLogic.js:61)
+    → Stockpiles dealt (20-30 cards each)            (gameLogic.js:71-75)
+    → Hands dealt (5 cards each)                     (gameLogic.js:78-80)
+  → Server sends 'gameStarted' to EACH player       (gameCoordinator.js:196-201)
     (each gets their own playerState)
-  → App routing switches to GameBoard             (App.js:77-91)
+  → App routing switches to GameBoard                (App.js:63-77)
 ```
 
 ### 4. Playing a Card
 
 ```
 Player clicks a card source (hand/stockpile/discard top)
-  → handleCardSelect stores card + source         (GameBoard.js:44-53)
+  → handleCardSelect stores card + source            (GameBoard.js:44-53)
   → UI highlights the selected card
 
 Player clicks a building pile
-  → handleBuildingPileClick fires                 (GameBoard.js:55-62)
-  → Client emits 'playCard'                       (useGameSocket.js:220)
-  → Server calls game.playCard()                  (server.js:211)
-    → Validates: correct turn, valid move         (gameLogic.js:136-145)
-    → Removes card from source                    (gameLogic.js:148-167)
-    → Adds card to building pile                  (gameLogic.js:174)
-    → If pile reaches 12: recycle into deck       (gameLogic.js:182-190)
-    → If hand empty: auto-draw 5 cards            (gameLogic.js:193-195)
-    → If stockpile empty: player wins             (gameLogic.js:198-201)
-  → Server sends 'gameStateUpdate' to each        (server.js:219-224)
-  → If game over: server sends 'gameOver'         (server.js:227-232)
+  → handleBuildingPileClick fires                    (GameBoard.js:55-62)
+  → Client sends 'playCard' via transport            (useGameConnection.js:254)
+  → Server calls game.playCard()                     (gameCoordinator.js:215)
+    → Validates: correct turn, valid move            (gameLogic.js:136-145)
+    → Removes card from source                       (gameLogic.js:148-167)
+    → Adds card to building pile                     (gameLogic.js:174)
+    → If pile reaches 12: recycle into deck          (gameLogic.js:182-190)
+    → If hand empty: auto-draw 5 cards               (gameLogic.js:193-195)
+    → If stockpile empty: player wins                (gameLogic.js:198-201)
+  → Server sends 'gameStateUpdate' to each           (gameCoordinator.js:222-227)
+  → If game over: server sends 'gameOver'            (gameCoordinator.js:229-234)
 ```
 
 ### 5. Discarding and Ending a Turn
 
 ```
 Player clicks "End Turn (Discard a Card)"
-  → handleEndTurn sets discardMode=true           (GameBoard.js:86-90)
+  → handleEndTurn sets discardMode=true              (GameBoard.js:86-90)
   → UI highlights discard piles as targets
 
 Player clicks a discard pile
-  → handleDiscardPileClick fires                  (GameBoard.js:64-78)
-  → Client emits 'discardCard'                    (useGameSocket.js:226)
-  → Server calls game.discardCard()               (server.js:245)
-    → Removes card from hand                      (gameLogic.js:217-224)
-    → Adds to chosen discard pile                 (gameLogic.js:224)
-  → Server calls game.endTurn()                   (server.js:253)
-    → Advances currentPlayerIndex                 (gameLogic.js:252)
-    → Draws cards for next player                 (gameLogic.js:255-256)
-  → Server sends 'gameStateUpdate' + 'turnChanged' (server.js:261-271)
+  → handleDiscardPileClick fires                     (GameBoard.js:64-78)
+  → Client sends 'discardCard' via transport         (useGameConnection.js:258)
+  → Server calls game.discardCard()                  (gameCoordinator.js:246)
+    → Removes card from hand                         (gameLogic.js:217-224)
+    → Adds to chosen discard pile                    (gameLogic.js:224)
+  → Server calls game.endTurn()                      (gameCoordinator.js:253)
+    → Advances currentPlayerIndex                    (gameLogic.js:252)
+    → Draws cards for next player                    (gameLogic.js:255-256)
+  → Server sends 'gameStateUpdate' + 'turnChanged'  (gameCoordinator.js:260-269)
 ```
 
 ### 6. Chat
 
 ```
 Player types message and submits
-  → Chat calls onSendMessage(text)                (Chat.js:34-39)
-  → Hook emits 'sendChatMessage'                  (useGameSocket.js:258)
-  → Server broadcasts 'chatMessage' to room       (server.js:323-329)
-  → All clients append to chatMessages            (useGameSocket.js:183-185)
-  → Messages saved to localStorage per room       (useGameSocket.js:43-47)
+  → Chat calls onSendMessage(text)                   (Chat.js:34-39)
+  → Hook sends 'sendChatMessage' via transport       (useGameConnection.js:284)
+  → Server broadcasts 'chatMessage' to room          (gameCoordinator.js:310-316)
+  → All clients append to chatMessages               (useGameConnection.js:194-196)
+  → Messages saved to localStorage per room          (useGameConnection.js:48-52)
 ```
 
 ### 7. Reconnection
 
 ```
 Player reloads page
-  → App mounts, useGameSocket creates connection  (useGameSocket.js:49-50)
-  → On 'connect', checks localStorage             (useGameSocket.js:57-67)
-  → If session found, emits 'reconnect'           (useGameSocket.js:62)
-  → Server finds player by old ID                 (server.js:109)
-  → Server swaps old socket ID for new            (server.js:147-151)
-  → Server sends 'reconnected' with full state    (server.js:157-162)
-  → Hook restores game state                      (useGameSocket.js:98-110)
+  → App mounts, useGameConnection creates transport  (useGameConnection.js:204-232)
+  → On connect, checks localStorage                  (useGameConnection.js:211-223)
+  → If session found, sends 'reconnect'              (useGameConnection.js:217)
+  → Server finds player by old ID                    (gameCoordinator.js:122)
+  → Server swaps old connection ID for new           (gameCoordinator.js:157-161)
+  → Server sends 'reconnected' with full state       (gameCoordinator.js:165-170)
+  → Hook restores game state                         (useGameConnection.js:101-118)
 ```
 
 ### 8. Leaving / Disconnect
 
 ```
 Player clicks "Leave Game" in waiting room
-  → Client emits 'leaveLobby'                     (useGameSocket.js:238)
-  → Server removes player from room               (server.js:344-346)
-  → If empty: schedules deletion after grace period (server.js:348)
-  → If others remain: emits 'playerLeft'           (server.js:351-355)
+  → Client sends 'leaveLobby' via transport          (useGameConnection.js:266)
+  → Server removes player from room                  (gameCoordinator.js:330-332)
+  → If empty: schedules deletion after grace period  (gameCoordinator.js:334-335)
+  → If others remain: sends 'playerLeft'             (gameCoordinator.js:337-340)
 
 Player clicks "Leave Game" during active game
-  → Client emits 'leaveGame'                       (useGameSocket.js:252)
-  → Server emits 'gameAborted' to entire room      (server.js:380)
-  → Server deletes game from Map                   (server.js:389)
-  → All clients return to lobby                    (useGameSocket.js:162-181)
+  → Client sends 'leaveGame' via transport           (useGameConnection.js:279)
+  → Server sends 'gameAborted' to entire room        (gameCoordinator.js:353)
+  → Server deletes game from Map                     (gameCoordinator.js:360)
+  → All clients return to lobby                      (useGameConnection.js:172-192)
 
 Player disconnects (tab close, network loss)
-  → Server 'disconnect' handler fires              (server.js:397)
-  → If pre-game: removes player, may schedule deletion (server.js:404-401)
-  → If mid-game: emits 'playerDisconnected'        (server.js:403-405)
+  → Server 'disconnect' handler fires                (gameCoordinator.js:365)
+  → If pre-game: removes player, may schedule deletion (gameCoordinator.js:377-386)
+  → If mid-game: sends 'playerDisconnected'          (gameCoordinator.js:388-390)
     → Room persists for reconnection
 ```
 
@@ -443,8 +521,8 @@ Player disconnects (tab close, network loss)
                    Props (↓)              Callbacks (↑)
                 ┌─────────────────────────────────────────┐
                 │               App.js                     │
-                │  useGameSocket() → state + actions       │
-                │  stablePlayerId, roomIdFromUrl           │
+                │  useGameConnection() → state + actions   │
+                │  roomIdFromUrl                           │
                 └─┬──────────────┬───────────┬────────────┘
         inLobby?  │  !gameStarted?│           │  gameStarted?
                   ▼              ▼            ▼
@@ -477,9 +555,9 @@ Player disconnects (tab close, network loss)
 
 ## localStorage Keys
 
-| Key                    | Value                              | Used by                                                                                                                                                             |
-| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skipBoSession`        | `{ roomId, playerId, playerName }` | Reconnection on reload ([useGameSocket.js:14](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L14)) |
-| `skipBoChat_{roomId}`  | `[{ message, playerName, ... }]`   | Chat persistence ([useGameSocket.js:45](https://github.com/s1ryx/skipbo/blob/cb5ffde9686524bfde73c8605a743e11a3670460/client/src/hooks/useGameSocket.js#L45))       |
-| `skipBoStablePlayerId` | `"player_abc123_1234567890"`       | Chat message attribution ([App.js:15-22](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/App.js#L15-L22))                  |
-| `skipBoQuickDiscard`   | `"true"` or `"false"`              | Quick discard setting ([GameBoard.js:26](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/components/GameBoard.js#L26))     |
+| Key                    | Value                              | Used by                                                                                                                                                                  |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `skipBoSession`        | `{ roomId, playerId, playerName }` | Reconnection on reload ([useGameConnection.js:211](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L211))   |
+| `skipBoChat_{roomId}`  | `[{ message, playerName, ... }]`   | Chat persistence ([useGameConnection.js:49](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L49))           |
+| `skipBoStablePlayerId` | `"player_abc123_1234567890"`       | Chat message attribution ([useGameConnection.js:10-17](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L10-L17)) |
+| `skipBoQuickDiscard`   | `"true"` or `"false"`              | Quick discard setting ([GameBoard.js:26](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/components/GameBoard.js#L26))           |
