@@ -31,13 +31,16 @@ class SocketIOTransport {
 
   /** Bind to an existing http.Server instance */
   attach(httpServer) {
-    this.io = socketIO(httpServer, {
-      cors: {
-        origin: process.env.CORS_ORIGIN || '*',
-        methods: ['GET', 'POST'],
-        credentials: true,
-      },
-    });
+    const origin = process.env.CORS_ORIGIN || '*';
+    const corsOptions = {
+      origin,
+      methods: ['GET', 'POST'],
+    };
+    // credentials: true is incompatible with origin: '*'
+    if (origin !== '*') {
+      corsOptions.credentials = true;
+    }
+    this.io = socketIO(httpServer, { cors: corsOptions });
 
     this.io.on('connection', (socket) => {
       this.handlers.onConnect(socket.id);

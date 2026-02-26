@@ -12,7 +12,8 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - HOST=0.0.0.0
-      - CORS_ORIGIN=*
+      # Set to your domain in production, e.g. https://skipbo.example.com
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
     expose:
       - '3001'
     networks:
