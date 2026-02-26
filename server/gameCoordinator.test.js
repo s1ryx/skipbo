@@ -816,6 +816,69 @@ describe('GameCoordinator', () => {
     });
   });
 
+  describe('completedGameCleanup', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('cleans up completed game after TTL', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+      const game = coordinator.games.get(roomId);
+
+      // Force winning condition: 1 card in stockpile, playable hand
+      const player1 = game.players[0];
+      player1.stockpile = [1];
+      player1.hand = [1, 2, 3, 4, 5];
+
+      // Play card via coordinator to trigger game over path
+      handlers.onMessage('player1', 'playCard', {
+        card: 1,
+        source: 'stockpile',
+        buildingPileIndex: 0,
+      });
+
+      expect(game.gameOver).toBe(true);
+      expect(coordinator.games.has(roomId)).toBe(true);
+
+      // Advance past TTL
+      jest.advanceTimersByTime(300001);
+
+      expect(coordinator.games.has(roomId)).toBe(false);
+      expect(coordinator.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.playerRooms.has('player2')).toBe(false);
+    });
+
+    it('cancels cleanup when game is aborted', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+      const game = coordinator.games.get(roomId);
+
+      // Force winning condition
+      const player1 = game.players[0];
+      player1.stockpile = [1];
+      player1.hand = [1, 2, 3, 4, 5];
+
+      handlers.onMessage('player1', 'playCard', {
+        card: 1,
+        source: 'stockpile',
+        buildingPileIndex: 0,
+      });
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
+
+      // Leave game (abort)
+      handlers.onMessage('player1', 'leaveGame', {});
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
+    });
+  });
+
   describe('scheduleRoomDeletion', () => {
     it('deletes room immediately when pending limit reached', () => {
       const { coordinator } = createCoordinator();
