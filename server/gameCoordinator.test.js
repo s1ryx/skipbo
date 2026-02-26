@@ -110,14 +110,138 @@ describe('GameCoordinator', () => {
       const call = transport.send.mock.calls.find((c) => c[1] === 'roomCreated');
       expect(call[0]).toBe('player1');
       expect(call[2]).toHaveProperty('roomId');
-      expect(call[2].playerId).toBe('player1');
+      expect(typeof call[2].playerId).toBe('string');
       expect(call[2].gameState).toBeDefined();
     });
 
-    it('generates a 6-character room ID', () => {
+    it('generates a 6-character room ID using valid alphabet', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoom(coordinator);
       expect(roomId).toHaveLength(6);
+      expect(roomId).toMatch(/^[3467ACDEFGHJKMNPQRTUVWXY]+$/);
+    });
+
+    it('rejects non-string player name', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 123, maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+      expect(coordinator.games.size).toBe(0);
+    });
+
+    it('rejects empty player name', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: '   ', maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+    });
+
+    it('rejects player name exceeding 30 characters', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 'A'.repeat(31), maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+    });
+
+    it('strips control characters from player name', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 'Al\x00ic\x1Fe', maxPlayers: 2 });
+      expect(coordinator.games.size).toBe(1);
+      const game = [...coordinator.games.values()][0];
+      expect(game.players[0].name).toBe('Alice');
+    });
+
+    it('strips HTML tags from player name', () => {
+      const { coordinator } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: '<b>Bold</b>', maxPlayers: 2 });
+      const game = [...coordinator.games.values()][0];
+      expect(game.players[0].name).toBe('Bold');
+    });
+
+    it('rejects name that becomes empty after HTML stripping', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', {
+        playerName: '<br><hr>',
+        maxPlayers: 2,
+      });
+      expect(coordinator.games.size).toBe(0);
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+    });
+    it('clamps maxPlayers to valid range', () => {
+      const { coordinator } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Too low
+      handlers.onMessage('p1', 'createRoom', { playerName: 'A', maxPlayers: 0 });
+      let game = [...coordinator.games.values()][0];
+      expect(game.playerCount).toBe(2);
+
+      // Too high
+      handlers.onMessage('p2', 'createRoom', { playerName: 'B', maxPlayers: 7 });
+      game = [...coordinator.games.values()][1];
+      expect(game.playerCount).toBe(2);
+
+      // NaN / float / string
+      handlers.onMessage('p3', 'createRoom', { playerName: 'C', maxPlayers: 2.5 });
+      game = [...coordinator.games.values()][2];
+      expect(game.playerCount).toBe(2);
+
+      // Valid
+      handlers.onMessage('p4', 'createRoom', { playerName: 'D', maxPlayers: 4 });
+      game = [...coordinator.games.values()][3];
+      expect(game.playerCount).toBe(4);
+    });
+
+    it('clamps stockpileSize to valid range', () => {
+      const { coordinator } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Invalid → undefined (uses game default)
+      handlers.onMessage('p1', 'createRoom', { playerName: 'A', maxPlayers: 2, stockpileSize: -1 });
+      let game = [...coordinator.games.values()][0];
+      expect(game.stockpileSize).toBeUndefined();
+
+      handlers.onMessage('p2', 'createRoom', { playerName: 'B', maxPlayers: 2, stockpileSize: 31 });
+      game = [...coordinator.games.values()][1];
+      expect(game.stockpileSize).toBeUndefined();
+
+      // Valid
+      handlers.onMessage('p3', 'createRoom', { playerName: 'C', maxPlayers: 2, stockpileSize: 10 });
+      game = [...coordinator.games.values()][2];
+      expect(game.stockpileSize).toBe(10);
+    });
+
+    it('rejects room creation when server is full', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Fill to max
+      for (let i = 0; i < 200; i++) {
+        coordinator.games.set(`room${i}`, {});
+      }
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 'Alice', maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.serverFull',
+      });
+      expect(coordinator.games.size).toBe(200);
     });
   });
 
@@ -143,7 +267,7 @@ describe('GameCoordinator', () => {
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'playerJoined',
-        expect.objectContaining({ playerId: 'player2', playerName: 'Bob' })
+        expect.objectContaining({ playerId: expect.any(String), playerName: 'Bob' })
       );
     });
 
@@ -179,6 +303,17 @@ describe('GameCoordinator', () => {
 
       expect(transport.send).toHaveBeenCalledWith('player3', 'error', {
         message: 'error.roomFull',
+      });
+    });
+
+    it('rejects invalid player name on join', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoom(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player2', 'joinRoom', { roomId, playerName: null });
+      expect(transport.send).toHaveBeenCalledWith('player2', 'error', {
+        message: 'error.invalidPlayerName',
       });
     });
 
@@ -237,6 +372,31 @@ describe('GameCoordinator', () => {
       expect(transport.send).toHaveBeenCalledWith('player1', 'error', {
         message: 'error.needMorePlayers',
       });
+    });
+
+    it('rejects startGame from non-host player', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player2', 'startGame', {});
+
+      expect(transport.send).toHaveBeenCalledWith('player2', 'error', {
+        message: 'error.onlyHostCanStart',
+      });
+    });
+
+    it('includes hostPlayerId in gameState', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+
+      const gameStartedCall = transport.send.mock.calls.find(
+        (c) => c[0] === 'player1' && c[1] === 'gameStarted'
+      );
+      expect(gameStartedCall[2].gameState.hostPlayerId).toBeTruthy();
     });
   });
 
@@ -321,7 +481,7 @@ describe('GameCoordinator', () => {
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         expect.any(String),
         'turnChanged',
-        expect.objectContaining({ currentPlayerId: 'player2' })
+        expect.objectContaining({ currentPlayerId: expect.any(String) })
       );
     });
   });
@@ -335,16 +495,15 @@ describe('GameCoordinator', () => {
       transport.sendToGroup.mockClear();
       handlers.onMessage('player1', 'sendChatMessage', {
         message: 'Hello!',
-        stablePlayerId: 'stable-1',
       });
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'chatMessage',
         expect.objectContaining({
-          playerId: 'player1',
+          playerId: expect.any(String),
           playerName: 'Alice',
-          stablePlayerId: 'stable-1',
+          stablePlayerId: expect.any(String),
           message: 'Hello!',
           timestamp: expect.any(Number),
         })
@@ -374,6 +533,71 @@ describe('GameCoordinator', () => {
       handlers.onMessage('unknown', 'sendChatMessage', { message: 'Hi', stablePlayerId: 's1' });
       expect(transport.sendToGroup).not.toHaveBeenCalled();
     });
+
+    it('silently ignores non-string message', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', { message: 123, stablePlayerId: 's1' });
+      expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
+
+    it('silently ignores empty message', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', { message: '   ', stablePlayerId: 's1' });
+      expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
+
+    it('silently ignores message exceeding 500 characters', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: 'A'.repeat(501),
+        stablePlayerId: 's1',
+      });
+      expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
+
+    it('strips HTML tags from chat message', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: 'Hello <b>world</b>',
+        stablePlayerId: 's1',
+      });
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        expect.any(String),
+        'chatMessage',
+        expect.objectContaining({ message: 'Hello world' })
+      );
+    });
+
+    it('sanitizes user data in log output', () => {
+      const { coordinator } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: 'Hello',
+      });
+      const chatLog = logSpy.mock.calls.find((c) => c[0].includes('Chat message'));
+      expect(chatLog[0]).not.toMatch(/[\r\n]/);
+      expect(chatLog[0]).not.toMatch(/\x1B/);
+      logSpy.mockRestore();
+    });
   });
 
   describe('leaveLobby', () => {
@@ -390,7 +614,7 @@ describe('GameCoordinator', () => {
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'playerLeft',
-        expect.objectContaining({ playerId: 'player2' })
+        expect.objectContaining({ playerId: expect.any(String) })
       );
     });
 
@@ -424,6 +648,22 @@ describe('GameCoordinator', () => {
       expect(coordinator.games.size).toBe(gamesBefore);
       expect(transport.removeFromGroup).not.toHaveBeenCalled();
     });
+
+    it('transfers host when host leaves lobby', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      const game = coordinator.games.get(roomId);
+      const originalHost = game.hostPublicId;
+      const player2PublicId = game.players[1].publicId;
+
+      // Host (player1) leaves
+      handlers.onMessage('player1', 'leaveLobby', {});
+
+      expect(game.hostPublicId).toBe(player2PublicId);
+      expect(game.hostPublicId).not.toBe(originalHost);
+    });
   });
 
   describe('leaveGame', () => {
@@ -435,6 +675,8 @@ describe('GameCoordinator', () => {
       handlers.onMessage('player1', 'leaveGame', {});
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(roomId, 'gameAborted');
+      expect(transport.removeFromGroup).toHaveBeenCalledWith('player1', roomId);
+      expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(coordinator.games.has(roomId)).toBe(false);
       expect(coordinator.playerRooms.has('player1')).toBe(false);
       expect(coordinator.playerRooms.has('player2')).toBe(false);
@@ -461,10 +703,11 @@ describe('GameCoordinator', () => {
       handlers.onDisconnect('player2');
 
       expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'playerLeft',
-        expect.objectContaining({ playerId: 'player2' })
+        expect.objectContaining({ playerId: expect.any(String) })
       );
     });
 
@@ -492,7 +735,7 @@ describe('GameCoordinator', () => {
       handlers.onDisconnect('player2');
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(roomId, 'playerDisconnected', {
-        playerId: 'player2',
+        playerId: expect.any(String),
       });
       // Game should still exist (allows reconnection)
       expect(coordinator.games.has(roomId)).toBe(true);
@@ -521,10 +764,12 @@ describe('GameCoordinator', () => {
   });
 
   describe('reconnect', () => {
-    it('reconnects a player to an active game', () => {
+    it('reconnects a player to an active game using session token', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createStartedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player2Token = game.players[1].sessionToken;
 
       // Simulate disconnect
       handlers.onDisconnect('player2');
@@ -533,7 +778,7 @@ describe('GameCoordinator', () => {
       transport.addToGroup.mockClear();
       handlers.onMessage('player2-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'player2',
+        sessionToken: player2Token,
         playerName: 'Bob',
       });
 
@@ -542,7 +787,8 @@ describe('GameCoordinator', () => {
         'reconnected',
         expect.objectContaining({
           roomId,
-          playerId: 'player2-new',
+          playerId: expect.any(String),
+          sessionToken: expect.any(String),
           gameState: expect.any(Object),
           playerState: expect.any(Object),
         })
@@ -552,11 +798,29 @@ describe('GameCoordinator', () => {
         roomId,
         'player2-new',
         'playerReconnected',
-        expect.objectContaining({ playerId: 'player2-new', playerName: 'Bob' })
+        expect.objectContaining({ playerId: expect.any(String), playerName: 'Bob' })
       );
     });
 
-    it('rejoins lobby when player was removed pre-game', () => {
+    it('issues a new session token on reconnect', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const oldToken = game.players[1].sessionToken;
+
+      handlers.onDisconnect('player2');
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken: oldToken,
+        playerName: 'Bob',
+      });
+
+      // Token should have been rotated
+      expect(game.players[1].sessionToken).not.toBe(oldToken);
+    });
+
+    it('rejoins lobby when session token not found pre-game', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createRoom(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -564,20 +828,20 @@ describe('GameCoordinator', () => {
       transport.send.mockClear();
       handlers.onMessage('player2-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'player2-old',
+        sessionToken: 'unknown-token',
         playerName: 'Bob',
       });
 
       expect(transport.send).toHaveBeenCalledWith(
         'player2-new',
         'reconnected',
-        expect.objectContaining({ roomId, playerId: 'player2-new' })
+        expect.objectContaining({ roomId, playerId: expect.any(String) })
       );
       expect(transport.sendToGroupExcept).toHaveBeenCalledWith(
         roomId,
         'player2-new',
         'playerJoined',
-        expect.objectContaining({ playerId: 'player2-new', playerName: 'Bob' })
+        expect.objectContaining({ playerId: expect.any(String), playerName: 'Bob' })
       );
     });
 
@@ -587,7 +851,7 @@ describe('GameCoordinator', () => {
 
       handlers.onMessage('player1', 'reconnect', {
         roomId: 'GONE00',
-        oldPlayerId: 'old-id',
+        sessionToken: 'some-token',
         playerName: 'Alice',
       });
 
@@ -596,7 +860,7 @@ describe('GameCoordinator', () => {
       });
     });
 
-    it('fails when player not found and game already started', () => {
+    it('fails when session token not found and game already started', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createStartedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -604,7 +868,7 @@ describe('GameCoordinator', () => {
       transport.send.mockClear();
       handlers.onMessage('unknown-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'never-existed',
+        sessionToken: 'invalid-token',
         playerName: 'Eve',
       });
 
@@ -621,13 +885,92 @@ describe('GameCoordinator', () => {
       transport.send.mockClear();
       handlers.onMessage('player3-new', 'reconnect', {
         roomId,
-        oldPlayerId: 'player3-old',
+        sessionToken: 'unknown-token',
         playerName: 'Eve',
       });
 
       expect(transport.send).toHaveBeenCalledWith('player3-new', 'reconnectFailed', {
         message: 'error.roomFull',
       });
+    });
+
+    it('fails when session token is missing', () => {
+      const { coordinator, transport } = createCoordinator();
+      createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.send.mockClear();
+      handlers.onMessage('p1', 'reconnect', {
+        roomId: 'ABCDEF',
+        playerName: 'Alice',
+      });
+
+      expect(transport.send).toHaveBeenCalledWith('p1', 'reconnectFailed', {
+        message: 'error.invalidSession',
+      });
+    });
+  });
+
+  describe('completedGameCleanup', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('cleans up completed game after TTL', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+      const game = coordinator.games.get(roomId);
+
+      // Force winning condition: 1 card in stockpile, playable hand
+      const player1 = game.players[0];
+      player1.stockpile = [1];
+      player1.hand = [1, 2, 3, 4, 5];
+
+      // Play card via coordinator to trigger game over path
+      handlers.onMessage('player1', 'playCard', {
+        card: 1,
+        source: 'stockpile',
+        buildingPileIndex: 0,
+      });
+
+      expect(game.gameOver).toBe(true);
+      expect(coordinator.games.has(roomId)).toBe(true);
+
+      // Advance past TTL
+      jest.advanceTimersByTime(300001);
+
+      expect(coordinator.games.has(roomId)).toBe(false);
+      expect(coordinator.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.playerRooms.has('player2')).toBe(false);
+    });
+
+    it('cancels cleanup when game is aborted', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+      const game = coordinator.games.get(roomId);
+
+      // Force winning condition
+      const player1 = game.players[0];
+      player1.stockpile = [1];
+      player1.hand = [1, 2, 3, 4, 5];
+
+      handlers.onMessage('player1', 'playCard', {
+        card: 1,
+        source: 'stockpile',
+        buildingPileIndex: 0,
+      });
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
+
+      // Leave game (abort)
+      handlers.onMessage('player1', 'leaveGame', {});
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
     });
   });
 

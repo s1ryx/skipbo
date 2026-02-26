@@ -1,3 +1,7 @@
+const crypto = require('crypto');
+
+const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'discard2', 'discard3']);
+
 class SkipBoGame {
   constructor(roomId, playerCount, stockpileSize) {
     this.roomId = roomId;
@@ -30,7 +34,7 @@ class SkipBoGame {
 
   shuffleDeck(deck) {
     for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = crypto.randomInt(i + 1);
       [deck[i], deck[j]] = [deck[j], deck[i]];
     }
     return deck;
@@ -43,6 +47,7 @@ class SkipBoGame {
 
     const player = {
       id: playerId,
+      publicId: crypto.randomUUID().slice(0, 8),
       name: playerName,
       stockpile: [],
       hand: [],
@@ -51,6 +56,11 @@ class SkipBoGame {
 
     this.players.push(player);
     return true;
+  }
+
+  getPublicId(connectionId) {
+    const player = this.players.find((p) => p.id === connectionId);
+    return player ? player.publicId : null;
   }
 
   removePlayer(playerId) {
@@ -133,6 +143,10 @@ class SkipBoGame {
   }
 
   canPlayCard(card, buildingPileIndex) {
+    if (!Number.isInteger(buildingPileIndex) || buildingPileIndex < 0 || buildingPileIndex > 3) {
+      return false;
+    }
+
     const pile = this.buildingPiles[buildingPileIndex];
     const nextValue = this.getNextCardValue(pile);
 
@@ -152,6 +166,10 @@ class SkipBoGame {
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
       return { success: false, error: 'error.notYourTurn' };
+    }
+
+    if (!VALID_SOURCES.has(source)) {
+      return { success: false, error: 'error.invalidSource' };
     }
 
     // Validate the move
@@ -225,7 +243,7 @@ class SkipBoGame {
       return { success: false, error: 'error.notYourTurn' };
     }
 
-    if (discardPileIndex < 0 || discardPileIndex > 3) {
+    if (!Number.isInteger(discardPileIndex) || discardPileIndex < 0 || discardPileIndex > 3) {
       return { success: false, error: 'error.invalidDiscardPile' };
     }
 
@@ -277,7 +295,7 @@ class SkipBoGame {
     return {
       roomId: this.roomId,
       players: this.players.map((p) => ({
-        id: p.id,
+        id: p.publicId,
         name: p.name,
         stockpileCount: p.stockpile.length,
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
@@ -286,11 +304,12 @@ class SkipBoGame {
       })),
       buildingPiles: this.buildingPiles,
       currentPlayerIndex: this.currentPlayerIndex,
-      currentPlayerId: this.getCurrentPlayer()?.id,
+      currentPlayerId: this.getCurrentPlayer()?.publicId,
       deckCount: this.deck.length,
+      hostPlayerId: this.hostPublicId || null,
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
-      winner: this.winner,
+      winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
     };
   }
 
@@ -300,7 +319,7 @@ class SkipBoGame {
 
     return {
       hand: player.hand,
-      stockpile: player.stockpile,
+      stockpileCount: player.stockpile.length,
       stockpileTop:
         player.stockpile.length > 0 ? player.stockpile[player.stockpile.length - 1] : null,
       discardPiles: player.discardPiles,

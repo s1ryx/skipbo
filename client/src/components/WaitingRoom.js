@@ -66,7 +66,7 @@ function WaitingRoom({ gameState, playerId, roomId, onStartGame, onLeaveLobby })
         <button onClick={onLeaveLobby} className="btn-leave-lobby">
           {t('game.leaveGame')}
         </button>
-        {gameState.players.length >= 2 && (
+        {gameState.players.length >= 2 && playerId === gameState.hostPlayerId && (
           <button onClick={onStartGame} className="btn-start-game">
             {t('game.startGame')}
           </button>

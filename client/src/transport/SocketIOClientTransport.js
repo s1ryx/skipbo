@@ -7,6 +7,7 @@ const SERVER_EVENTS = [
   'playerLeft',
   'reconnected',
   'reconnectFailed',
+  'sessionToken',
   'gameStarted',
   'gameStateUpdate',
   'gameOver',

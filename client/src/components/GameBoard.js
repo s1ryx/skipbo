@@ -16,7 +16,6 @@ function GameBoard({
   chatMessages,
   onSendChatMessage,
   onMarkMessagesRead,
-  stablePlayerId,
 }) {
   const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState(null);
@@ -240,7 +239,7 @@ function GameBoard({
             {/* Stockpile */}
             <div className="stockpile-section">
               <div className="pile-label">
-                {t('game.yourStockpile', { count: playerState.stockpile.length })}
+                {t('game.yourStockpile', { count: playerState.stockpileCount })}
               </div>
               {playerState.stockpileTop ? (
                 <div
@@ -381,7 +380,7 @@ function GameBoard({
         messages={chatMessages}
         onSendMessage={onSendChatMessage}
         onMarkMessagesRead={onMarkMessagesRead}
-        stablePlayerId={stablePlayerId}
+        playerId={playerId}
       />
     </div>
   );

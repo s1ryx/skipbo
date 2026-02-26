@@ -1,5 +1,8 @@
 const socketIO = require('socket.io');
 
+const RATE_LIMIT_WINDOW_MS = 10000;
+const RATE_LIMIT_MAX_EVENTS = 30;
+
 // Every event the server expects from clients
 const CLIENT_EVENTS = [
   'createRoom',
@@ -23,28 +26,34 @@ class SocketIOTransport {
   constructor(handlers) {
     this.handlers = handlers;
     this.io = null;
+    this.eventTimestamps = new Map();
   }
 
   /** Bind to an existing http.Server instance */
   attach(httpServer) {
-    this.io = socketIO(httpServer, {
-      cors: {
-        origin: process.env.CORS_ORIGIN || '*',
-        methods: ['GET', 'POST'],
-        credentials: true,
-      },
-    });
+    const origin = process.env.CORS_ORIGIN || '*';
+    const corsOptions = {
+      origin,
+      methods: ['GET', 'POST'],
+    };
+    // credentials: true is incompatible with origin: '*'
+    if (origin !== '*') {
+      corsOptions.credentials = true;
+    }
+    this.io = socketIO(httpServer, { cors: corsOptions });
 
     this.io.on('connection', (socket) => {
       this.handlers.onConnect(socket.id);
 
       CLIENT_EVENTS.forEach((event) => {
         socket.on(event, (data) => {
+          if (this._isRateLimited(socket)) return;
           this.handlers.onMessage(socket.id, event, data || {});
         });
       });
 
       socket.on('disconnect', () => {
+        this.eventTimestamps.delete(socket.id);
         this.handlers.onDisconnect(socket.id);
       });
     });
@@ -79,6 +88,30 @@ class SocketIOTransport {
     if (socket) {
       socket.leave(groupId);
     }
+  }
+
+  /** @private Check if a connection has exceeded the rate limit */
+  _isRateLimited(socket) {
+    const now = Date.now();
+    let timestamps = this.eventTimestamps.get(socket.id);
+    if (!timestamps) {
+      timestamps = [];
+      this.eventTimestamps.set(socket.id, timestamps);
+    }
+
+    // Remove timestamps outside the window
+    const cutoff = now - RATE_LIMIT_WINDOW_MS;
+    while (timestamps.length > 0 && timestamps[0] <= cutoff) {
+      timestamps.shift();
+    }
+
+    if (timestamps.length >= RATE_LIMIT_MAX_EVENTS) {
+      socket.emit('error', { message: 'error.rateLimited' });
+      return true;
+    }
+
+    timestamps.push(now);
+    return false;
   }
 }
 

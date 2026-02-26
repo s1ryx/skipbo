@@ -24,6 +24,7 @@ const makeGameState = (overrides = {}) => ({
   buildingPiles: [[], [], [], []],
   currentPlayerIndex: 0,
   currentPlayerId: 'p1',
+  hostPlayerId: 'p1',
   deckCount: 100,
   gameStarted: false,
   gameOver: false,
@@ -109,5 +110,15 @@ describe('WaitingRoom', () => {
     renderWaitingRoom({ onLeaveLobby });
     fireEvent.click(screen.getByText('Leave Game'));
     expect(onLeaveLobby).toHaveBeenCalled();
+  });
+
+  it('hides start button for non-host player', () => {
+    renderWaitingRoom({ playerId: 'p2' });
+    expect(screen.queryByText('Start Game')).not.toBeInTheDocument();
+  });
+
+  it('shows start button for host player', () => {
+    renderWaitingRoom({ playerId: 'p1' });
+    expect(screen.getByText('Start Game')).toBeInTheDocument();
   });
 });

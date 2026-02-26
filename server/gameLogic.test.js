@@ -61,13 +61,14 @@ describe('SkipBoGame', () => {
       const result = game.addPlayer('p1', 'Alice');
       expect(result).toBe(true);
       expect(game.players).toHaveLength(1);
-      expect(game.players[0]).toEqual({
+      expect(game.players[0]).toEqual(expect.objectContaining({
         id: 'p1',
         name: 'Alice',
         stockpile: [],
         hand: [],
         discardPiles: [[], [], [], []],
-      });
+      }));
+      expect(game.players[0].publicId).toHaveLength(8);
     });
 
     it('rejects when room is full', () => {
@@ -336,6 +337,28 @@ describe('SkipBoGame', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe('error.cardNotFound');
     });
+
+    it('rejects invalid source values', () => {
+      const player = game.players[0];
+      player.hand = [1, 2, 3, 4, 5];
+
+      expect(game.playCard('p1', 1, 'constructor', 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, '__proto__', 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, '', 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, null, 0).error).toBe('error.invalidSource');
+      expect(game.playCard('p1', 1, 'discard5', 0).error).toBe('error.invalidSource');
+    });
+
+    it('rejects invalid buildingPileIndex values', () => {
+      const player = game.players[0];
+      player.hand = [1, 2, 3, 4, 5];
+
+      expect(game.playCard('p1', 1, 'hand', -1).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', 4).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', 1.5).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', undefined).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', 'abc').success).toBe(false);
+    });
   });
 
   describe('discardCard', () => {
@@ -366,6 +389,8 @@ describe('SkipBoGame', () => {
       game.players[0].hand = [1, 2, 3, 4, 5];
       expect(game.discardCard('p1', 1, -1).error).toBe('error.invalidDiscardPile');
       expect(game.discardCard('p1', 1, 4).error).toBe('error.invalidDiscardPile');
+      expect(game.discardCard('p1', 1, 1.5).error).toBe('error.invalidDiscardPile');
+      expect(game.discardCard('p1', 1, undefined).error).toBe('error.invalidDiscardPile');
     });
 
     it('rejects card not in hand', () => {
@@ -488,29 +513,30 @@ describe('SkipBoGame', () => {
       expect(playerState).not.toHaveProperty('stockpile');
     });
 
-    it('includes currentPlayerId', () => {
+    it('includes currentPlayerId as publicId', () => {
       game.addPlayer('p1', 'Alice');
       game.addPlayer('p2', 'Bob');
       game.startGame();
 
       const state = game.getGameState();
-      expect(state.currentPlayerId).toBe('p1');
+      expect(state.currentPlayerId).toBe(game.players[0].publicId);
     });
   });
 
   describe('getPlayerState', () => {
-    it('returns hand, stockpile, and discard piles for a player', () => {
+    it('returns hand, stockpile count, and discard piles for a player', () => {
       game.addPlayer('p1', 'Alice');
       game.addPlayer('p2', 'Bob');
       game.startGame();
 
       const state = game.getPlayerState('p1');
       expect(state).toHaveProperty('hand');
-      expect(state).toHaveProperty('stockpile');
+      expect(state).toHaveProperty('stockpileCount');
       expect(state).toHaveProperty('stockpileTop');
       expect(state).toHaveProperty('discardPiles');
+      expect(state).not.toHaveProperty('stockpile');
       expect(state.hand).toHaveLength(5);
-      expect(state.stockpile).toHaveLength(30);
+      expect(state.stockpileCount).toBe(30);
       expect(state.discardPiles).toHaveLength(4);
     });
 

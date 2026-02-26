@@ -99,6 +99,7 @@ describe('SocketIOClientTransport', () => {
         'playerLeft',
         'reconnected',
         'reconnectFailed',
+        'sessionToken',
         'gameStarted',
         'gameStateUpdate',
         'gameOver',
