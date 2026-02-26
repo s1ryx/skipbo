@@ -620,6 +620,8 @@ describe('GameCoordinator', () => {
       handlers.onMessage('player1', 'leaveGame', {});
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(roomId, 'gameAborted');
+      expect(transport.removeFromGroup).toHaveBeenCalledWith('player1', roomId);
+      expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(coordinator.games.has(roomId)).toBe(false);
       expect(coordinator.playerRooms.has('player1')).toBe(false);
       expect(coordinator.playerRooms.has('player2')).toBe(false);
@@ -646,6 +648,7 @@ describe('GameCoordinator', () => {
       handlers.onDisconnect('player2');
 
       expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'playerLeft',
