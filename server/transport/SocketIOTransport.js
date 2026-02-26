@@ -23,10 +23,11 @@ class SocketIOTransport {
    * @param {function(string)} handlers.onDisconnect - Called with connectionId
    * @param {function(string, string, object)} handlers.onMessage - Called with connectionId, event, data
    */
-  constructor(handlers) {
+  constructor(handlers, options = {}) {
     this.handlers = handlers;
     this.io = null;
     this.eventTimestamps = new Map();
+    this.rateLimitMax = options.rateLimitMax || RATE_LIMIT_MAX_EVENTS;
   }
 
   /** Bind to an existing http.Server instance */
@@ -105,7 +106,7 @@ class SocketIOTransport {
       timestamps.shift();
     }
 
-    if (timestamps.length >= RATE_LIMIT_MAX_EVENTS) {
+    if (timestamps.length >= this.rateLimitMax) {
       socket.emit('error', { message: 'error.rateLimited' });
       return true;
     }
