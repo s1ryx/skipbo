@@ -160,6 +160,29 @@ describe('GameCoordinator', () => {
       const game = [...coordinator.games.values()][0];
       expect(game.players[0].name).toBe('Alice');
     });
+
+    it('strips HTML tags from player name', () => {
+      const { coordinator } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: '<b>Bold</b>', maxPlayers: 2 });
+      const game = [...coordinator.games.values()][0];
+      expect(game.players[0].name).toBe('Bold');
+    });
+
+    it('rejects name that becomes empty after HTML stripping', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', {
+        playerName: '<br><hr>',
+        maxPlayers: 2,
+      });
+      expect(coordinator.games.size).toBe(0);
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+    });
   });
 
   describe('joinRoom', () => {
@@ -458,6 +481,23 @@ describe('GameCoordinator', () => {
         stablePlayerId: 's1',
       });
       expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
+
+    it('strips HTML tags from chat message', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: 'Hello <b>world</b>',
+        stablePlayerId: 's1',
+      });
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        expect.any(String),
+        'chatMessage',
+        expect.objectContaining({ message: 'Hello world' })
+      );
     });
   });
 
