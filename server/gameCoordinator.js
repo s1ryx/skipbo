@@ -3,6 +3,7 @@ const SkipBoGame = require('./gameLogic');
 
 const LOBBY_GRACE_PERIOD_MS = 30000;
 const MAX_PENDING_ROOMS = 50;
+const MAX_TOTAL_ROOMS = 200;
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
 const MIN_STOCKPILE_SIZE = 1;
@@ -74,6 +75,11 @@ class GameCoordinator {
     const validName = validatePlayerName(playerName);
     if (!validName) {
       this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
+      return;
+    }
+
+    if (this.games.size >= MAX_TOTAL_ROOMS) {
+      this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
       return;
     }
 
