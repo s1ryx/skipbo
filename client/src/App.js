@@ -4,27 +4,13 @@ import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
 import { useTranslation } from './i18n';
-import useGameSocket from './hooks/useGameSocket';
+import useGameConnection from './useGameConnection';
 
 const VERSION = require('../package.json').version;
 const COMMIT_HASH = process.env.REACT_APP_COMMIT_HASH;
 
-const generatePlayerUniqueId = () => {
-  return 'player_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
-};
-
-const getStablePlayerId = () => {
-  let stableId = localStorage.getItem('skipBoStablePlayerId');
-  if (!stableId) {
-    stableId = generatePlayerUniqueId();
-    localStorage.setItem('skipBoStablePlayerId', stableId);
-  }
-  return stableId;
-};
-
 function App() {
   const { t, language, setLanguage, supportedLanguages } = useTranslation();
-  const [stablePlayerId] = useState(getStablePlayerId());
   const [roomIdFromUrl, setRoomIdFromUrl] = useState(null);
 
   useEffect(() => {
@@ -44,6 +30,7 @@ function App() {
     inLobby,
     error,
     chatMessages,
+    stablePlayerId,
     createRoom,
     joinRoom,
     startGame,
@@ -53,7 +40,7 @@ function App() {
     leaveGame,
     sendChatMessage,
     markMessagesAsRead,
-  } = useGameSocket(stablePlayerId);
+  } = useGameConnection();
 
   return (
     <div className="App">
