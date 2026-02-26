@@ -523,18 +523,19 @@ describe('SkipBoGame', () => {
   });
 
   describe('getPlayerState', () => {
-    it('returns hand, stockpile, and discard piles for a player', () => {
+    it('returns hand, stockpile count, and discard piles for a player', () => {
       game.addPlayer('p1', 'Alice');
       game.addPlayer('p2', 'Bob');
       game.startGame();
 
       const state = game.getPlayerState('p1');
       expect(state).toHaveProperty('hand');
-      expect(state).toHaveProperty('stockpile');
+      expect(state).toHaveProperty('stockpileCount');
       expect(state).toHaveProperty('stockpileTop');
       expect(state).toHaveProperty('discardPiles');
+      expect(state).not.toHaveProperty('stockpile');
       expect(state.hand).toHaveLength(5);
-      expect(state.stockpile).toHaveLength(30);
+      expect(state.stockpileCount).toBe(30);
       expect(state.discardPiles).toHaveLength(4);
     });
 

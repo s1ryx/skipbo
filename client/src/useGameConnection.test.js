@@ -61,7 +61,7 @@ const fakeGameState = {
 
 const fakePlayerState = {
   hand: [1, 2, 3, 4, 5],
-  stockpile: [6, 7, 8],
+  stockpileCount: 3,
   stockpileTop: 8,
   discardPiles: [[], [], [], []],
 };

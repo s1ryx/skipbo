@@ -35,7 +35,7 @@ const makeGameState = (overrides = {}) => ({
 
 const makePlayerState = (overrides = {}) => ({
   hand: [1, 3, 5, 7, 9],
-  stockpile: Array(30).fill(0),
+  stockpileCount: 30,
   stockpileTop: 5,
   discardPiles: [[], [], [], []],
   ...overrides,
