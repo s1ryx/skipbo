@@ -306,6 +306,7 @@ class SkipBoGame {
       currentPlayerIndex: this.currentPlayerIndex,
       currentPlayerId: this.getCurrentPlayer()?.publicId,
       deckCount: this.deck.length,
+      hostPlayerId: this.hostPublicId || null,
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,

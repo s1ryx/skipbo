@@ -102,6 +102,7 @@ class GameCoordinator {
 
     const sessionToken = crypto.randomUUID();
     game.players[game.players.length - 1].sessionToken = sessionToken;
+    game.hostPublicId = game.players[0].publicId;
 
     this.games.set(roomId, game);
     this.playerRooms.set(connectionId, roomId);
@@ -270,6 +271,12 @@ class GameCoordinator {
       return;
     }
 
+    const senderPublicId = game.getPublicId(connectionId);
+    if (senderPublicId !== game.hostPublicId) {
+      this.transport.send(connectionId, 'error', { message: 'error.onlyHostCanStart' });
+      return;
+    }
+
     const started = game.startGame();
 
     if (!started) {
@@ -396,6 +403,9 @@ class GameCoordinator {
     if (game.players.length === 0) {
       this.scheduleRoomDeletion(roomId);
     } else {
+      if (game.hostPublicId === publicId) {
+        game.hostPublicId = game.players[0].publicId;
+      }
       this.transport.sendToGroup(roomId, 'playerLeft', {
         playerId: publicId,
         gameState: game.getGameState(),
@@ -446,6 +456,9 @@ class GameCoordinator {
       if (game.players.length === 0) {
         this.scheduleRoomDeletion(roomId);
       } else {
+        if (game.hostPublicId === publicId) {
+          game.hostPublicId = game.players[0].publicId;
+        }
         this.transport.sendToGroup(roomId, 'playerLeft', {
           playerId: publicId,
           gameState: game.getGameState(),
