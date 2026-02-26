@@ -1,3 +1,5 @@
+const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'discard2', 'discard3']);
+
 class SkipBoGame {
   constructor(roomId, playerCount, stockpileSize) {
     this.roomId = roomId;
@@ -156,6 +158,10 @@ class SkipBoGame {
 
     if (!player || this.getCurrentPlayer().id !== playerId) {
       return { success: false, error: 'error.notYourTurn' };
+    }
+
+    if (!VALID_SOURCES.has(source)) {
+      return { success: false, error: 'error.invalidSource' };
     }
 
     // Validate the move
