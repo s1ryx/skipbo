@@ -193,4 +193,33 @@ describe('SocketIOTransport', () => {
       expect(() => transport.removeFromGroup('unknown', 'room1')).not.toThrow();
     });
   });
+
+  describe('rate limiting', () => {
+    it('allows events within the rate limit', () => {
+      const socket = simulateConnection('player1');
+      for (let i = 0; i < 30; i++) {
+        socket._trigger('startGame');
+      }
+      expect(handlers.onMessage).toHaveBeenCalledTimes(30);
+    });
+
+    it('drops events exceeding the rate limit', () => {
+      const socket = simulateConnection('player1');
+      socket.emit = jest.fn();
+      for (let i = 0; i < 35; i++) {
+        socket._trigger('startGame');
+      }
+      expect(handlers.onMessage).toHaveBeenCalledTimes(30);
+      expect(socket.emit).toHaveBeenCalledWith('error', { message: 'error.rateLimited' });
+    });
+
+    it('cleans up timestamps on disconnect', () => {
+      const socket = simulateConnection('player1');
+      socket._trigger('startGame');
+      expect(transport.eventTimestamps.has('player1')).toBe(true);
+
+      socket._trigger('disconnect');
+      expect(transport.eventTimestamps.has('player1')).toBe(false);
+    });
+  });
 });
