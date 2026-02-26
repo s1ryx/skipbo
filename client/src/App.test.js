@@ -62,7 +62,7 @@ const renderApp = () => {
 
 beforeEach(() => {
   mockSocket._reset();
-  localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe('App', () => {
@@ -174,7 +174,7 @@ describe('App', () => {
     });
 
     it('attempts reconnection when saved session exists', () => {
-      localStorage.setItem(
+      sessionStorage.setItem(
         'skipBoSession',
         JSON.stringify({ roomId: 'OLD123', playerName: 'Alice', sessionToken: 'tok-123' })
       );
