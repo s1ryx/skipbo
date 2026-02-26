@@ -257,22 +257,20 @@ describe('GameCoordinator', () => {
       createStartedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
 
-      // Find a card with value 1 in player1's hand
+      // Inject a known card into player1's hand so the test is deterministic
       const game = [...coordinator.games.values()][0];
       const player1 = game.players.find((p) => p.id === 'player1');
-      const card1 = player1.hand.find((c) => c === 1);
+      player1.hand[0] = 1;
 
-      if (card1) {
-        transport.send.mockClear();
-        handlers.onMessage('player1', 'playCard', {
-          card: 1,
-          source: 'hand',
-          buildingPileIndex: 0,
-        });
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'playCard', {
+        card: 1,
+        source: 'hand',
+        buildingPileIndex: 0,
+      });
 
-        const updateCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStateUpdate');
-        expect(updateCalls.length).toBeGreaterThanOrEqual(1);
-      }
+      const updateCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStateUpdate');
+      expect(updateCalls.length).toBeGreaterThanOrEqual(1);
     });
 
     it('sends error on invalid move', () => {
