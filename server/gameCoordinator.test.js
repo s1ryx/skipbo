@@ -373,6 +373,31 @@ describe('GameCoordinator', () => {
         message: 'error.needMorePlayers',
       });
     });
+
+    it('rejects startGame from non-host player', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player2', 'startGame', {});
+
+      expect(transport.send).toHaveBeenCalledWith('player2', 'error', {
+        message: 'error.onlyHostCanStart',
+      });
+    });
+
+    it('includes hostPlayerId in gameState', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+
+      const gameStartedCall = transport.send.mock.calls.find(
+        (c) => c[0] === 'player1' && c[1] === 'gameStarted'
+      );
+      expect(gameStartedCall[2].gameState.hostPlayerId).toBeTruthy();
+    });
   });
 
   describe('playCard', () => {
@@ -607,6 +632,22 @@ describe('GameCoordinator', () => {
 
       expect(coordinator.games.size).toBe(gamesBefore);
       expect(transport.removeFromGroup).not.toHaveBeenCalled();
+    });
+
+    it('transfers host when host leaves lobby', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      const game = coordinator.games.get(roomId);
+      const originalHost = game.hostPublicId;
+      const player2PublicId = game.players[1].publicId;
+
+      // Host (player1) leaves
+      handlers.onMessage('player1', 'leaveLobby', {});
+
+      expect(game.hostPublicId).toBe(player2PublicId);
+      expect(game.hostPublicId).not.toBe(originalHost);
     });
   });
 
