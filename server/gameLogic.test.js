@@ -336,6 +336,17 @@ describe('SkipBoGame', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe('error.cardNotFound');
     });
+
+    it('rejects invalid buildingPileIndex values', () => {
+      const player = game.players[0];
+      player.hand = [1, 2, 3, 4, 5];
+
+      expect(game.playCard('p1', 1, 'hand', -1).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', 4).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', 1.5).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', undefined).success).toBe(false);
+      expect(game.playCard('p1', 1, 'hand', 'abc').success).toBe(false);
+    });
   });
 
   describe('discardCard', () => {
@@ -366,6 +377,8 @@ describe('SkipBoGame', () => {
       game.players[0].hand = [1, 2, 3, 4, 5];
       expect(game.discardCard('p1', 1, -1).error).toBe('error.invalidDiscardPile');
       expect(game.discardCard('p1', 1, 4).error).toBe('error.invalidDiscardPile');
+      expect(game.discardCard('p1', 1, 1.5).error).toBe('error.invalidDiscardPile');
+      expect(game.discardCard('p1', 1, undefined).error).toBe('error.invalidDiscardPile');
     });
 
     it('rejects card not in hand', () => {
