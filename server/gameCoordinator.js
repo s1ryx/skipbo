@@ -5,9 +5,13 @@ const MAX_PENDING_ROOMS = 50;
 const MAX_PLAYER_NAME_LENGTH = 30;
 const MAX_CHAT_MESSAGE_LENGTH = 500;
 
+function stripHtml(str) {
+  return str.replace(/<[^>]*>/g, '');
+}
+
 function validatePlayerName(name) {
   if (typeof name !== 'string') return null;
-  const trimmed = name.trim().replace(/[\x00-\x1F]/g, '');
+  const trimmed = stripHtml(name.trim()).replace(/[\x00-\x1F]/g, '');
   if (trimmed.length === 0 || trimmed.length > MAX_PLAYER_NAME_LENGTH) return null;
   return trimmed;
 }
@@ -298,7 +302,7 @@ class GameCoordinator {
 
   handleSendChatMessage(connectionId, { message, stablePlayerId }) {
     if (typeof message !== 'string') return;
-    const sanitized = message.trim().replace(/[\x00-\x1F]/g, '');
+    const sanitized = stripHtml(message.trim()).replace(/[\x00-\x1F]/g, '');
     if (sanitized.length === 0 || sanitized.length > MAX_CHAT_MESSAGE_LENGTH) return;
 
     const roomId = this.playerRooms.get(connectionId);
