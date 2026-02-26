@@ -172,64 +172,55 @@ describe('useGameConnection', () => {
     it('updates game state', () => {
       const { result } = renderHook(() => useGameConnection());
       act(() => {
-        mockSocket._trigger('playerJoined', {
-          playerId: 'other-player',
-          gameState: fakeGameState,
-        });
+        mockSocket._trigger('playerJoined', { gameState: fakeGameState });
       });
       expect(result.current.gameState).toEqual(fakeGameState);
     });
 
-    it('sets room state when the joining player is us', () => {
-      const { result } = renderHook(() => useGameConnection());
-      act(() => {
-        mockSocket._trigger('connect');
-      });
-      expect(result.current.inLobby).toBe(true);
-
-      act(() => {
-        mockSocket._trigger('playerJoined', {
-          playerId: 'test-socket-id',
-          gameState: fakeGameState,
-        });
-      });
-      expect(result.current.roomId).toBe('ROOM01');
-      expect(result.current.inLobby).toBe(false);
-    });
-
-    it('does not change room state when another player joins', () => {
+    it('does not change room state on its own', () => {
       const { result } = renderHook(() => useGameConnection());
       act(() => {
         mockSocket._trigger('connect');
       });
 
       act(() => {
-        mockSocket._trigger('playerJoined', {
-          playerId: 'someone-else',
-          gameState: fakeGameState,
-        });
+        mockSocket._trigger('playerJoined', { gameState: fakeGameState });
       });
       expect(result.current.inLobby).toBe(true);
       expect(result.current.roomId).toBeNull();
     });
+  });
 
-    it('saves session when connectionId matches a player', () => {
+  describe('sessionToken event', () => {
+    it('sets room state and saves session for joining player', () => {
+      const gameStateWithPubId = {
+        ...fakeGameState,
+        players: [{ ...fakeGameState.players[0], id: 'pub-123' }],
+      };
       const { result } = renderHook(() => useGameConnection());
-      // First connect to set the connectionIdRef
       act(() => {
         mockSocket._trigger('connect');
       });
+      // First receive playerJoined with gameState
       act(() => {
-        mockSocket._trigger('playerJoined', {
-          playerId: 'test-socket-id',
-          gameState: fakeGameState,
+        mockSocket._trigger('playerJoined', { gameState: gameStateWithPubId });
+      });
+      // Then receive sessionToken targeted to us
+      act(() => {
+        mockSocket._trigger('sessionToken', {
+          playerId: 'pub-123',
+          sessionToken: 'tok-456',
         });
       });
 
+      expect(result.current.playerId).toBe('pub-123');
+      expect(result.current.roomId).toBe('ROOM01');
+      expect(result.current.inLobby).toBe(false);
+
       const session = JSON.parse(localStorage.getItem('skipBoSession'));
       expect(session.roomId).toBe('ROOM01');
-      expect(session.playerId).toBe('test-socket-id');
-      expect(session.playerName).toBe('Alice');
+      expect(session.playerId).toBe('pub-123');
+      expect(session.sessionToken).toBe('tok-456');
     });
   });
 
@@ -508,15 +499,15 @@ describe('useGameConnection', () => {
     it('leaveLobby sends event and resets state', () => {
       const { result } = renderHook(() => useGameConnection());
 
-      // Simulate a confirmed room join via server event
+      // Simulate a confirmed room join via server events
       act(() => {
         mockSocket._trigger('connect');
       });
       act(() => {
-        mockSocket._trigger('playerJoined', {
-          playerId: 'test-socket-id',
-          gameState: fakeGameState,
-        });
+        mockSocket._trigger('playerJoined', { gameState: fakeGameState });
+      });
+      act(() => {
+        mockSocket._trigger('sessionToken', { playerId: 'pub-1', sessionToken: 'tok-1' });
       });
       expect(result.current.inLobby).toBe(false);
 
@@ -538,6 +529,7 @@ describe('useGameConnection', () => {
         mockSocket._trigger('roomCreated', {
           roomId: 'ROOM01',
           playerId: 'p1',
+          sessionToken: 'tok-1',
           gameState: fakeGameState,
         });
       });

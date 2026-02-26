@@ -61,13 +61,14 @@ describe('SkipBoGame', () => {
       const result = game.addPlayer('p1', 'Alice');
       expect(result).toBe(true);
       expect(game.players).toHaveLength(1);
-      expect(game.players[0]).toEqual({
+      expect(game.players[0]).toEqual(expect.objectContaining({
         id: 'p1',
         name: 'Alice',
         stockpile: [],
         hand: [],
         discardPiles: [[], [], [], []],
-      });
+      }));
+      expect(game.players[0].publicId).toHaveLength(8);
     });
 
     it('rejects when room is full', () => {
@@ -512,13 +513,13 @@ describe('SkipBoGame', () => {
       expect(playerState).not.toHaveProperty('stockpile');
     });
 
-    it('includes currentPlayerId', () => {
+    it('includes currentPlayerId as publicId', () => {
       game.addPlayer('p1', 'Alice');
       game.addPlayer('p2', 'Bob');
       game.startGame();
 
       const state = game.getGameState();
-      expect(state.currentPlayerId).toBe('p1');
+      expect(state.currentPlayerId).toBe(game.players[0].publicId);
     });
   });
 

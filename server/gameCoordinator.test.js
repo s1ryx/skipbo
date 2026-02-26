@@ -110,7 +110,7 @@ describe('GameCoordinator', () => {
       const call = transport.send.mock.calls.find((c) => c[1] === 'roomCreated');
       expect(call[0]).toBe('player1');
       expect(call[2]).toHaveProperty('roomId');
-      expect(call[2].playerId).toBe('player1');
+      expect(typeof call[2].playerId).toBe('string');
       expect(call[2].gameState).toBeDefined();
     });
 
@@ -267,7 +267,7 @@ describe('GameCoordinator', () => {
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'playerJoined',
-        expect.objectContaining({ playerId: 'player2', playerName: 'Bob' })
+        expect.objectContaining({ playerId: expect.any(String), playerName: 'Bob' })
       );
     });
 
@@ -456,7 +456,7 @@ describe('GameCoordinator', () => {
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         expect.any(String),
         'turnChanged',
-        expect.objectContaining({ currentPlayerId: 'player2' })
+        expect.objectContaining({ currentPlayerId: expect.any(String) })
       );
     });
   });
@@ -477,7 +477,7 @@ describe('GameCoordinator', () => {
         roomId,
         'chatMessage',
         expect.objectContaining({
-          playerId: 'player1',
+          playerId: expect.any(String),
           playerName: 'Alice',
           stablePlayerId: 'stable-1',
           message: 'Hello!',
@@ -575,7 +575,7 @@ describe('GameCoordinator', () => {
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'playerLeft',
-        expect.objectContaining({ playerId: 'player2' })
+        expect.objectContaining({ playerId: expect.any(String) })
       );
     });
 
@@ -652,7 +652,7 @@ describe('GameCoordinator', () => {
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
         'playerLeft',
-        expect.objectContaining({ playerId: 'player2' })
+        expect.objectContaining({ playerId: expect.any(String) })
       );
     });
 
@@ -680,7 +680,7 @@ describe('GameCoordinator', () => {
       handlers.onDisconnect('player2');
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(roomId, 'playerDisconnected', {
-        playerId: 'player2',
+        playerId: expect.any(String),
       });
       // Game should still exist (allows reconnection)
       expect(coordinator.games.has(roomId)).toBe(true);
@@ -732,7 +732,7 @@ describe('GameCoordinator', () => {
         'reconnected',
         expect.objectContaining({
           roomId,
-          playerId: 'player2-new',
+          playerId: expect.any(String),
           sessionToken: expect.any(String),
           gameState: expect.any(Object),
           playerState: expect.any(Object),
@@ -743,7 +743,7 @@ describe('GameCoordinator', () => {
         roomId,
         'player2-new',
         'playerReconnected',
-        expect.objectContaining({ playerId: 'player2-new', playerName: 'Bob' })
+        expect.objectContaining({ playerId: expect.any(String), playerName: 'Bob' })
       );
     });
 
@@ -780,13 +780,13 @@ describe('GameCoordinator', () => {
       expect(transport.send).toHaveBeenCalledWith(
         'player2-new',
         'reconnected',
-        expect.objectContaining({ roomId, playerId: 'player2-new' })
+        expect.objectContaining({ roomId, playerId: expect.any(String) })
       );
       expect(transport.sendToGroupExcept).toHaveBeenCalledWith(
         roomId,
         'player2-new',
         'playerJoined',
-        expect.objectContaining({ playerId: 'player2-new', playerName: 'Bob' })
+        expect.objectContaining({ playerId: expect.any(String), playerName: 'Bob' })
       );
     });
 
