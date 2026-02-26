@@ -133,6 +133,10 @@ class SkipBoGame {
   }
 
   canPlayCard(card, buildingPileIndex) {
+    if (!Number.isInteger(buildingPileIndex) || buildingPileIndex < 0 || buildingPileIndex > 3) {
+      return false;
+    }
+
     const pile = this.buildingPiles[buildingPileIndex];
     const nextValue = this.getNextCardValue(pile);
 
@@ -225,7 +229,7 @@ class SkipBoGame {
       return { success: false, error: 'error.notYourTurn' };
     }
 
-    if (discardPileIndex < 0 || discardPileIndex > 3) {
+    if (!Number.isInteger(discardPileIndex) || discardPileIndex < 0 || discardPileIndex > 3) {
       return { success: false, error: 'error.invalidDiscardPile' };
     }
 
