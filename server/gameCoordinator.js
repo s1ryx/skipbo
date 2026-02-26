@@ -354,7 +354,7 @@ class GameCoordinator {
     });
   }
 
-  handleSendChatMessage(connectionId, { message, stablePlayerId }) {
+  handleSendChatMessage(connectionId, { message }) {
     if (typeof message !== 'string') return;
     const sanitized = stripHtml(message.trim()).replace(/[\x00-\x1F]/g, '');
     if (sanitized.length === 0 || sanitized.length > MAX_CHAT_MESSAGE_LENGTH) return;
@@ -371,7 +371,7 @@ class GameCoordinator {
     this.transport.sendToGroup(roomId, 'chatMessage', {
       playerId: player.publicId,
       playerName: player.name,
-      stablePlayerId: stablePlayerId,
+      stablePlayerId: player.publicId,
       message: sanitized,
       timestamp: Date.now(),
     });

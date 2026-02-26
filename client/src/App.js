@@ -30,7 +30,6 @@ function App() {
     inLobby,
     error,
     chatMessages,
-    stablePlayerId,
     createRoom,
     joinRoom,
     startGame,
@@ -72,7 +71,6 @@ function App() {
           chatMessages={chatMessages}
           onSendChatMessage={sendChatMessage}
           onMarkMessagesRead={markMessagesAsRead}
-          stablePlayerId={stablePlayerId}
         />
       )}
 

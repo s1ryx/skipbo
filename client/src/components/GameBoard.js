@@ -16,7 +16,6 @@ function GameBoard({
   chatMessages,
   onSendChatMessage,
   onMarkMessagesRead,
-  stablePlayerId,
 }) {
   const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState(null);
@@ -381,7 +380,7 @@ function GameBoard({
         messages={chatMessages}
         onSendMessage={onSendChatMessage}
         onMarkMessagesRead={onMarkMessagesRead}
-        stablePlayerId={stablePlayerId}
+        playerId={playerId}
       />
     </div>
   );

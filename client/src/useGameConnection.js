@@ -1,21 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import SocketIOClientTransport from './transport/SocketIOClientTransport';
 
-// Generate a stable unique player identifier
-const generatePlayerUniqueId = () => {
-  return 'player_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
-};
-
-// Get or create stable player ID
-const getStablePlayerId = () => {
-  let stableId = localStorage.getItem('skipBoStablePlayerId');
-  if (!stableId) {
-    stableId = generatePlayerUniqueId();
-    localStorage.setItem('skipBoStablePlayerId', stableId);
-  }
-  return stableId;
-};
-
 export default function useGameConnection() {
   const [gameState, setGameState] = useState(null);
   const [playerState, setPlayerState] = useState(null);
@@ -39,7 +24,6 @@ export default function useGameConnection() {
     }
     return [];
   });
-  const [stablePlayerId] = useState(getStablePlayerId);
   const transportRef = useRef(null);
   const connectionIdRef = useRef(null);
   const roomIdRef = useRef(null);
@@ -291,12 +275,9 @@ export default function useGameConnection() {
     transportRef.current?.send('leaveGame');
   }, []);
 
-  const sendChatMessage = useCallback(
-    (message) => {
-      transportRef.current?.send('sendChatMessage', { message, stablePlayerId });
-    },
-    [stablePlayerId]
-  );
+  const sendChatMessage = useCallback((message) => {
+    transportRef.current?.send('sendChatMessage', { message });
+  }, []);
 
   const markMessagesAsRead = useCallback(() => {
     setChatMessages((prevMessages) => prevMessages.map((msg) => ({ ...msg, read: true })));
@@ -310,7 +291,6 @@ export default function useGameConnection() {
     inLobby,
     error,
     chatMessages,
-    stablePlayerId,
     createRoom,
     joinRoom,
     startGame,
