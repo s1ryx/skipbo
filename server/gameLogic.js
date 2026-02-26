@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'discard2', 'discard3']);
 
 class SkipBoGame {
@@ -32,7 +34,7 @@ class SkipBoGame {
 
   shuffleDeck(deck) {
     for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = crypto.randomInt(i + 1);
       [deck[i], deck[j]] = [deck[j], deck[i]];
     }
     return deck;
