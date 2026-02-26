@@ -198,6 +198,212 @@ describe('GameCoordinator', () => {
     });
   });
 
+  describe('startGame', () => {
+    it('starts the game and sends gameStarted to each player', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
+      expect(gameStartedCalls).toHaveLength(2);
+
+      // Each player receives their own playerState
+      const p1Call = gameStartedCalls.find((c) => c[0] === 'player1');
+      const p2Call = gameStartedCalls.find((c) => c[0] === 'player2');
+      expect(p1Call[2].playerState).toBeDefined();
+      expect(p2Call[2].playerState).toBeDefined();
+    });
+
+    it('sends error when room not found', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('unknown', 'startGame', {});
+
+      expect(transport.send).toHaveBeenCalledWith('unknown', 'error', {
+        message: 'error.roomNotFound',
+      });
+    });
+
+    it('sends error when not enough players', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoom(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+
+      expect(transport.send).toHaveBeenCalledWith('player1', 'error', {
+        message: 'error.needMorePlayers',
+      });
+    });
+  });
+
+  describe('playCard', () => {
+    it('sends error when room not found', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('unknown', 'playCard', { card: 1, source: 'hand', buildingPileIndex: 0 });
+
+      expect(transport.send).toHaveBeenCalledWith('unknown', 'error', {
+        message: 'error.roomNotFound',
+      });
+    });
+
+    it('broadcasts gameStateUpdate on valid play', () => {
+      const { coordinator, transport } = createCoordinator();
+      createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      // Find a card with value 1 in player1's hand
+      const game = [...coordinator.games.values()][0];
+      const player1 = game.players.find((p) => p.id === 'player1');
+      const card1 = player1.hand.find((c) => c === 1);
+
+      if (card1) {
+        transport.send.mockClear();
+        handlers.onMessage('player1', 'playCard', {
+          card: 1,
+          source: 'hand',
+          buildingPileIndex: 0,
+        });
+
+        const updateCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStateUpdate');
+        expect(updateCalls.length).toBeGreaterThanOrEqual(1);
+      }
+    });
+
+    it('sends error on invalid move', () => {
+      const { coordinator, transport } = createCoordinator();
+      createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.send.mockClear();
+      // Playing a 5 on an empty pile (needs 1) should fail
+      handlers.onMessage('player1', 'playCard', {
+        card: 5,
+        source: 'hand',
+        buildingPileIndex: 0,
+      });
+
+      expect(transport.send).toHaveBeenCalledWith('player1', 'error', expect.any(Object));
+    });
+  });
+
+  describe('discardCard', () => {
+    it('sends error when room not found', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('unknown', 'discardCard', { card: 1, discardPileIndex: 0 });
+
+      expect(transport.send).toHaveBeenCalledWith('unknown', 'error', {
+        message: 'error.roomNotFound',
+      });
+    });
+
+    it('broadcasts gameStateUpdate and turnChanged on valid discard', () => {
+      const { coordinator, transport } = createCoordinator();
+      createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      const game = [...coordinator.games.values()][0];
+      const player1 = game.players.find((p) => p.id === 'player1');
+      const card = player1.hand[0];
+
+      transport.send.mockClear();
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'discardCard', { card, discardPileIndex: 0 });
+
+      const updateCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStateUpdate');
+      expect(updateCalls).toHaveLength(2); // one per player
+
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        expect.any(String),
+        'turnChanged',
+        expect.objectContaining({ currentPlayerId: 'player2' })
+      );
+    });
+  });
+
+  describe('endTurn', () => {
+    it('sends error when room not found', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('unknown', 'endTurn', {});
+
+      expect(transport.send).toHaveBeenCalledWith('unknown', 'error', {
+        message: 'error.roomNotFound',
+      });
+    });
+
+    it('sends error when not the current player', () => {
+      const { coordinator, transport } = createCoordinator();
+      createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.send.mockClear();
+      handlers.onMessage('player2', 'endTurn', {});
+
+      expect(transport.send).toHaveBeenCalledWith('player2', 'error', {
+        message: 'error.notYourTurn',
+      });
+    });
+  });
+
+  describe('sendChatMessage', () => {
+    it('broadcasts chat message to the room', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: 'Hello!',
+        stablePlayerId: 'stable-1',
+      });
+
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'chatMessage',
+        expect.objectContaining({
+          playerId: 'player1',
+          playerName: 'Alice',
+          stablePlayerId: 'stable-1',
+          message: 'Hello!',
+          timestamp: expect.any(Number),
+        })
+      );
+    });
+
+    it('trims whitespace from messages', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: '  Hello!  ',
+        stablePlayerId: 'stable-1',
+      });
+
+      const call = transport.sendToGroup.mock.calls.find((c) => c[1] === 'chatMessage');
+      expect(call[2].message).toBe('Hello!');
+    });
+
+    it('silently ignores when player has no room', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('unknown', 'sendChatMessage', { message: 'Hi', stablePlayerId: 's1' });
+      expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
+  });
+
   describe('leaveLobby', () => {
     it('removes the player and notifies remaining players', () => {
       const { coordinator, transport } = createCoordinator();
