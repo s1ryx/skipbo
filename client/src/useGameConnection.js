@@ -71,12 +71,18 @@ export default function useGameConnection() {
         }
       },
 
-      playerJoined: ({ gameState }) => {
+      playerJoined: ({ playerId, gameState }) => {
         // eslint-disable-next-line no-console
         console.log('Player joined');
         setGameState(gameState);
 
         const myId = connectionIdRef.current;
+        if (playerId === myId) {
+          roomIdRef.current = gameState.roomId;
+          setRoomId(gameState.roomId);
+          setInLobby(false);
+        }
+
         if (myId) {
           const currentPlayer = gameState.players.find((p) => p.id === myId);
           if (currentPlayer) {
@@ -236,9 +242,6 @@ export default function useGameConnection() {
 
   const joinRoom = useCallback((joinRoomId, playerName) => {
     transportRef.current?.send('joinRoom', { roomId: joinRoomId, playerName });
-    roomIdRef.current = joinRoomId;
-    setRoomId(joinRoomId);
-    setInLobby(false);
   }, []);
 
   const startGame = useCallback(() => {

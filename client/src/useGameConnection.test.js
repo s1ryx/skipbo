@@ -169,9 +169,45 @@ describe('useGameConnection', () => {
     it('updates game state', () => {
       const { result } = renderHook(() => useGameConnection());
       act(() => {
-        mockSocket._trigger('playerJoined', { gameState: fakeGameState });
+        mockSocket._trigger('playerJoined', {
+          playerId: 'other-player',
+          gameState: fakeGameState,
+        });
       });
       expect(result.current.gameState).toEqual(fakeGameState);
+    });
+
+    it('sets room state when the joining player is us', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        mockSocket._trigger('connect');
+      });
+      expect(result.current.inLobby).toBe(true);
+
+      act(() => {
+        mockSocket._trigger('playerJoined', {
+          playerId: 'test-socket-id',
+          gameState: fakeGameState,
+        });
+      });
+      expect(result.current.roomId).toBe('ROOM01');
+      expect(result.current.inLobby).toBe(false);
+    });
+
+    it('does not change room state when another player joins', () => {
+      const { result } = renderHook(() => useGameConnection());
+      act(() => {
+        mockSocket._trigger('connect');
+      });
+
+      act(() => {
+        mockSocket._trigger('playerJoined', {
+          playerId: 'someone-else',
+          gameState: fakeGameState,
+        });
+      });
+      expect(result.current.inLobby).toBe(true);
+      expect(result.current.roomId).toBeNull();
     });
 
     it('saves session when connectionId matches a player', () => {
@@ -181,7 +217,10 @@ describe('useGameConnection', () => {
         mockSocket._trigger('connect');
       });
       act(() => {
-        mockSocket._trigger('playerJoined', { gameState: fakeGameState });
+        mockSocket._trigger('playerJoined', {
+          playerId: 'test-socket-id',
+          gameState: fakeGameState,
+        });
       });
 
       const session = JSON.parse(localStorage.getItem('skipBoSession'));
@@ -385,7 +424,7 @@ describe('useGameConnection', () => {
       });
     });
 
-    it('joinRoom sends event and updates local state', () => {
+    it('joinRoom sends event without changing local state', () => {
       const { result } = renderHook(() => useGameConnection());
       act(() => {
         result.current.joinRoom('ROOM01', 'Alice');
@@ -394,8 +433,8 @@ describe('useGameConnection', () => {
         roomId: 'ROOM01',
         playerName: 'Alice',
       });
-      expect(result.current.roomId).toBe('ROOM01');
-      expect(result.current.inLobby).toBe(false);
+      expect(result.current.inLobby).toBe(true);
+      expect(result.current.roomId).toBeNull();
     });
 
     it('startGame sends the correct event', () => {
@@ -432,9 +471,15 @@ describe('useGameConnection', () => {
     it('leaveLobby sends event and resets state', () => {
       const { result } = renderHook(() => useGameConnection());
 
-      // Enter a room first
+      // Simulate a confirmed room join via server event
       act(() => {
-        result.current.joinRoom('ROOM01', 'Alice');
+        mockSocket._trigger('connect');
+      });
+      act(() => {
+        mockSocket._trigger('playerJoined', {
+          playerId: 'test-socket-id',
+          gameState: fakeGameState,
+        });
       });
       expect(result.current.inLobby).toBe(false);
 
