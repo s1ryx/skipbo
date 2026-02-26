@@ -240,7 +240,7 @@ function GameBoard({
             {/* Stockpile */}
             <div className="stockpile-section">
               <div className="pile-label">
-                {t('game.yourStockpile', { count: playerState.stockpile.length })}
+                {t('game.yourStockpile', { count: playerState.stockpileCount })}
               </div>
               {playerState.stockpileTop ? (
                 <div

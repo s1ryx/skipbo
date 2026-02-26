@@ -310,7 +310,7 @@ class SkipBoGame {
 
     return {
       hand: player.hand,
-      stockpile: player.stockpile,
+      stockpileCount: player.stockpile.length,
       stockpileTop:
         player.stockpile.length > 0 ? player.stockpile[player.stockpile.length - 1] : null,
       discardPiles: player.discardPiles,
