@@ -4,6 +4,7 @@ const SkipBoGame = require('./gameLogic');
 const LOBBY_GRACE_PERIOD_MS = 30000;
 const MAX_PENDING_ROOMS = 50;
 const MAX_TOTAL_ROOMS = 200;
+const COMPLETED_GAME_TTL_MS = 300000;
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
 const MIN_STOCKPILE_SIZE = 1;
@@ -28,6 +29,7 @@ class GameCoordinator {
     this.games = new Map();
     this.playerRooms = new Map();
     this.pendingDeletions = new Map();
+    this.completedGameTimers = new Map();
   }
 
   setTransport(transport) {
@@ -284,6 +286,7 @@ class GameCoordinator {
         winner: game.winner,
         gameState: game.getGameState(),
       });
+      this.scheduleCompletedGameCleanup(roomId);
     }
   }
 
@@ -386,6 +389,7 @@ class GameCoordinator {
     });
 
     this.cancelPendingDeletion(roomId);
+    this.cancelCompletedGameCleanup(roomId);
     this.games.delete(roomId);
 
     console.log(`Game in room ${roomId} has been aborted`);
@@ -445,6 +449,29 @@ class GameCoordinator {
       clearTimeout(timeoutId);
       this.pendingDeletions.delete(roomId);
       console.log(`Cancelled pending deletion for lobby ${roomId}`);
+    }
+  }
+
+  scheduleCompletedGameCleanup(roomId) {
+    const timeoutId = setTimeout(() => {
+      const game = this.games.get(roomId);
+      if (game) {
+        game.players.forEach((player) => {
+          this.playerRooms.delete(player.id);
+        });
+      }
+      this.games.delete(roomId);
+      this.completedGameTimers.delete(roomId);
+      console.log(`Completed game ${roomId} cleaned up after TTL`);
+    }, COMPLETED_GAME_TTL_MS);
+    this.completedGameTimers.set(roomId, timeoutId);
+  }
+
+  cancelCompletedGameCleanup(roomId) {
+    const timeoutId = this.completedGameTimers.get(roomId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this.completedGameTimers.delete(roomId);
     }
   }
 }
