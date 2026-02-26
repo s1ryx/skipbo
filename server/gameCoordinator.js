@@ -16,6 +16,10 @@ function stripHtml(str) {
   return str.replace(/<[^>]*>/g, '');
 }
 
+function sanitizeForLog(str) {
+  return str.replace(/[\r\n]/g, '').replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
+}
+
 function validatePlayerName(name) {
   if (typeof name !== 'string') return null;
   const trimmed = stripHtml(name.trim()).replace(/[\x00-\x1F]/g, '');
@@ -116,7 +120,7 @@ class GameCoordinator {
       gameState: game.getGameState(),
     });
 
-    console.log(`Room created: ${roomId} by ${validName}`);
+    console.log(`Room created: ${roomId} by ${sanitizeForLog(validName)}`);
   }
 
   handleJoinRoom(connectionId, { roomId, playerName }) {
@@ -164,7 +168,7 @@ class GameCoordinator {
       sessionToken,
     });
 
-    console.log(`${validName} joined room: ${roomId}`);
+    console.log(`${sanitizeForLog(validName)} joined room: ${roomId}`);
   }
 
   handleReconnect(connectionId, { roomId, sessionToken, playerName }) {
@@ -227,7 +231,7 @@ class GameCoordinator {
           gameState: game.getGameState(),
         });
 
-        console.log(`${validName} rejoined lobby: ${roomId}`);
+        console.log(`${sanitizeForLog(validName)} rejoined lobby: ${roomId}`);
         return;
       }
 
@@ -259,7 +263,7 @@ class GameCoordinator {
       playerName: player.name,
     });
 
-    console.log(`${validName} reconnected to room: ${roomId}`);
+    console.log(`${sanitizeForLog(validName)} reconnected to room: ${roomId}`);
   }
 
   handleStartGame(connectionId) {
@@ -383,7 +387,7 @@ class GameCoordinator {
       timestamp: Date.now(),
     });
 
-    console.log(`Chat message in room ${roomId} from ${player.name}: ${sanitized}`);
+    console.log(`Chat message in room ${roomId} from ${sanitizeForLog(player.name)}: ${sanitizeForLog(sanitized)}`);
   }
 
   handleLeaveLobby(connectionId) {
