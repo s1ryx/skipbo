@@ -119,6 +119,47 @@ describe('GameCoordinator', () => {
       const roomId = createRoom(coordinator);
       expect(roomId).toHaveLength(6);
     });
+
+    it('rejects non-string player name', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 123, maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+      expect(coordinator.games.size).toBe(0);
+    });
+
+    it('rejects empty player name', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: '   ', maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+    });
+
+    it('rejects player name exceeding 30 characters', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 'A'.repeat(31), maxPlayers: 2 });
+      expect(transport.send).toHaveBeenCalledWith('p1', 'error', {
+        message: 'error.invalidPlayerName',
+      });
+    });
+
+    it('strips control characters from player name', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'createRoom', { playerName: 'Al\x00ic\x1Fe', maxPlayers: 2 });
+      expect(coordinator.games.size).toBe(1);
+      const game = [...coordinator.games.values()][0];
+      expect(game.players[0].name).toBe('Alice');
+    });
   });
 
   describe('joinRoom', () => {
@@ -179,6 +220,17 @@ describe('GameCoordinator', () => {
 
       expect(transport.send).toHaveBeenCalledWith('player3', 'error', {
         message: 'error.roomFull',
+      });
+    });
+
+    it('rejects invalid player name on join', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoom(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player2', 'joinRoom', { roomId, playerName: null });
+      expect(transport.send).toHaveBeenCalledWith('player2', 'error', {
+        message: 'error.invalidPlayerName',
       });
     });
 
