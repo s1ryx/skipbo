@@ -583,6 +583,21 @@ describe('GameCoordinator', () => {
         expect.objectContaining({ message: 'Hello world' })
       );
     });
+
+    it('sanitizes user data in log output', () => {
+      const { coordinator } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: 'Hello',
+      });
+      const chatLog = logSpy.mock.calls.find((c) => c[0].includes('Chat message'));
+      expect(chatLog[0]).not.toMatch(/[\r\n]/);
+      expect(chatLog[0]).not.toMatch(/\x1B/);
+      logSpy.mockRestore();
+    });
   });
 
   describe('leaveLobby', () => {
