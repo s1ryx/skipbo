@@ -3,6 +3,7 @@ const SkipBoGame = require('./gameLogic');
 const LOBBY_GRACE_PERIOD_MS = 30000;
 const MAX_PENDING_ROOMS = 50;
 const MAX_PLAYER_NAME_LENGTH = 30;
+const MAX_CHAT_MESSAGE_LENGTH = 500;
 
 function validatePlayerName(name) {
   if (typeof name !== 'string') return null;
@@ -296,6 +297,10 @@ class GameCoordinator {
   }
 
   handleSendChatMessage(connectionId, { message, stablePlayerId }) {
+    if (typeof message !== 'string') return;
+    const sanitized = message.trim().replace(/[\x00-\x1F]/g, '');
+    if (sanitized.length === 0 || sanitized.length > MAX_CHAT_MESSAGE_LENGTH) return;
+
     const roomId = this.playerRooms.get(connectionId);
     if (!roomId) return;
 
@@ -309,11 +314,11 @@ class GameCoordinator {
       playerId: connectionId,
       playerName: player.name,
       stablePlayerId: stablePlayerId,
-      message: message.trim(),
+      message: sanitized,
       timestamp: Date.now(),
     });
 
-    console.log(`Chat message in room ${roomId} from ${player.name}: ${message}`);
+    console.log(`Chat message in room ${roomId} from ${player.name}: ${sanitized}`);
   }
 
   handleLeaveLobby(connectionId) {
