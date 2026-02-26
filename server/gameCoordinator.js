@@ -385,6 +385,7 @@ class GameCoordinator {
     this.transport.sendToGroup(roomId, 'gameAborted');
 
     game.players.forEach((player) => {
+      this.transport.removeFromGroup(player.id, roomId);
       this.playerRooms.delete(player.id);
     });
 
@@ -409,6 +410,7 @@ class GameCoordinator {
 
     if (!game.gameStarted) {
       game.removePlayer(connectionId);
+      this.transport.removeFromGroup(connectionId, roomId);
       if (game.players.length === 0) {
         this.scheduleRoomDeletion(roomId);
       } else {
