@@ -426,6 +426,39 @@ describe('GameCoordinator', () => {
       handlers.onMessage('unknown', 'sendChatMessage', { message: 'Hi', stablePlayerId: 's1' });
       expect(transport.sendToGroup).not.toHaveBeenCalled();
     });
+
+    it('silently ignores non-string message', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', { message: 123, stablePlayerId: 's1' });
+      expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
+
+    it('silently ignores empty message', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', { message: '   ', stablePlayerId: 's1' });
+      expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
+
+    it('silently ignores message exceeding 500 characters', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'sendChatMessage', {
+        message: 'A'.repeat(501),
+        stablePlayerId: 's1',
+      });
+      expect(transport.sendToGroup).not.toHaveBeenCalled();
+    });
   });
 
   describe('leaveLobby', () => {
