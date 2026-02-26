@@ -100,6 +100,9 @@ class GameCoordinator {
     const game = new SkipBoGame(roomId, validMaxPlayers, validStockpileSize);
     game.addPlayer(connectionId, validName);
 
+    const sessionToken = crypto.randomUUID();
+    game.players[game.players.length - 1].sessionToken = sessionToken;
+
     this.games.set(roomId, game);
     this.playerRooms.set(connectionId, roomId);
 
@@ -108,6 +111,7 @@ class GameCoordinator {
     this.transport.send(connectionId, 'roomCreated', {
       roomId,
       playerId: connectionId,
+      sessionToken,
       gameState: game.getGameState(),
     });
 
@@ -142,6 +146,9 @@ class GameCoordinator {
       return;
     }
 
+    const sessionToken = crypto.randomUUID();
+    game.players[game.players.length - 1].sessionToken = sessionToken;
+
     this.playerRooms.set(connectionId, roomId);
     this.transport.addToGroup(connectionId, roomId);
 
@@ -151,14 +158,23 @@ class GameCoordinator {
       gameState: game.getGameState(),
     });
 
+    this.transport.send(connectionId, 'sessionToken', { sessionToken });
+
     console.log(`${validName} joined room: ${roomId}`);
   }
 
-  handleReconnect(connectionId, { roomId, oldPlayerId, playerName }) {
+  handleReconnect(connectionId, { roomId, sessionToken, playerName }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
       this.transport.send(connectionId, 'reconnectFailed', {
         message: 'error.invalidPlayerName',
+      });
+      return;
+    }
+
+    if (!sessionToken || typeof sessionToken !== 'string') {
+      this.transport.send(connectionId, 'reconnectFailed', {
+        message: 'error.invalidSession',
       });
       return;
     }
@@ -174,7 +190,7 @@ class GameCoordinator {
 
     this.cancelPendingDeletion(roomId);
 
-    const player = game.players.find((p) => p.id === oldPlayerId);
+    const player = game.players.find((p) => p.sessionToken === sessionToken);
 
     if (!player) {
       // Player was removed — rejoin if game hasn't started
@@ -185,23 +201,27 @@ class GameCoordinator {
           return;
         }
 
+        const newToken = crypto.randomUUID();
+        game.players[game.players.length - 1].sessionToken = newToken;
+
         this.playerRooms.set(connectionId, roomId);
         this.transport.addToGroup(connectionId, roomId);
 
         this.transport.send(connectionId, 'reconnected', {
           roomId,
           playerId: connectionId,
+          sessionToken: newToken,
           gameState: game.getGameState(),
           playerState: game.getPlayerState(connectionId),
         });
 
         this.transport.sendToGroupExcept(roomId, connectionId, 'playerJoined', {
           playerId: connectionId,
-          playerName,
+          playerName: validName,
           gameState: game.getGameState(),
         });
 
-        console.log(`${playerName} rejoined lobby: ${roomId}`);
+        console.log(`${validName} rejoined lobby: ${roomId}`);
         return;
       }
 
@@ -209,10 +229,13 @@ class GameCoordinator {
       return;
     }
 
-    // Update player's connection ID
+    // Update player's connection ID and issue new session token
+    const oldConnectionId = player.id;
     player.id = connectionId;
+    const newToken = crypto.randomUUID();
+    player.sessionToken = newToken;
 
-    this.playerRooms.delete(oldPlayerId);
+    this.playerRooms.delete(oldConnectionId);
     this.playerRooms.set(connectionId, roomId);
 
     this.transport.addToGroup(connectionId, roomId);
@@ -220,6 +243,7 @@ class GameCoordinator {
     this.transport.send(connectionId, 'reconnected', {
       roomId,
       playerId: connectionId,
+      sessionToken: newToken,
       gameState: game.getGameState(),
       playerState: game.getPlayerState(connectionId),
     });
@@ -229,7 +253,7 @@ class GameCoordinator {
       playerName: player.name,
     });
 
-    console.log(`${playerName} reconnected to room: ${roomId}`);
+    console.log(`${validName} reconnected to room: ${roomId}`);
   }
 
   handleStartGame(connectionId) {
