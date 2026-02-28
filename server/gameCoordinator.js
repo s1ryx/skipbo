@@ -314,7 +314,7 @@ class GameCoordinator {
       return;
     }
 
-    game.players.forEach((player) => {
+    game.players.filter((p) => !p.isBot).forEach((player) => {
       this.transport.send(player.id, 'gameStarted', {
         gameState: game.getGameState(),
         playerState: game.getPlayerState(player.id),
@@ -337,6 +337,9 @@ class GameCoordinator {
     }
 
     console.log(`Game started in room: ${roomId}`);
+
+    // Check if first player is a bot
+    this._scheduleBotTurnIfNeeded(roomId);
   }
 
   handlePlayCard(connectionId, { card, source, buildingPileIndex }) {
@@ -473,6 +476,9 @@ class GameCoordinator {
     this.transport.sendToGroup(roomId, 'turnChanged', {
       currentPlayerId: game.getPublicId(endTurnResult.nextPlayer),
     });
+
+    // Check if next player is a bot
+    this._scheduleBotTurnIfNeeded(roomId);
   }
 
   handleSendChatMessage(connectionId, { message }) {
@@ -686,7 +692,7 @@ class GameCoordinator {
       game.resetForRematch();
       game.startGame();
 
-      game.players.forEach((player) => {
+      game.players.filter((p) => !p.isBot).forEach((player) => {
         this.transport.send(player.id, 'gameStarted', {
           gameState: game.getGameState(),
           playerState: game.getPlayerState(player.id),
@@ -694,6 +700,8 @@ class GameCoordinator {
       });
 
       console.log(`Rematch started in room ${roomId}`);
+
+      this._scheduleBotTurnIfNeeded(roomId);
     } else {
       this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
         rematchVotes: game.players
@@ -859,6 +867,190 @@ class GameCoordinator {
       this.gameLoggers.delete(roomId);
       this.turnCounters.delete(roomId);
     }
+  }
+
+  _scheduleBotTurnIfNeeded(roomId) {
+    const game = this.games.get(roomId);
+    if (!game || !game.gameStarted || game.gameOver) return;
+
+    const currentPlayer = game.getCurrentPlayer();
+    if (!currentPlayer || !currentPlayer.isBot) return;
+
+    const timerId = setTimeout(() => {
+      this._playBotTurn(roomId);
+    }, 500);
+
+    if (!this.botTurnTimers.has(roomId)) {
+      this.botTurnTimers.set(roomId, []);
+    }
+    this.botTurnTimers.get(roomId).push(timerId);
+  }
+
+  _playBotTurn(roomId) {
+    const game = this.games.get(roomId);
+    if (!game || !game.gameStarted || game.gameOver) return;
+
+    const currentPlayer = game.getCurrentPlayer();
+    if (!currentPlayer || !currentPlayer.isBot) return;
+
+    const botId = currentPlayer.id;
+    const aiKey = `${roomId}:${currentPlayer.publicId}`;
+    const ai = this.botAIs.get(aiKey);
+    if (!ai) return;
+
+    const logger = this.gameLoggers.get(roomId);
+
+    const playNext = () => {
+      // Re-check guards — game state may have changed
+      if (!this.games.has(roomId) || game.gameOver) return;
+      if (game.getCurrentPlayer()?.id !== botId) return;
+
+      const gameState = game.getGameState();
+      const playerState = game.getPlayerState(botId);
+      const move = ai.findPlayableCard(playerState, gameState);
+
+      if (move && !game.gameOver) {
+        // Log before play
+        let stateBefore = null;
+        let aiAnalysis = null;
+        if (logger) {
+          stateBefore = logger._snapshot(game);
+          if (this.moveAnalyzer) {
+            aiAnalysis = this.moveAnalyzer.analyzePlay(playerState, gameState, {
+              card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex,
+            });
+          }
+        }
+
+        const result = game.playCard(botId, move.card, move.source, move.buildingPileIndex);
+        if (!result.success) return this._botDiscard(roomId, game, botId, ai, logger);
+
+        // Log the play
+        if (logger) {
+          const counter = this.turnCounters.get(roomId);
+          logger.logPlay(
+            counter.turn, currentPlayer.name, true,
+            { card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex },
+            stateBefore, aiAnalysis
+          );
+          counter.plays++;
+        }
+
+        // Broadcast to humans
+        this._broadcastToHumans(roomId, game);
+
+        if (game.gameOver) {
+          this._handleBotGameOver(roomId, game, logger);
+          return;
+        }
+
+        // Schedule next play with delay
+        const timerId = setTimeout(playNext, 500 + Math.random() * 300);
+        if (this.botTurnTimers.has(roomId)) {
+          this.botTurnTimers.get(roomId).push(timerId);
+        }
+        return;
+      }
+
+      // No more plays — discard
+      this._botDiscard(roomId, game, botId, ai, logger);
+    };
+
+    playNext();
+  }
+
+  _botDiscard(roomId, game, botId, ai, logger) {
+    const currentPlayer = game.getCurrentPlayer();
+    if (!currentPlayer || currentPlayer.id !== botId) return;
+
+    const discardGameState = game.getGameState();
+    const discardPlayerState = game.getPlayerState(botId);
+    const discard = ai.chooseDiscard(discardPlayerState, discardGameState);
+
+    if (discard) {
+      // Log before discard
+      let stateBefore = null;
+      let aiAnalysis = null;
+      if (logger) {
+        stateBefore = logger._snapshot(game);
+        if (this.moveAnalyzer) {
+          aiAnalysis = this.moveAnalyzer.analyzeDiscard(discardPlayerState, discardGameState, {
+            card: discard.card, discardPileIndex: discard.discardPileIndex,
+          });
+        }
+      }
+
+      const result = game.discardCard(botId, discard.card, discard.discardPileIndex);
+      if (!result.success) return;
+
+      // Log the discard
+      if (logger) {
+        const counter = this.turnCounters.get(roomId);
+        logger.logDiscard(
+          counter.turn, currentPlayer.name, true,
+          { card: discard.card, discardPileIndex: discard.discardPileIndex },
+          stateBefore, aiAnalysis
+        );
+        logger.logTurnEnd(counter.turn, currentPlayer.name, true, counter.plays);
+      }
+    }
+
+    // End turn
+    const endTurnResult = game.endTurn(botId);
+    if (!endTurnResult.success) return;
+
+    // Log new turn start
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      counter.turn++;
+      counter.plays = 0;
+      const nextPlayer = game.getCurrentPlayer();
+      counter.playerName = nextPlayer.name;
+      counter.isBot = !!nextPlayer.isBot;
+      logger.logTurnStart(counter.turn, game);
+    }
+
+    // Broadcast final state to humans
+    this._broadcastToHumans(roomId, game);
+    this.transport.sendToGroup(roomId, 'turnChanged', {
+      currentPlayerId: game.getCurrentPlayer()?.publicId,
+    });
+
+    // Check if next player is also a bot
+    this._scheduleBotTurnIfNeeded(roomId);
+  }
+
+  _handleBotGameOver(roomId, game, logger) {
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
+      logger.endGame(game);
+      logger.close();
+      this.gameLoggers.delete(roomId);
+      this.turnCounters.delete(roomId);
+    }
+
+    this.transport.sendToGroup(roomId, 'gameOver', {
+      winner: game.winner,
+      gameState: game.getGameState(),
+    });
+
+    // Also send final gameStateUpdate to humans
+    this._broadcastToHumans(roomId, game);
+
+    this._clearBotTimers(roomId);
+    this.scheduleCompletedGameCleanup(roomId);
+  }
+
+  _broadcastToHumans(roomId, game) {
+    game.players.forEach((player) => {
+      if (!player.isBot) {
+        this.transport.send(player.id, 'gameStateUpdate', {
+          gameState: game.getGameState(),
+          playerState: game.getPlayerState(player.id),
+        });
+      }
+    });
   }
 
   _clearBotTimers(roomId) {
