@@ -89,6 +89,7 @@ class AISocketClient {
         playerName: this.name,
         maxPlayers: 2,
         stockpileSize: this.stockpileSize,
+        isBot: true,
       });
     });
   }
@@ -110,7 +111,7 @@ class AISocketClient {
         clearTimeout(timeout);
         reject(new Error(data.message));
       });
-      this.socket.emit('joinRoom', { roomId, playerName: this.name });
+      this.socket.emit('joinRoom', { roomId, playerName: this.name, isBot: true });
     });
   }
 
