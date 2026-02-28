@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const SkipBoGame = require('./gameLogic');
+const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
 
 const LOBBY_GRACE_PERIOD_MS = 30000;
 const MAX_PENDING_ROOMS = 50;
@@ -28,12 +29,19 @@ function validatePlayerName(name) {
 }
 
 class GameCoordinator {
-  constructor() {
+  constructor(options = {}) {
     this.transport = null;
     this.games = new Map();
     this.playerRooms = new Map();
     this.pendingDeletions = new Map();
     this.completedGameTimers = new Map();
+
+    // Game logging
+    this.loggingEnabled = options.logging ?? false;
+    this.logAnalysis = options.logAnalysis ?? false;
+    this.gameLoggers = new Map();   // roomId → GameLogger
+    this.turnCounters = new Map();  // roomId → { turn, plays, playerName, isBot }
+    this.moveAnalyzer = this.logAnalysis ? new MoveAnalyzer() : null;
   }
 
   setTransport(transport) {
@@ -81,7 +89,7 @@ class GameCoordinator {
     }
   }
 
-  handleCreateRoom(connectionId, { playerName, maxPlayers, stockpileSize }) {
+  handleCreateRoom(connectionId, { playerName, maxPlayers, stockpileSize, isBot }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
       this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
@@ -110,6 +118,7 @@ class GameCoordinator {
 
     const sessionToken = crypto.randomUUID();
     game.players[game.players.length - 1].sessionToken = sessionToken;
+    game.players[game.players.length - 1].isBot = !!isBot;
     game.hostPublicId = game.players[0].publicId;
 
     this.games.set(roomId, game);
@@ -127,7 +136,7 @@ class GameCoordinator {
     console.log(`Room created: ${roomId} by ${sanitizeForLog(validName)}`);
   }
 
-  handleJoinRoom(connectionId, { roomId, playerName }) {
+  handleJoinRoom(connectionId, { roomId, playerName, isBot }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
       this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
@@ -157,6 +166,7 @@ class GameCoordinator {
 
     const sessionToken = crypto.randomUUID();
     game.players[game.players.length - 1].sessionToken = sessionToken;
+    game.players[game.players.length - 1].isBot = !!isBot;
 
     this.playerRooms.set(connectionId, roomId);
     this.transport.addToGroup(connectionId, roomId);
@@ -301,6 +311,21 @@ class GameCoordinator {
       });
     });
 
+    // Initialize game logging
+    if (this.loggingEnabled) {
+      const logger = new GameLogger({ roomId, mode: 'server' });
+      logger.startGame(game);
+      this.gameLoggers.set(roomId, logger);
+      const current = game.getCurrentPlayer();
+      this.turnCounters.set(roomId, {
+        turn: 1,
+        plays: 0,
+        playerName: current.name,
+        isBot: !!current.isBot,
+      });
+      logger.logTurnStart(1, game);
+    }
+
     console.log(`Game started in room: ${roomId}`);
   }
 
@@ -313,11 +338,36 @@ class GameCoordinator {
       return;
     }
 
+    // Snapshot state before the play for logging
+    const logger = this.gameLoggers.get(roomId);
+    let stateBefore = null;
+    let aiAnalysis = null;
+    if (logger) {
+      stateBefore = logger._snapshot(game);
+      if (this.moveAnalyzer) {
+        const ps = game.getPlayerState(connectionId);
+        const gs = game.getGameState();
+        aiAnalysis = this.moveAnalyzer.analyzePlay(ps, gs, { card, source, buildingPileIndex });
+      }
+    }
+
     const result = game.playCard(connectionId, card, source, buildingPileIndex);
 
     if (!result.success) {
       this.transport.send(connectionId, 'error', { message: result.error });
       return;
+    }
+
+    // Log the play
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      const player = game.players.find((p) => p.id === connectionId);
+      logger.logPlay(
+        counter.turn, player.name, !!player.isBot,
+        { card, source, buildingPileIndex },
+        stateBefore, aiAnalysis
+      );
+      counter.plays++;
     }
 
     game.players.forEach((player) => {
@@ -332,6 +382,14 @@ class GameCoordinator {
         winner: game.winner,
         gameState: game.getGameState(),
       });
+      if (logger) {
+        const counter = this.turnCounters.get(roomId);
+        logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
+        logger.endGame(game);
+        logger.close();
+        this.gameLoggers.delete(roomId);
+        this.turnCounters.delete(roomId);
+      }
       this.scheduleCompletedGameCleanup(roomId);
     }
   }
@@ -345,6 +403,19 @@ class GameCoordinator {
       return;
     }
 
+    // Snapshot state before the discard for logging
+    const logger = this.gameLoggers.get(roomId);
+    let stateBefore = null;
+    let aiAnalysis = null;
+    if (logger) {
+      stateBefore = logger._snapshot(game);
+      if (this.moveAnalyzer) {
+        const ps = game.getPlayerState(connectionId);
+        const gs = game.getGameState();
+        aiAnalysis = this.moveAnalyzer.analyzeDiscard(ps, gs, { card, discardPileIndex });
+      }
+    }
+
     const result = game.discardCard(connectionId, card, discardPileIndex);
 
     if (!result.success) {
@@ -352,11 +423,34 @@ class GameCoordinator {
       return;
     }
 
+    // Log the discard and turn end
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      const player = game.players.find((p) => p.id === connectionId);
+      logger.logDiscard(
+        counter.turn, player.name, !!player.isBot,
+        { card, discardPileIndex },
+        stateBefore, aiAnalysis
+      );
+      logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
+    }
+
     const endTurnResult = game.endTurn(connectionId);
 
     if (!endTurnResult.success) {
       this.transport.send(connectionId, 'error', { message: endTurnResult.error });
       return;
+    }
+
+    // Log the new turn start
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      counter.turn++;
+      counter.plays = 0;
+      const nextPlayer = game.getCurrentPlayer();
+      counter.playerName = nextPlayer.name;
+      counter.isBot = !!nextPlayer.isBot;
+      logger.logTurnStart(counter.turn, game);
     }
 
     game.players.forEach((player) => {
@@ -442,6 +536,7 @@ class GameCoordinator {
 
       if (game.players.length === 0) {
         this.cancelCompletedGameCleanup(roomId);
+        this._cleanupLogger(roomId);
         this.games.delete(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
@@ -461,6 +556,7 @@ class GameCoordinator {
 
       this.cancelPendingDeletion(roomId);
       this.cancelCompletedGameCleanup(roomId);
+      this._cleanupLogger(roomId);
       this.games.delete(roomId);
 
       console.log(`Game in room ${roomId} has been aborted`);
@@ -555,6 +651,7 @@ class GameCoordinator {
 
       if (game.players.length === 0) {
         this.cancelCompletedGameCleanup(roomId);
+        this._cleanupLogger(roomId);
         this.games.delete(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
@@ -616,6 +713,15 @@ class GameCoordinator {
     if (timeoutId) {
       clearTimeout(timeoutId);
       this.completedGameTimers.delete(roomId);
+    }
+  }
+
+  _cleanupLogger(roomId) {
+    const logger = this.gameLoggers.get(roomId);
+    if (logger) {
+      logger.close();
+      this.gameLoggers.delete(roomId);
+      this.turnCounters.delete(roomId);
     }
   }
 }
