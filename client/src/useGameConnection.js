@@ -312,6 +312,14 @@ export default function useGameConnection() {
     setChatMessages((prevMessages) => prevMessages.map((msg) => ({ ...msg, read: true })));
   }, []);
 
+  const addBot = useCallback((aiType) => {
+    transportRef.current?.send('addBot', { aiType });
+  }, []);
+
+  const removeBot = useCallback((botPlayerId) => {
+    transportRef.current?.send('removeBot', { botPlayerId });
+  }, []);
+
   return {
     gameState,
     playerState,
@@ -333,5 +341,7 @@ export default function useGameConnection() {
     rematchStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
+    addBot,
+    removeBot,
   };
 }
