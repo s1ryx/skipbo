@@ -143,6 +143,12 @@
   font-size: 0.9em;
 }
 
+.bot-badge {
+  color: #4a9eff;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
 .opponent-cards {
   display: flex;
   flex-wrap: wrap;
