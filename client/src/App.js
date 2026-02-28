@@ -57,6 +57,8 @@ function App() {
     rematchStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
+    addBot,
+    removeBot,
   } = useGameConnection();
 
   return (
@@ -76,6 +78,8 @@ function App() {
           roomId={roomId}
           onStartGame={startGame}
           onLeaveLobby={leaveLobby}
+          onAddBot={addBot}
+          onRemoveBot={removeBot}
         />
       ) : (
         <GameBoard
