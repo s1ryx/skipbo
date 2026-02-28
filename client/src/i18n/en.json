@@ -68,6 +68,12 @@
   "game.leave": "Leave",
   "game.rematchStockpile": "Stockpile: {{count}} cards",
 
+  "game.bot": "(Bot)",
+  "game.addBot": "Add Bot",
+  "game.removeBot": "Remove",
+  "game.aiImproved": "Improved AI",
+  "game.aiBaseline": "Baseline AI",
+
   "card.wild": "WILD",
 
   "chat.title": "Chat",
@@ -91,6 +97,10 @@
   "error.invalidDiscardPile": "Invalid discard pile",
   "error.cardNotInHand": "Card not in hand",
   "error.playerNotFoundDraw": "Player not found",
+  "error.onlyHostCanAddBot": "Only the host can add bots",
+  "error.onlyHostCanRemoveBot": "Only the host can remove bots",
+  "error.notABot": "Player is not a bot",
+  "error.cannotAddBotDuringGame": "Cannot add bots after game has started",
 
   "language.en": "English",
   "language.de": "Deutsch",

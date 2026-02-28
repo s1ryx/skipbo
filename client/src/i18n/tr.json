@@ -68,6 +68,12 @@
   "game.leave": "Ayrıl",
   "game.rematchStockpile": "Kart destesi: {{count}} kart",
 
+  "game.bot": "(Bot)",
+  "game.addBot": "Bot Ekle",
+  "game.removeBot": "Kaldır",
+  "game.aiImproved": "Gelişmiş Bot",
+  "game.aiBaseline": "Temel Bot",
+
   "card.wild": "JOKER",
 
   "chat.title": "Sohbet",
@@ -91,6 +97,10 @@
   "error.invalidDiscardPile": "Geçersiz Iskarta destesi",
   "error.cardNotInHand": "Kart elinde değil",
   "error.playerNotFoundDraw": "Oyuncu bulunamadı",
+  "error.onlyHostCanAddBot": "Sadece oda sahibi bot ekleyebilir",
+  "error.onlyHostCanRemoveBot": "Sadece oda sahibi botu kaldırabilir",
+  "error.notABot": "Oyuncu bir bot değil",
+  "error.cannotAddBotDuringGame": "Oyun başladıktan sonra bot eklenemez",
 
   "language.en": "English",
   "language.de": "Deutsch",
