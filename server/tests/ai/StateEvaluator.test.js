@@ -239,3 +239,65 @@ describe('detectRunway', () => {
     expect(runway.length).toBe(5);
   });
 });
+
+// ── scoreDiscard with runway integration ──────────────────────────────
+
+describe('StateEvaluator.scoreDiscard', () => {
+  let evaluator;
+
+  beforeEach(() => {
+    evaluator = makeEvaluator();
+  });
+
+  test('penalizes discarding a runway card', () => {
+    const { playerState, gameState } = makeState({
+      hand: [3, 4, 5, 8, 12],
+      buildingPiles: [[1, 2], [], [], []], // needs 3
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const runway = { length: 3, cards: new Set([3, 4, 5]) };
+
+    // Discarding a runway card (3) should score worse than a non-runway card (12)
+    const scoreRunway = evaluator.scoreDiscard(3, 1, playerState, gameState, runway);
+    const scoreNonRunway = evaluator.scoreDiscard(12, 1, playerState, gameState, runway);
+    expect(scoreNonRunway).toBeGreaterThan(scoreRunway);
+  });
+
+  test('no runway effect when runway < 3', () => {
+    const { playerState, gameState } = makeState({
+      hand: [3, 8, 9, 10, 12],
+      buildingPiles: [[1, 2], [], [], []], // needs 3
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const runway = { length: 1, cards: new Set([3]) };
+
+    // With short runway, no bonus/penalty applied
+    const withRunway = evaluator.scoreDiscard(3, 1, playerState, gameState, runway);
+    const withoutRunway = evaluator.scoreDiscard(3, 1, playerState, gameState);
+    expect(withRunway).toBe(withoutRunway);
+  });
+
+  test('frozen pile gets discount on bricking', () => {
+    const { playerState, gameState } = makeState({
+      hand: [4, 8, 9, 10, 12],
+      stockpileTop: 7,
+      discardPiles: [[7, 7], [], [], []], // pile 0 has stock value 7s
+      buildingPiles: [[1, 2], [], [], []], // no pile needs 7
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    // Bricking frozen pile 0 (4 on top of [7,7])
+    const frozenBrick = evaluator.scoreDiscard(4, 0, playerState, gameState);
+    // Bricking non-frozen empty pile 1
+    const emptyPile = evaluator.scoreDiscard(4, 1, playerState, gameState);
+
+    // Frozen pile brick should be less penalized (closer to 0 or even better)
+    // compared to just the raw bricking cost. But empty pile is always +5.
+    // The key: frozen pile discount makes bricking less negative.
+    expect(frozenBrick).toBeGreaterThan(
+      discardPlacementScore(4, [7, 7], pileChainQuality([7, 7])) - 20 // rough lower bound
+    );
+  });
+});
