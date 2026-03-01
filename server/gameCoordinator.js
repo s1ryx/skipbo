@@ -117,7 +117,7 @@ class GameCoordinator {
       return;
     }
 
-    if (this.games.size >= MAX_TOTAL_ROOMS) {
+    if (this.gameRepository.size >= MAX_TOTAL_ROOMS) {
       this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
       return;
     }
@@ -129,7 +129,7 @@ class GameCoordinator {
       ? stockpileSize
       : undefined;
 
-    const roomId = generateRoomId(this.games);
+    const roomId = generateRoomId(this.gameRepository);
     if (!roomId) {
       this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
       return;
@@ -143,7 +143,7 @@ class GameCoordinator {
     player.isBot = !!isBot;
     game.setHost(player.publicId);
 
-    this.games.set(roomId, game);
+    this.gameRepository.saveGame(roomId, game);
     this.sessionManager.setRoom(connectionId, roomId);
 
     this.transport.addToGroup(connectionId, roomId);
@@ -165,7 +165,7 @@ class GameCoordinator {
       return;
     }
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
@@ -224,7 +224,7 @@ class GameCoordinator {
       return;
     }
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'reconnectFailed', {
@@ -306,7 +306,7 @@ class GameCoordinator {
 
   handleStartGame(connectionId) {
     const roomId = this.sessionManager.getRoom(connectionId);
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
@@ -356,7 +356,7 @@ class GameCoordinator {
 
   handlePlayCard(connectionId, { card, source, buildingPileIndex }) {
     const roomId = this.sessionManager.getRoom(connectionId);
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
@@ -377,7 +377,7 @@ class GameCoordinator {
 
   handleDiscardCard(connectionId, { card, discardPileIndex }) {
     const roomId = this.sessionManager.getRoom(connectionId);
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
@@ -404,7 +404,7 @@ class GameCoordinator {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game) return;
 
     const player = game.getPlayerByConnectionId(connectionId);
@@ -423,7 +423,7 @@ class GameCoordinator {
 
   handleAddBot(connectionId, { aiType }) {
     const roomId = this.sessionManager.getRoom(connectionId);
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
@@ -460,7 +460,7 @@ class GameCoordinator {
 
   handleRemoveBot(connectionId, { botPlayerId }) {
     const roomId = this.sessionManager.getRoom(connectionId);
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
@@ -495,7 +495,7 @@ class GameCoordinator {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game || game.phase !== Phase.LOBBY) return;
 
     const player = game.getPlayerByConnectionId(connectionId);
@@ -530,7 +530,7 @@ class GameCoordinator {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game) return;
 
     const leavingPlayer = game.getPlayerByConnectionId(connectionId);
@@ -549,7 +549,7 @@ class GameCoordinator {
         this._cleanupLogger(roomId);
         this.botManager.cleanup(roomId);
         this.sessionManager.removeAllForPlayers(game.players);
-        this.games.delete(roomId);
+        this.gameRepository.deleteGame(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
           gameState: this._getDecoratedGameState(game),
@@ -570,7 +570,7 @@ class GameCoordinator {
       this.cancelCompletedGameCleanup(roomId);
       this._cleanupLogger(roomId);
       this.botManager.cleanup(roomId);
-      this.games.delete(roomId);
+      this.gameRepository.deleteGame(roomId);
 
       this.logger.info('game aborted', { roomId });
     }
@@ -580,7 +580,7 @@ class GameCoordinator {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game || game.phase !== Phase.FINISHED) return;
 
     const voter = game.getPlayerByConnectionId(connectionId);
@@ -616,7 +616,7 @@ class GameCoordinator {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game || game.phase !== Phase.FINISHED) return;
 
     const sender = game.getPlayerByConnectionId(connectionId);
@@ -639,7 +639,7 @@ class GameCoordinator {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game) {
       this.sessionManager.removeRoom(connectionId);
       return;
@@ -676,7 +676,7 @@ class GameCoordinator {
         this._cleanupLogger(roomId);
         this.botManager.cleanup(roomId);
         this.sessionManager.removeAllForPlayers(game.players);
-        this.games.delete(roomId);
+        this.gameRepository.deleteGame(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
           gameState: this._getDecoratedGameState(game),
@@ -695,7 +695,7 @@ class GameCoordinator {
           this.transport.removeFromGroup(p.connectionId, roomId);
           this.sessionManager.removeRoom(p.connectionId);
         });
-        this.games.delete(roomId);
+        this.gameRepository.deleteGame(roomId);
         this.logger.info('game aborted — no human players remain', { roomId });
       } else {
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
@@ -709,11 +709,11 @@ class GameCoordinator {
 
   scheduleRoomDeletion(roomId) {
     if (this.pendingDeletions.size >= MAX_PENDING_ROOMS) {
-      this.games.delete(roomId);
+      this.gameRepository.deleteGame(roomId);
       this.logger.info('empty lobby deleted immediately', { roomId });
     } else {
       const timeoutId = setTimeout(() => {
-        this.games.delete(roomId);
+        this.gameRepository.deleteGame(roomId);
         this.pendingDeletions.delete(roomId);
         this.logger.info('empty lobby deleted after grace period', { roomId });
       }, LOBBY_GRACE_PERIOD_MS);
@@ -733,14 +733,14 @@ class GameCoordinator {
 
   scheduleCompletedGameCleanup(roomId) {
     const timeoutId = setTimeout(() => {
-      const game = this.games.get(roomId);
+      const game = this.gameRepository.getGame(roomId);
       if (game) {
         game.players.forEach((p) => {
           this.sessionManager.removeRoom(p.connectionId);
         });
       }
       this.botManager.clearAIs(roomId);
-      this.games.delete(roomId);
+      this.gameRepository.deleteGame(roomId);
       this.completedGameTimers.delete(roomId);
       this.logger.info('completed game cleaned up after TTL', { roomId });
     }, COMPLETED_GAME_TTL_MS);
@@ -765,7 +765,7 @@ class GameCoordinator {
   }
 
   _scheduleBotTurnIfNeeded(roomId) {
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game || game.phase !== Phase.PLAYING) return;
 
     const currentPlayer = game.getCurrentPlayer();
@@ -777,7 +777,7 @@ class GameCoordinator {
   }
 
   _playBotTurn(roomId) {
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game || game.phase !== Phase.PLAYING) return;
 
     const currentPlayer = game.getCurrentPlayer();
@@ -788,7 +788,7 @@ class GameCoordinator {
     if (!ai) return;
 
     const playNext = () => {
-      if (!this.games.has(roomId) || game.phase === Phase.FINISHED) return;
+      if (!this.gameRepository.hasGame(roomId) || game.phase === Phase.FINISHED) return;
       if (game.getCurrentPlayer()?.internalId !== botId) return;
 
       const gameState = this._getDecoratedGameState(game);
@@ -956,7 +956,7 @@ class GameCoordinator {
 }
 
 // Exclude confusing characters: 0, O, I, 1, 5, S, 8, B, 2, Z
-function generateRoomId(existingIds) {
+function generateRoomId(repository) {
   const chars = '3467ACDEFGHJKMNPQRTUVWXY';
   const MAX_ATTEMPTS = 10;
 
@@ -966,7 +966,7 @@ function generateRoomId(existingIds) {
     for (let i = 0; i < 6; i++) {
       roomId += chars.charAt(bytes[i] % chars.length);
     }
-    if (!existingIds || !existingIds.has(roomId)) {
+    if (!repository || !repository.hasGame(roomId)) {
       return roomId;
     }
   }
