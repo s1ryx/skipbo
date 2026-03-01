@@ -59,13 +59,15 @@ class SkipBoGame {
     return deck;
   }
 
-  addPlayer(playerId, playerName) {
+  addPlayer(connectionId, playerName) {
     if (this.players.length >= this.playerCount) {
       return false;
     }
 
     const player = {
-      id: playerId,
+      internalId: connectionId,
+      connectionId,
+      id: connectionId,
       publicId: crypto.randomUUID().slice(0, 8),
       name: playerName,
       stockpile: [],
@@ -75,6 +77,10 @@ class SkipBoGame {
 
     this.players.push(player);
     return true;
+  }
+
+  getPlayerByConnectionId(connectionId) {
+    return this.players.find((p) => p.connectionId === connectionId) || null;
   }
 
   getPublicId(playerId) {
@@ -95,6 +101,13 @@ class SkipBoGame {
     const player = this.players.find((p) => p.id === oldId);
     if (!player) return false;
     player.id = newId;
+    return true;
+  }
+
+  updateConnectionId(internalId, newConnectionId) {
+    const player = this.players.find((p) => p.internalId === internalId);
+    if (!player) return false;
+    player.connectionId = newConnectionId;
     return true;
   }
 
