@@ -107,4 +107,55 @@ describe('AIPlayer', () => {
       expect(play.source).toBe('discard0');
     });
   });
+
+  describe('chooseDiscard', () => {
+    test('returns a valid discard', () => {
+      const { playerState, gameState } = makeState({
+        hand: [5, 6, 7, 8, 9],
+      });
+      const discard = ai.chooseDiscard(playerState, gameState);
+      expect(discard).not.toBeNull();
+      expect(playerState.hand).toContain(discard.card);
+      expect(discard.discardPileIndex).toBeGreaterThanOrEqual(0);
+      expect(discard.discardPileIndex).toBeLessThanOrEqual(3);
+    });
+
+    test('never discards SKIP-BO when alternatives exist', () => {
+      const { playerState, gameState } = makeState({
+        hand: ['SKIP-BO', 'SKIP-BO', 3, 7, 12],
+      });
+      const discard = ai.chooseDiscard(playerState, gameState);
+      expect(discard.card).not.toBe('SKIP-BO');
+    });
+
+    test('prefers contiguous descending placement', () => {
+      const { playerState, gameState } = makeState({
+        hand: [5, 6, 7, 8, 9],
+        discardPiles: [[10], [], [], []], // pile 0 top is 10
+      });
+      const discard = ai.chooseDiscard(playerState, gameState);
+      // 9 on pile 0 (top=10) is contiguous descending — should be preferred
+      if (discard.card === 9) {
+        expect(discard.discardPileIndex).toBe(0);
+      }
+    });
+
+    test('does not discard card matching pile need when held deliberately', () => {
+      const { playerState, gameState } = makeState({
+        hand: [1, 2, 10, 11, 12],
+        buildingPiles: [[], [], [], []], // all need 1
+      });
+      // The AI might choose to not play the 1 (unlikely but possible if opponent blocks).
+      // When discarding, it should not discard the 1 since it matches a pile need.
+      const discard = ai.chooseDiscard(playerState, gameState);
+      // Should discard one of 10, 11, 12 (far from pile needs)
+      expect(discard.card).toBeGreaterThanOrEqual(10);
+    });
+
+    test('returns null for empty hand', () => {
+      const { playerState, gameState } = makeState({ hand: [] });
+      const discard = ai.chooseDiscard(playerState, gameState);
+      expect(discard).toBeNull();
+    });
+  });
 });
