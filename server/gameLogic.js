@@ -10,6 +10,9 @@ const {
   DEFAULT_STOCKPILE_SMALL,
   LARGE_GAME_THRESHOLD,
   MIN_PLAYERS,
+  MAX_PLAYERS,
+  MIN_STOCKPILE_SIZE,
+  MAX_STOCKPILE_SIZE,
   Phase,
 } = require('./config');
 
@@ -18,8 +21,8 @@ const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'dis
 class SkipBoGame {
   constructor(roomId, playerCount, stockpileSize) {
     this.roomId = roomId;
-    this.playerCount = playerCount;
-    this.stockpileSize = stockpileSize; // Custom stockpile size
+    this.playerCount = Math.min(Math.max(playerCount || MIN_PLAYERS, MIN_PLAYERS), MAX_PLAYERS);
+    this.stockpileSize = stockpileSize || null;
     this.players = [];
     this.deck = [];
     this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
