@@ -301,3 +301,117 @@ describe('StateEvaluator.scoreDiscard', () => {
     );
   });
 });
+
+// ── _opponentImpact (danger zone + player count) ─────────────────────
+
+describe('StateEvaluator._opponentImpact', () => {
+  let evaluator;
+
+  beforeEach(() => {
+    evaluator = makeEvaluator();
+  });
+
+  test('danger zone: heavy penalty when chain leaves pile at distance 1', () => {
+    // Playing 4 on pile [1,2,3] → needs 5, opponent stock = 6 → distance 1
+    const chain = {
+      plays: [{ card: 4, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [4],
+      oppStockTop: 6,
+      buildingPiles: [[1, 2, 3], [], [], []], // pile 0 needs 4
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const impact = evaluator._opponentImpact(chain, playerState, gameState);
+    // Should have both per-play penalty (distance 1 after playing 4→pile needs 5)
+    // AND post-chain danger zone penalty
+    expect(impact).toBeLessThan(-10);
+  });
+
+  test('blasting through danger zone: less penalty than stopping in it', () => {
+    // Chain plays 4,5,6 on pile [1,2,3] → ends at 7, past opponent's stock 6
+    const chainThrough = {
+      plays: [
+        { card: 4, source: 'hand', pileIndex: 0 },
+        { card: 5, source: 'hand', pileIndex: 0 },
+        { card: 6, source: 'hand', pileIndex: 0 },
+      ],
+      totalPlays: 3,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    // Chain plays only 4 → stops at danger zone
+    const chainStop = {
+      plays: [{ card: 4, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [4, 5, 6],
+      oppStockTop: 6,
+      buildingPiles: [[1, 2, 3], [], [], []], // needs 4
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const impactThrough = evaluator._opponentImpact(chainThrough, playerState, gameState);
+    const impactStop = evaluator._opponentImpact(chainStop, playerState, gameState);
+
+    // Blasting through should have LESS penalty than stopping in danger zone
+    expect(impactThrough).toBeGreaterThan(impactStop);
+  });
+
+  test('player count scaling: 4-player game has smaller penalties', () => {
+    const chain = {
+      plays: [{ card: 4, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState: ps2, gameState: gs2 } = makeState({
+      hand: [4],
+      oppStockTop: 6,
+      buildingPiles: [[1, 2, 3], [], [], []], // needs 4
+    });
+
+    // 4-player game
+    const gs4 = {
+      ...gs2,
+      players: [
+        gs2.players[0],
+        gs2.players[1],
+        { stockpileTop: 8, stockpileCount: 25, discardPiles: [[], [], [], []], handCount: 5 },
+        { stockpileTop: 11, stockpileCount: 22, discardPiles: [[], [], [], []], handCount: 5 },
+      ],
+    };
+
+    evaluator.cc.update(ps2, gs2);
+    const impact2p = evaluator._opponentImpact(chain, ps2, gs2);
+
+    evaluator.cc.update(ps2, gs4);
+    const impact4p = evaluator._opponentImpact(chain, ps2, gs4);
+
+    // 4-player penalty should be smaller in magnitude
+    expect(Math.abs(impact4p)).toBeLessThan(Math.abs(impact2p));
+  });
+});
