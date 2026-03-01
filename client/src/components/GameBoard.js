@@ -6,6 +6,7 @@ import Chat from './Chat';
 import LeaveConfirmDialog from './LeaveConfirmDialog';
 import GameOverOverlay from './GameOverOverlay';
 import OpponentArea from './OpponentArea';
+import BuildingPiles from './BuildingPiles';
 import { useTranslation } from '../i18n';
 
 function GameBoard({
@@ -101,25 +102,6 @@ function GameBoard({
     setSelectedSource(null);
   };
 
-  const getNextCardForPile = (pile) => {
-    if (pile.length === 0) return 1;
-
-    const lastCard = pile[pile.length - 1];
-    if (lastCard === 'SKIP-BO') {
-      let value = 0;
-      for (let i = 0; i < pile.length; i++) {
-        if (pile[i] !== 'SKIP-BO') {
-          value = pile[i];
-        } else {
-          value++;
-        }
-      }
-      return value === 12 ? null : value + 1;
-    }
-
-    return lastCard === 12 ? null : lastCard + 1;
-  };
-
   return (
     <div className="game-board">
       <div className="game-header">
@@ -141,40 +123,11 @@ function GameBoard({
         currentPlayerId={gameState.currentPlayerId}
       />
 
-      {/* Building Piles (Center) */}
-      <div className="building-piles">
-        <h3>{t('game.buildingPiles')}</h3>
-        <div className="piles-container">
-          {gameState.buildingPiles.map((pile, index) => (
-            <div
-              key={index}
-              className={`building-pile ${selectedCard && isMyTurn && !discardMode ? 'clickable' : ''}`}
-              onClick={() => handleBuildingPileClick(index)}
-            >
-              <div className="pile-info">
-                {t('game.pile', { index: index + 1 })}
-                {pile.length > 0 && (
-                  <span className="next-card">
-                    {getNextCardForPile(pile)
-                      ? t('game.nextCard', { value: getNextCardForPile(pile) })
-                      : t('game.pileComplete')}
-                  </span>
-                )}
-              </div>
-              {pile.length > 0 ? (
-                <div className="pile-stack">
-                  <Card value={pile[pile.length - 1]} isVisible={true} />
-                  <div className="pile-count">{t('game.cards', { count: pile.length })}</div>
-                </div>
-              ) : (
-                <div className="empty-pile">
-                  <div className="empty-pile-text">{t('game.startWith1')}</div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <BuildingPiles
+        piles={gameState.buildingPiles}
+        isClickable={selectedCard && isMyTurn && !discardMode}
+        onPileClick={handleBuildingPileClick}
+      />
 
       {/* Current Player Area */}
       {playerState && (
