@@ -4,10 +4,17 @@ import { useTranslation } from '../i18n';
 
 function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
   const { t } = useTranslation();
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem('skipBoPlayerName') || ''
+  );
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [stockpileSize, setStockpileSize] = useState(30);
   const [roomIdToJoin, setRoomIdToJoin] = useState('');
+
+  const handleNameChange = (name) => {
+    setPlayerName(name);
+    localStorage.setItem('skipBoPlayerName', name);
+  };
   const [showJoinForm, setShowJoinForm] = useState(false);
 
   // If initialRoomId is provided from URL, pre-fill and show join form
@@ -60,7 +67,7 @@ function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
                   <input
                     type="text"
                     value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     placeholder={t('lobby.enterName')}
                     required
                   />
@@ -121,7 +128,7 @@ function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
                   <input
                     type="text"
                     value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     placeholder={t('lobby.enterName')}
                     required
                   />

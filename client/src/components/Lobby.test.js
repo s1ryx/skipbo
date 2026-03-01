@@ -17,6 +17,10 @@ const renderLobby = (props = {}) => {
 };
 
 describe('Lobby', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   describe('create game form', () => {
     it('renders the create game form by default', () => {
       renderLobby();
@@ -160,6 +164,42 @@ describe('Lobby', () => {
       fireEvent.click(screen.getByText('Join Room'));
 
       expect(onJoinRoom).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('player name persistence', () => {
+    it('loads player name from localStorage on mount', () => {
+      localStorage.setItem('skipBoPlayerName', 'SavedName');
+      renderLobby();
+      expect(screen.getByPlaceholderText('Enter your name').value).toBe('SavedName');
+    });
+
+    it('saves player name to localStorage on change', () => {
+      renderLobby();
+      fireEvent.change(screen.getByPlaceholderText('Enter your name'), {
+        target: { value: 'NewName' },
+      });
+      expect(localStorage.getItem('skipBoPlayerName')).toBe('NewName');
+    });
+
+    it('uses persisted name when creating room', () => {
+      localStorage.setItem('skipBoPlayerName', 'PersistedAlice');
+      const onCreateRoom = jest.fn();
+      renderLobby({ onCreateRoom });
+      fireEvent.click(screen.getByText('Create Room'));
+      expect(onCreateRoom).toHaveBeenCalledWith('PersistedAlice', 2, 30);
+    });
+
+    it('uses persisted name when joining room', () => {
+      localStorage.setItem('skipBoPlayerName', 'PersistedBob');
+      const onJoinRoom = jest.fn();
+      renderLobby({ onJoinRoom });
+      fireEvent.click(screen.getByText('Join Existing Room'));
+      fireEvent.change(screen.getByPlaceholderText('Enter room ID'), {
+        target: { value: 'ABC123' },
+      });
+      fireEvent.click(screen.getByText('Join Room'));
+      expect(onJoinRoom).toHaveBeenCalledWith('ABC123', 'PersistedBob');
     });
   });
 
