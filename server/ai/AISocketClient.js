@@ -14,8 +14,10 @@ const { AIPlayer } = require('./AIPlayer');
 const { ChainDetector, getNextCardValue } = require('./ChainDetector');
 const gameAI = require(path.join(__dirname, '..', 'tests', 'integration', 'helpers', 'gameAI'));
 
-const BOX_TOP    = '\x1b[36m╔══ AI Turn %TURN% (%NAME%) ══════════════════════════════════════╗\x1b[0m';
-const BOX_BOTTOM = '\x1b[36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m';
+const BOX_TOP =
+  '\x1b[36m╔══ AI Turn %TURN% (%NAME%) ══════════════════════════════════════╗\x1b[0m';
+const BOX_BOTTOM =
+  '\x1b[36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -50,7 +52,9 @@ class AISocketClient {
 
     this.ai = new AIPlayer();
     this._gameEndResolve = null;
-    this._gameEndPromise = new Promise((resolve) => { this._gameEndResolve = resolve; });
+    this._gameEndPromise = new Promise((resolve) => {
+      this._gameEndResolve = resolve;
+    });
     this._playing = false;
   }
 
@@ -199,9 +203,7 @@ class AISocketClient {
   }
 
   async _playTurn() {
-    const header = BOX_TOP
-      .replace('%TURN%', this.turnNumber)
-      .replace('%NAME%', this.name);
+    const header = BOX_TOP.replace('%TURN%', this.turnNumber).replace('%NAME%', this.name);
     console.log('\n' + header);
 
     this._logState();
@@ -247,24 +249,28 @@ class AISocketClient {
 
   _findPlay() {
     if (this.aiType === 'old') {
-      return gameAI.findPlayableCard(this.playerState, this.gameState, this.verbose ? (m) => console.log(`  ${m}`) : () => {});
+      return gameAI.findPlayableCard(
+        this.playerState,
+        this.gameState,
+        this.verbose ? (m) => console.log(`  ${m}`) : () => {}
+      );
     }
 
-    const log = this.verbose
-      ? (m) => console.log(`  \x1b[90m${m}\x1b[0m`)
-      : () => {};
+    const log = this.verbose ? (m) => console.log(`  \x1b[90m${m}\x1b[0m`) : () => {};
 
     return this.ai.findPlayableCard(this.playerState, this.gameState, log);
   }
 
   _findDiscard() {
     if (this.aiType === 'old') {
-      return gameAI.chooseDiscard(this.playerState, this.turnNumber, this.verbose ? (m) => console.log(`  ${m}`) : () => {});
+      return gameAI.chooseDiscard(
+        this.playerState,
+        this.turnNumber,
+        this.verbose ? (m) => console.log(`  ${m}`) : () => {}
+      );
     }
 
-    const log = this.verbose
-      ? (m) => console.log(`  \x1b[90m${m}\x1b[0m`)
-      : () => {};
+    const log = this.verbose ? (m) => console.log(`  \x1b[90m${m}\x1b[0m`) : () => {};
 
     return this.ai.chooseDiscard(this.playerState, this.gameState, log);
   }
@@ -323,19 +329,26 @@ class AISocketClient {
       const oppDTops = p.discardPiles.map((dp, i) =>
         dp.length > 0 ? `${dp[dp.length - 1]}` : '--'
       );
-      console.log(`  Opponent ${p.name}: stock=${p.stockpileTop ?? '?'}(${p.stockpileCount}), hand=${p.handCount}, discards=[${oppDTops.join(',')}]`);
+      console.log(
+        `  Opponent ${p.name}: stock=${p.stockpileTop ?? '?'}(${p.stockpileCount}), hand=${p.handCount}, discards=[${oppDTops.join(',')}]`
+      );
     }
     console.log('');
   }
 
   _logPlay(move) {
-    const cardStr = move.card === 'SKIP-BO' ? '\x1b[35mSKIP-BO\x1b[0m' : `\x1b[33m${move.card}\x1b[0m`;
-    console.log(`  \x1b[32m>> PLAY:\x1b[0m ${cardStr} from ${move.source} → pile ${move.buildingPileIndex}`);
+    const cardStr =
+      move.card === 'SKIP-BO' ? '\x1b[35mSKIP-BO\x1b[0m' : `\x1b[33m${move.card}\x1b[0m`;
+    console.log(
+      `  \x1b[32m>> PLAY:\x1b[0m ${cardStr} from ${move.source} → pile ${move.buildingPileIndex}`
+    );
   }
 
   _logDiscard(discard) {
     if (!this.verbose) {
-      console.log(`  \x1b[34m>> DISCARD:\x1b[0m ${discard.card} → pile ${discard.discardPileIndex}`);
+      console.log(
+        `  \x1b[34m>> DISCARD:\x1b[0m ${discard.card} → pile ${discard.discardPileIndex}`
+      );
       return;
     }
 
@@ -357,7 +370,8 @@ class AISocketClient {
     const top = options.slice(0, 5);
     console.log('  Discard options (top 5):');
     for (const opt of top) {
-      const marker = opt.card === discard.card && opt.pile === discard.discardPileIndex ? ' <<<' : '';
+      const marker =
+        opt.card === discard.card && opt.pile === discard.discardPileIndex ? ' <<<' : '';
       console.log(`    ${opt.card}→pile${opt.pile}: score ${opt.score.toFixed(1)}${marker}`);
     }
     console.log(`  \x1b[34m>> DISCARD:\x1b[0m ${discard.card} → pile ${discard.discardPileIndex}`);

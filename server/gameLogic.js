@@ -16,7 +16,14 @@ const {
 } = require('./config');
 const { ErrorCodes } = require('./errors');
 
-const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'discard2', 'discard3']);
+const VALID_SOURCES = new Set([
+  'hand',
+  'stockpile',
+  'discard0',
+  'discard1',
+  'discard2',
+  'discard3',
+]);
 
 class SkipBoGame {
   constructor(roomId, playerCount, stockpileSize) {
@@ -123,10 +130,7 @@ class SkipBoGame {
 
   updateStockpileSize(size) {
     const maxAllowed = this.getMaxStockpileSize();
-    this.stockpileSize = Math.min(
-      Math.max(size, MIN_STOCKPILE_SIZE),
-      maxAllowed
-    );
+    this.stockpileSize = Math.min(Math.max(size, MIN_STOCKPILE_SIZE), maxAllowed);
   }
 
   startGame() {
@@ -367,9 +371,7 @@ class SkipBoGame {
   }
 
   getRematchVoterPublicIds() {
-    return this.players
-      .filter((p) => this.rematchVotes.has(p.internalId))
-      .map((p) => p.publicId);
+    return this.players.filter((p) => this.rematchVotes.has(p.internalId)).map((p) => p.publicId);
   }
 
   resetForRematch(stockpileSize) {

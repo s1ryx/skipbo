@@ -513,16 +513,16 @@ skip-bo/
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | Transport layer, component tree, event reference, game flow diagrams |
-| [Game Rules](docs/RULES.md) | Complete Skip-Bo rules with examples |
-| [Code Standards](docs/CODE_STANDARDS.md) | ESLint, Prettier, naming conventions, CI checks |
-| [Commit Guidelines](docs/COMMIT_GUIDELINES.md) | Commit message format and atomic commit rules |
-| [Git Workflow](docs/GIT_WORKFLOW.md) | Branching model, PR process, release flow |
-| [Testing](docs/TESTING.md) | Test frameworks, organization, patterns, and what must be tested |
-| [Technical Debt](docs/TECH_DEBT.md) | Known coupling issues and refactoring roadmap |
-| [Design Principles](docs/DESIGN_PRINCIPLES.md) | Target architecture, abstraction layers, design patterns |
+| Document                                       | Description                                                          |
+| ---------------------------------------------- | -------------------------------------------------------------------- |
+| [Architecture](docs/ARCHITECTURE.md)           | Transport layer, component tree, event reference, game flow diagrams |
+| [Game Rules](docs/RULES.md)                    | Complete Skip-Bo rules with examples                                 |
+| [Code Standards](docs/CODE_STANDARDS.md)       | ESLint, Prettier, naming conventions, CI checks                      |
+| [Commit Guidelines](docs/COMMIT_GUIDELINES.md) | Commit message format and atomic commit rules                        |
+| [Git Workflow](docs/GIT_WORKFLOW.md)           | Branching model, PR process, release flow                            |
+| [Testing](docs/TESTING.md)                     | Test frameworks, organization, patterns, and what must be tested     |
+| [Technical Debt](docs/TECH_DEBT.md)            | Known coupling issues and refactoring roadmap                        |
+| [Design Principles](docs/DESIGN_PRINCIPLES.md) | Target architecture, abstraction layers, design patterns             |
 
 ## Future Enhancements
 

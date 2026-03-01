@@ -53,7 +53,7 @@ function logState(playerState, gameState, log) {
 function findPlayableCard(playerState, gameState, log = noop) {
   const nextValues = gameState.buildingPiles.map((pile) => getNextCardValue(pile));
   const stockTop = playerState.stockpileTop;
-  const stockNum = (stockTop != null && stockTop !== 'SKIP-BO') ? stockTop : null;
+  const stockNum = stockTop != null && stockTop !== 'SKIP-BO' ? stockTop : null;
 
   // Phase 1: Stockpile (always — this is the win condition)
   if (stockTop != null) {
@@ -68,7 +68,9 @@ function findPlayableCard(playerState, gameState, log = noop) {
         }
       }
       if (bestPile !== -1) {
-        log(`  >> STOCKPILE SKIP-BO -> pile ${bestPile} (as ${nextValues[bestPile]}, closest to completion)`);
+        log(
+          `  >> STOCKPILE SKIP-BO -> pile ${bestPile} (as ${nextValues[bestPile]}, closest to completion)`
+        );
         return { card: 'SKIP-BO', source: 'stockpile', buildingPileIndex: bestPile };
       }
     } else {
@@ -128,7 +130,11 @@ function findPlayableCard(playerState, gameState, log = noop) {
       const stockChains = stockTop != null && canPlayCard(stockTop, nextAfterPlay);
       const underChains = pile.length > 1 && canPlayCard(pile[pile.length - 2], nextAfterPlay);
       if (handChains || stockChains || underChains) {
-        const reason = stockChains ? 'enables stockpile' : handChains ? 'enables hand card' : 'enables chain';
+        const reason = stockChains
+          ? 'enables stockpile'
+          : handChains
+            ? 'enables hand card'
+            : 'enables chain';
         log(`  -> Discard[${d}] ${topCard} -> pile ${i} (${reason})`);
         return { card: topCard, source: `discard${d}`, buildingPileIndex: i };
       }
@@ -180,11 +186,19 @@ function findPlayableCard(playerState, gameState, log = noop) {
  *   3. SKIP-BO bridges toward target's stockpile value
  *   4. Never play own stockpile (prevents accidental win)
  */
-function findPlayableCardCooperative(playerState, gameState, targetPlayerId, isTargetPlayer, log = noop) {
+function findPlayableCardCooperative(
+  playerState,
+  gameState,
+  targetPlayerId,
+  isTargetPlayer,
+  log = noop
+) {
   const targetPlayer = gameState.players.find((p) => p.id === targetPlayerId);
   const targetTop = targetPlayer ? targetPlayer.stockpileTop : null;
 
-  log(`  Target: ${targetPlayer?.name} stockpile=${targetTop} (${targetPlayer?.stockpileCount} left)`);
+  log(
+    `  Target: ${targetPlayer?.name} stockpile=${targetTop} (${targetPlayer?.stockpileCount} left)`
+  );
 
   // Target player: use competitive logic — same goal (empty own stockpile)
   if (isTargetPlayer) {
@@ -193,7 +207,7 @@ function findPlayableCardCooperative(playerState, gameState, targetPlayerId, isT
 
   // --- Helper player logic below ---
   const nextValues = gameState.buildingPiles.map((pile) => getNextCardValue(pile));
-  const reservedValue = (targetTop != null && targetTop !== 'SKIP-BO') ? targetTop : null;
+  const reservedValue = targetTop != null && targetTop !== 'SKIP-BO' ? targetTop : null;
 
   // 1. Play number cards from hand — cycle aggressively, skip reserved piles
   for (const card of playerState.hand) {
@@ -324,7 +338,9 @@ function pickDiscardPile(card, discardPiles, log = noop) {
       }
     }
     if (bestPile !== -1) {
-      log(`  Discard ${card} -> pile ${bestPile} (closest above: ${discardPiles[bestPile][discardPiles[bestPile].length - 1]})`);
+      log(
+        `  Discard ${card} -> pile ${bestPile} (closest above: ${discardPiles[bestPile][discardPiles[bestPile].length - 1]})`
+      );
       return bestPile;
     }
   }
@@ -370,7 +386,13 @@ function chooseDiscard(playerState, turnCount = 0, log = noop) {
  * Discards highest non-SKIP-BO card using smart pile placement.
  * Never discards SKIP-BO.
  */
-function chooseDiscardCooperative(playerState, gameState, targetPlayerId, turnCount = 0, log = noop) {
+function chooseDiscardCooperative(
+  playerState,
+  gameState,
+  targetPlayerId,
+  turnCount = 0,
+  log = noop
+) {
   const hand = playerState.hand;
   if (hand.length === 0) return null;
 

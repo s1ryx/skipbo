@@ -66,63 +66,63 @@ function App() {
 
   return (
     <ErrorBoundary>
-    <div className="App">
-      <header className="App-header">
-        <h1>{t('app.title')}</h1>
-      </header>
+      <div className="App">
+        <header className="App-header">
+          <h1>{t('app.title')}</h1>
+        </header>
 
-      <ConnectionStatus isConnected={isConnected} />
-      {error && <div className="error-message">{t(error)}</div>}
+        <ConnectionStatus isConnected={isConnected} />
+        {error && <div className="error-message">{t(error)}</div>}
 
-      {inLobby ? (
-        <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} initialRoomId={roomIdFromUrl} />
-      ) : !gameState?.gameStarted ? (
-        <WaitingRoom
-          gameState={gameState}
-          playerId={playerId}
-          roomId={roomId}
-          onStartGame={startGame}
-          onLeaveLobby={leaveLobby}
-          onAddBot={addBot}
-          onRemoveBot={removeBot}
-        />
-      ) : (
-        <GameBoard
-          gameState={gameState}
-          playerState={playerState}
-          playerId={playerId}
-          roomId={roomId}
-          onPlayCard={playCard}
-          onDiscardCard={discardCard}
-          onLeaveGame={leaveGame}
-          onRequestRematch={requestRematch}
-          onUpdateRematchSettings={updateRematchSettings}
-          rematchVotes={rematchVotes}
-          rematchStockpileSize={rematchStockpileSize}
-          chatMessages={chatMessages}
-          onSendChatMessage={sendChatMessage}
-          onMarkMessagesRead={markMessagesAsRead}
-        />
-      )}
+        {inLobby ? (
+          <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} initialRoomId={roomIdFromUrl} />
+        ) : !gameState?.gameStarted ? (
+          <WaitingRoom
+            gameState={gameState}
+            playerId={playerId}
+            roomId={roomId}
+            onStartGame={startGame}
+            onLeaveLobby={leaveLobby}
+            onAddBot={addBot}
+            onRemoveBot={removeBot}
+          />
+        ) : (
+          <GameBoard
+            gameState={gameState}
+            playerState={playerState}
+            playerId={playerId}
+            roomId={roomId}
+            onPlayCard={playCard}
+            onDiscardCard={discardCard}
+            onLeaveGame={leaveGame}
+            onRequestRematch={requestRematch}
+            onUpdateRematchSettings={updateRematchSettings}
+            rematchVotes={rematchVotes}
+            rematchStockpileSize={rematchStockpileSize}
+            chatMessages={chatMessages}
+            onSendChatMessage={sendChatMessage}
+            onMarkMessagesRead={markMessagesAsRead}
+          />
+        )}
 
-      <footer className="App-footer">
-        <span className="version">
-          v{VERSION}
-          {COMMIT_HASH && ` (${COMMIT_HASH})`}
-        </span>
-        <select
-          className="language-selector"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-        >
-          {supportedLanguages.map((lang) => (
-            <option key={lang} value={lang}>
-              {t(`language.${lang}`)}
-            </option>
-          ))}
-        </select>
-      </footer>
-    </div>
+        <footer className="App-footer">
+          <span className="version">
+            v{VERSION}
+            {COMMIT_HASH && ` (${COMMIT_HASH})`}
+          </span>
+          <select
+            className="language-selector"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+          >
+            {supportedLanguages.map((lang) => (
+              <option key={lang} value={lang}>
+                {t(`language.${lang}`)}
+              </option>
+            ))}
+          </select>
+        </footer>
+      </div>
     </ErrorBoundary>
   );
 }

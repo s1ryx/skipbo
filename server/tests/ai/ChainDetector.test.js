@@ -93,7 +93,9 @@ describe('ChainDetector', () => {
     const chains = cd.findChains(playerState, gameState);
 
     // Should find chain: play 3 → pile needs 4 → play 4
-    const chain2 = chains.find((c) => c.totalPlays === 2 && c.plays[0].card === 3 && c.plays[1].card === 4);
+    const chain2 = chains.find(
+      (c) => c.totalPlays === 2 && c.plays[0].card === 3 && c.plays[1].card === 4
+    );
     expect(chain2).toBeDefined();
     expect(chain2.plays[0].pileIndex).toBe(0);
     expect(chain2.plays[1].pileIndex).toBe(0);
@@ -134,12 +136,13 @@ describe('ChainDetector', () => {
     const chains = cd.findChains(playerState, gameState);
 
     // Chain: play 3 from discard → reveals 4 → play 4 from discard
-    const revealChain = chains.find((c) =>
-      c.totalPlays >= 2 &&
-      c.plays[0].source === 'discard0' &&
-      c.plays[0].card === 3 &&
-      c.plays[1].source === 'discard0' &&
-      c.plays[1].card === 4
+    const revealChain = chains.find(
+      (c) =>
+        c.totalPlays >= 2 &&
+        c.plays[0].source === 'discard0' &&
+        c.plays[0].card === 3 &&
+        c.plays[1].source === 'discard0' &&
+        c.plays[1].card === 4
     );
     expect(revealChain).toBeDefined();
   });
@@ -152,10 +155,8 @@ describe('ChainDetector', () => {
     const chains = cd.findChains(playerState, gameState);
 
     // SKIP-BO can play as 4 on pile 0, then 5 from hand
-    const skipChain = chains.find((c) =>
-      c.plays[0].card === 'SKIP-BO' &&
-      c.plays[0].pileIndex === 0 &&
-      c.totalPlays >= 2
+    const skipChain = chains.find(
+      (c) => c.plays[0].card === 'SKIP-BO' && c.plays[0].pileIndex === 0 && c.totalPlays >= 2
     );
     expect(skipChain).toBeDefined();
   });

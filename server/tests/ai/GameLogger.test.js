@@ -7,13 +7,17 @@ const { GameLogger, MoveAnalyzer } = require('../../ai/GameLogger');
 function makeGame(overrides = {}) {
   const players = overrides.players || [
     {
-      internalId: 'p1', name: 'Alice', isBot: false,
+      internalId: 'p1',
+      name: 'Alice',
+      isBot: false,
       hand: [1, 2, 3, 4, 5],
       stockpile: [7],
       discardPiles: [[], [], [], []],
     },
     {
-      internalId: 'p2', name: 'Bob', isBot: true,
+      internalId: 'p2',
+      name: 'Bob',
+      isBot: true,
       hand: [6, 7, 8, 9, 10],
       stockpile: [3, 5],
       discardPiles: [[4], [], [], []],
@@ -128,7 +132,13 @@ describe('GameLogger', () => {
     const game = makeGame();
     logger.startGame(game);
     const stateBefore = logger._snapshot(game);
-    logger.logPlay(1, 'Alice', false, { card: 1, source: 'hand', buildingPileIndex: 0 }, stateBefore);
+    logger.logPlay(
+      1,
+      'Alice',
+      false,
+      { card: 1, source: 'hand', buildingPileIndex: 0 },
+      stateBefore
+    );
     logger.close();
 
     const lines = readLogLines(tmpDir);
@@ -146,8 +156,21 @@ describe('GameLogger', () => {
     const game = makeGame();
     logger.startGame(game);
     const stateBefore = logger._snapshot(game);
-    const analysis = { chosenScore: 10, bestScore: 15, bestMove: { card: 2 }, agreement: false, alternatives: [] };
-    logger.logPlay(1, 'Alice', false, { card: 1, source: 'hand', buildingPileIndex: 0 }, stateBefore, analysis);
+    const analysis = {
+      chosenScore: 10,
+      bestScore: 15,
+      bestMove: { card: 2 },
+      agreement: false,
+      alternatives: [],
+    };
+    logger.logPlay(
+      1,
+      'Alice',
+      false,
+      { card: 1, source: 'hand', buildingPileIndex: 0 },
+      stateBefore,
+      analysis
+    );
     logger.close();
 
     const lines = readLogLines(tmpDir);
@@ -162,7 +185,13 @@ describe('GameLogger', () => {
     const game = makeGame();
     logger.startGame(game);
     const stateBefore = logger._snapshot(game);
-    logger.logPlay(1, 'Alice', false, { card: 1, source: 'hand', buildingPileIndex: 0 }, stateBefore);
+    logger.logPlay(
+      1,
+      'Alice',
+      false,
+      { card: 1, source: 'hand', buildingPileIndex: 0 },
+      stateBefore
+    );
     logger.close();
 
     const lines = readLogLines(tmpDir);
@@ -220,7 +249,13 @@ describe('GameLogger', () => {
     logger.startGame(game);
     logger.logTurnStart(1, game);
     const stateBefore = logger._snapshot(game);
-    logger.logPlay(1, 'Alice', false, { card: 1, source: 'hand', buildingPileIndex: 0 }, stateBefore);
+    logger.logPlay(
+      1,
+      'Alice',
+      false,
+      { card: 1, source: 'hand', buildingPileIndex: 0 },
+      stateBefore
+    );
     logger.logDiscard(1, 'Alice', false, { card: 5, discardPileIndex: 0 }, stateBefore);
     logger.logTurnEnd(1, 'Alice', false, 1);
     logger.endGame(game);
@@ -314,7 +349,9 @@ describe('MoveAnalyzer', () => {
 
     // AI should want to play 1 (starts a pile)
     const result = analyzer.analyzePlay(playerState, gameState, {
-      card: 1, source: 'hand', buildingPileIndex: 0,
+      card: 1,
+      source: 'hand',
+      buildingPileIndex: 0,
     });
 
     expect(result.agreement).toBe(true);
@@ -333,7 +370,9 @@ describe('MoveAnalyzer', () => {
     // Playing 2 on an empty pile is invalid in-game, but the analyzer
     // just tries to find this move among scored chains. It won't find it.
     const result = analyzer.analyzePlay(playerState, gameState, {
-      card: 2, source: 'hand', buildingPileIndex: 0,
+      card: 2,
+      source: 'hand',
+      buildingPileIndex: 0,
     });
 
     // 2 can't be played on empty pile, so chosen score is 0
@@ -350,7 +389,8 @@ describe('MoveAnalyzer', () => {
     });
 
     const result = analyzer.analyzeDiscard(playerState, gameState, {
-      card: 9, discardPileIndex: 0,
+      card: 9,
+      discardPileIndex: 0,
     });
 
     expect(result.alternatives.length).toBeGreaterThanOrEqual(1);
@@ -391,7 +431,9 @@ describe('MoveAnalyzer', () => {
 
     // SKIP-BO can play as 1 on empty pile
     const result = analyzer.analyzePlay(playerState, gameState, {
-      card: 'SKIP-BO', source: 'hand', buildingPileIndex: 0,
+      card: 'SKIP-BO',
+      source: 'hand',
+      buildingPileIndex: 0,
     });
 
     expect(result.alternatives.length).toBeGreaterThanOrEqual(1);

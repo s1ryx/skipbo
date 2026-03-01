@@ -89,8 +89,8 @@ function discardPlacementScore(card, pile, pileQuality) {
 
   const diff = top - card;
 
-  if (diff === 1) return 10;  // Tier 1: contiguous descending — best
-  if (diff === 0) return 7;   // Tier 2: same value — good
+  if (diff === 1) return 10; // Tier 1: contiguous descending — best
+  if (diff === 0) return 7; // Tier 2: same value — good
 
   if (diff > 1) {
     if (diff <= 3) {
@@ -404,8 +404,11 @@ class StateEvaluator {
 
     // Opponent position (negative if they're ahead)
     for (const p of gameState.players) {
-      if (p.stockpileTop === playerState.stockpileTop &&
-          p.stockpileCount === playerState.stockpileCount) continue; // skip self
+      if (
+        p.stockpileTop === playerState.stockpileTop &&
+        p.stockpileCount === playerState.stockpileCount
+      )
+        continue; // skip self
       const oppProgress = (initialStock - p.stockpileCount) / initialStock;
       score -= oppProgress * 100;
     }
@@ -452,10 +455,8 @@ class StateEvaluator {
 
     // Player count scaling (§7.2): blocking matters less with more opponents
     const playerCount = gameState.players.length;
-    const scaleFactor = playerCount <= 2 ? 1.0
-      : playerCount === 3 ? 0.6
-        : playerCount === 4 ? 0.4
-          : 0.2; // 5+
+    const scaleFactor =
+      playerCount <= 2 ? 1.0 : playerCount === 3 ? 0.6 : playerCount === 4 ? 0.4 : 0.2; // 5+
 
     // Compute initial pile needs
     const initialNeeds = gameState.buildingPiles.map((p) => getNextCardValue(p));
@@ -471,8 +472,11 @@ class StateEvaluator {
 
     for (const player of gameState.players) {
       // Skip self (rough match by stockpile count — imperfect but sufficient)
-      if (player.stockpileCount === playerState.stockpileCount &&
-          player.stockpileTop === playerState.stockpileTop) continue;
+      if (
+        player.stockpileCount === playerState.stockpileCount &&
+        player.stockpileTop === playerState.stockpileTop
+      )
+        continue;
 
       const oppStock = player.stockpileTop;
       if (oppStock == null || oppStock === 'SKIP-BO') continue;
@@ -593,7 +597,10 @@ class StateEvaluator {
     // Part of a hand sequence
     const handNums = playerState.hand.filter((c) => typeof c === 'number').sort((a, b) => a - b);
     for (let i = 0; i < handNums.length - 1; i++) {
-      if (handNums[i + 1] === handNums[i] + 1 && (handNums[i] === card || handNums[i + 1] === card)) {
+      if (
+        handNums[i + 1] === handNums[i] + 1 &&
+        (handNums[i] === card || handNums[i + 1] === card)
+      ) {
         value += 6; // consecutive pair
         break;
       }
@@ -628,8 +635,8 @@ class StateEvaluator {
       const oppStock = player.stockpileTop;
       if (oppStock == null || typeof oppStock !== 'number') continue;
 
-      if (card === oppStock) bonus += 5;      // hiding the value they need
-      if (card === oppStock - 1) bonus += 3;  // hiding the bridge to their value
+      if (card === oppStock) bonus += 5; // hiding the value they need
+      if (card === oppStock - 1) bonus += 3; // hiding the bridge to their value
     }
 
     return bonus;

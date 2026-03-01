@@ -666,6 +666,7 @@ describe('GameCoordinator', () => {
       });
       const chatLog = logSpy.mock.calls.find((c) => c[0].includes('chat message'));
       expect(chatLog[0]).not.toMatch(/[\r\n]/);
+      // eslint-disable-next-line no-control-regex
       expect(chatLog[0]).not.toMatch(/\x1B/);
       logSpy.mockRestore();
     });
@@ -1110,7 +1111,10 @@ describe('GameCoordinator', () => {
 
       // Fill up pending deletions to the limit
       for (let i = 0; i < 50; i++) {
-        coordinator.pendingDeletions.set(`fake-room-${i}`, setTimeout(() => {}, 99999));
+        coordinator.pendingDeletions.set(
+          `fake-room-${i}`,
+          setTimeout(() => {}, 99999)
+        );
       }
 
       handlers.onMessage('player1', 'leaveLobby', {});
@@ -1163,9 +1167,7 @@ describe('GameCoordinator', () => {
       expect(game.gameOver).toBe(false);
       expect(game.gameStarted).toBe(true);
 
-      const gameStartedCalls = transport.send.mock.calls.filter(
-        (c) => c[1] === 'gameStarted'
-      );
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
       expect(gameStartedCalls.length).toBe(2);
     });
 
@@ -1441,9 +1443,7 @@ describe('GameCoordinator', () => {
       expect(game.gameOver).toBe(false);
       expect(game.gameStarted).toBe(true);
 
-      const gameStartedCalls = transport.send.mock.calls.filter(
-        (c) => c[1] === 'gameStarted'
-      );
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
       // Only human gets gameStarted (bot filtered out)
       expect(gameStartedCalls.length).toBe(1);
       expect(gameStartedCalls[0][0]).toBe('player1');

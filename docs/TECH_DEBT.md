@@ -105,7 +105,7 @@ broadcasting, the coordinator decorates the game state with bot metadata:
 
 ```js
 const state = game.getGameState();
-state.players = state.players.map(p => ({
+state.players = state.players.map((p) => ({
   ...p,
   isBot: this.botAIs.has(`${roomId}:${p.id}`),
   aiType: this.botAIs.get(`${roomId}:${p.id}`)?.type || null,
@@ -254,11 +254,11 @@ The coordinator directly mutates player objects owned by the game
 engine:
 
 ```js
-player.id = connectionId;        // reconnect
-player.sessionToken = token;      // join
-player.isBot = true;              // add bot
-player.aiType = validAiType;      // add bot
-game.hostPublicId = publicId;     // host transfer
+player.id = connectionId; // reconnect
+player.sessionToken = token; // join
+player.isBot = true; // add bot
+player.aiType = validAiType; // add bot
+game.hostPublicId = publicId; // host transfer
 ```
 
 **Why it matters:** The game engine cannot enforce invariants on its
@@ -269,9 +269,9 @@ coordinator reaches in directly.
 **Possible fix:** Add encapsulated mutators to `SkipBoGame`:
 
 ```js
-game.setPlayerId(oldId, newId)
-game.setSessionToken(playerId, token)
-game.setHost(publicId)
+game.setPlayerId(oldId, newId);
+game.setSessionToken(playerId, token);
+game.setHost(publicId);
 ```
 
 **Violates:** Loose Coupling, Clear Abstraction Layers.
@@ -355,9 +355,13 @@ Game phase is encoded as two booleans: `gameStarted` (boolean) and
 `gameOver` (boolean). Every phase-dependent handler contains:
 
 ```js
-if (!game.gameStarted) { /* lobby */ }
-else if (game.gameOver) { /* post-game */ }
-else { /* mid-game */ }
+if (!game.gameStarted) {
+  /* lobby */
+} else if (game.gameOver) {
+  /* post-game */
+} else {
+  /* mid-game */
+}
 ```
 
 This three-way branch appears in `handleDisconnect`,
@@ -371,7 +375,7 @@ allows an invalid state (`gameStarted: false, gameOver: true`).
 
 ```js
 const Phase = { LOBBY: 'lobby', PLAYING: 'playing', FINISHED: 'finished' };
-game.phase  // single field, exhaustive switch
+game.phase; // single field, exhaustive switch
 ```
 
 **Violates:** Consistency, Design Pattern Adherence (State Machine
@@ -489,45 +493,45 @@ independently shippable.
 
 ### Phase 1 — Quick wins (Low effort)
 
-| # | Change | Benefit |
-|---|--------|---------|
-| 1 | Add `BOT_ID_PREFIX` constant and `isBotId()` helper | Explicit convention |
-| 2 | Rename `getPublicId(connectionId)` → `getPublicId(playerId)` | Accurate naming |
-| 3 | Add game phase enum (`LOBBY`, `PLAYING`, `FINISHED`) | Eliminate boolean pair, enable exhaustive matching |
-| 4 | Extract game constants to shared `config.js` | Single source of truth for rules and limits |
+| #   | Change                                                       | Benefit                                            |
+| --- | ------------------------------------------------------------ | -------------------------------------------------- |
+| 1   | Add `BOT_ID_PREFIX` constant and `isBotId()` helper          | Explicit convention                                |
+| 2   | Rename `getPublicId(connectionId)` → `getPublicId(playerId)` | Accurate naming                                    |
+| 3   | Add game phase enum (`LOBBY`, `PLAYING`, `FINISHED`)         | Eliminate boolean pair, enable exhaustive matching |
+| 4   | Extract game constants to shared `config.js`                 | Single source of truth for rules and limits        |
 
 ### Phase 2 — Server encapsulation (Medium effort)
 
-| # | Change | Benefit |
-|---|--------|---------|
-| 5 | Add rematch methods to `SkipBoGame` | Game engine owns its lifecycle |
-| 6 | Add player mutators to `SkipBoGame` (`setPlayerId`, `setHost`) | Enforce invariants |
-| 7 | Move validation to game engine, sanitize I/O in coordinator | No duplicate rules |
-| 8 | Move `isBot`/`aiType` out of game engine, decorate in coordinator | Pure domain model |
+| #   | Change                                                            | Benefit                        |
+| --- | ----------------------------------------------------------------- | ------------------------------ |
+| 5   | Add rematch methods to `SkipBoGame`                               | Game engine owns its lifecycle |
+| 6   | Add player mutators to `SkipBoGame` (`setPlayerId`, `setHost`)    | Enforce invariants             |
+| 7   | Move validation to game engine, sanitize I/O in coordinator       | No duplicate rules             |
+| 8   | Move `isBot`/`aiType` out of game engine, decorate in coordinator | Pure domain model              |
 
 ### Phase 3 — Server extraction (Medium-High effort)
 
-| # | Change | Benefit |
-|---|--------|---------|
-| 9 | Extract `BotManager` from coordinator | Bot logic testable in isolation |
-| 10 | Extract `SessionManager` from coordinator | Session logic centralized |
-| 11 | Unify human/bot turn execution into `_executeTurn()` | Single code path |
-| 12 | Add structured logging (replace `console.log`) | Production-ready observability |
+| #   | Change                                               | Benefit                         |
+| --- | ---------------------------------------------------- | ------------------------------- |
+| 9   | Extract `BotManager` from coordinator                | Bot logic testable in isolation |
+| 10  | Extract `SessionManager` from coordinator            | Session logic centralized       |
+| 11  | Unify human/bot turn execution into `_executeTurn()` | Single code path                |
+| 12  | Add structured logging (replace `console.log`)       | Production-ready observability  |
 
 ### Phase 4 — Client restructuring (Medium effort)
 
-| # | Change | Benefit |
-|---|--------|---------|
-| 13 | Split `useGameConnection` into focused hooks | Each hook testable in isolation |
-| 14 | Extract `GameBoard` sub-components | Smaller, focused components |
-| 15 | Extract `messageHandlers.js` from god hook | Pure functions, easy to test |
-| 16 | Move `getNextCardForPile` to shared utility | Eliminate client-server logic duplication |
+| #   | Change                                       | Benefit                                   |
+| --- | -------------------------------------------- | ----------------------------------------- |
+| 13  | Split `useGameConnection` into focused hooks | Each hook testable in isolation           |
+| 14  | Extract `GameBoard` sub-components           | Smaller, focused components               |
+| 15  | Extract `messageHandlers.js` from god hook   | Pure functions, easy to test              |
+| 16  | Move `getNextCardForPile` to shared utility  | Eliminate client-server logic duplication |
 
 ### Phase 5 — Architecture alignment (High effort)
 
-| # | Change | Benefit |
-|---|--------|---------|
-| 17 | Separate player identity from connection ID | Clean ID semantics |
-| 18 | Introduce game repository abstraction | Storage-agnostic game persistence |
-| 19 | Add error boundary and connection status to client | Graceful failure handling |
-| 20 | Standardize error objects across all layers | Consistent error handling |
+| #   | Change                                             | Benefit                           |
+| --- | -------------------------------------------------- | --------------------------------- |
+| 17  | Separate player identity from connection ID        | Clean ID semantics                |
+| 18  | Introduce game repository abstraction              | Storage-agnostic game persistence |
+| 19  | Add error boundary and connection status to client | Graceful failure handling         |
+| 20  | Standardize error objects across all layers        | Consistent error handling         |

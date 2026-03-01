@@ -63,7 +63,11 @@ function PlayerArea({
                           if (discardMode) {
                             return;
                           }
-                          if (quickDiscardEnabled && selectedCard && selectedSource?.startsWith('hand-')) {
+                          if (
+                            quickDiscardEnabled &&
+                            selectedCard &&
+                            selectedSource?.startsWith('hand-')
+                          ) {
                             return;
                           }
                           if (cardIndex === pile.length - 1) {
@@ -111,18 +115,12 @@ function PlayerArea({
         {selectedCard && (
           <div className="selected-card-info">
             {t('game.selected')} <Card value={selectedCard} isVisible={true} size="small" />
-            <button onClick={onClearSelection}>
-              {t('game.cancel')}
-            </button>
+            <button onClick={onClearSelection}>{t('game.cancel')}</button>
           </div>
         )}
         <div className="settings-toggle">
           <label>
-            <input
-              type="checkbox"
-              checked={quickDiscardEnabled}
-              onChange={onToggleQuickDiscard}
-            />
+            <input type="checkbox" checked={quickDiscardEnabled} onChange={onToggleQuickDiscard} />
             {t('game.quickDiscard')}
           </label>
         </div>

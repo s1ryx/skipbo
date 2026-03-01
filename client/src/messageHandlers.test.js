@@ -22,9 +22,15 @@ const sessionStorageMock = (() => {
   let store = {};
   return {
     getItem: jest.fn((key) => store[key] || null),
-    setItem: jest.fn((key, value) => { store[key] = value; }),
-    removeItem: jest.fn((key) => { delete store[key]; }),
-    clear: jest.fn(() => { store = {}; }),
+    setItem: jest.fn((key, value) => {
+      store[key] = value;
+    }),
+    removeItem: jest.fn((key) => {
+      delete store[key];
+    }),
+    clear: jest.fn(() => {
+      store = {};
+    }),
   };
 })();
 Object.defineProperty(globalThis, 'sessionStorage', { value: sessionStorageMock });
@@ -86,8 +92,11 @@ describe('createMessageHandlers', () => {
       const playerState = { hand: [1, 2] };
 
       handlers.reconnected({
-        roomId: 'XYZ', playerId: 'p1', sessionToken: 'tok2',
-        gameState, playerState,
+        roomId: 'XYZ',
+        playerId: 'p1',
+        sessionToken: 'tok2',
+        gameState,
+        playerState,
       });
 
       expect(deps.setRoomId).toHaveBeenCalledWith('XYZ');
@@ -107,8 +116,11 @@ describe('createMessageHandlers', () => {
       };
 
       handlers.reconnected({
-        roomId: 'XYZ', playerId: 'p1', sessionToken: 'tok',
-        gameState, playerState: {},
+        roomId: 'XYZ',
+        playerId: 'p1',
+        sessionToken: 'tok',
+        gameState,
+        playerState: {},
       });
 
       expect(deps.setRematchVotes).toHaveBeenCalledWith(['p1']);

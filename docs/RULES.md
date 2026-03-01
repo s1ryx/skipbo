@@ -146,4 +146,3 @@ If two players empty their stockpiles at the same time, the one who played their
 2. Unable to make any more plays
 3. Discards a card at the end of their turn
 4. Play passes to the next player
-

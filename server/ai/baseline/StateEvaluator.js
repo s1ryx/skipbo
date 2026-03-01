@@ -108,13 +108,19 @@ class StateEvaluator {
       if (need == null) continue;
       if (playerState.hand.some((c) => c === need || c === 'SKIP-BO')) accessible++;
       for (const dp of playerState.discardPiles) {
-        if (dp.length > 0 && (dp[dp.length - 1] === need || dp[dp.length - 1] === 'SKIP-BO')) accessible++;
+        if (dp.length > 0 && (dp[dp.length - 1] === need || dp[dp.length - 1] === 'SKIP-BO'))
+          accessible++;
       }
-      if (playerState.stockpileTop === need || playerState.stockpileTop === 'SKIP-BO') accessible += 5;
+      if (playerState.stockpileTop === need || playerState.stockpileTop === 'SKIP-BO')
+        accessible += 5;
     }
     score += accessible * 8;
     for (const p of gameState.players) {
-      if (p.stockpileTop === playerState.stockpileTop && p.stockpileCount === playerState.stockpileCount) continue;
+      if (
+        p.stockpileTop === playerState.stockpileTop &&
+        p.stockpileCount === playerState.stockpileCount
+      )
+        continue;
       const oppProgress = (initialStock - p.stockpileCount) / initialStock;
       score -= oppProgress * 100;
     }
@@ -140,8 +146,11 @@ class StateEvaluator {
     let penalty = 0;
     for (const play of chain.plays) {
       for (const player of gameState.players) {
-        if (player.stockpileCount === playerState.stockpileCount &&
-            player.stockpileTop === playerState.stockpileTop) continue;
+        if (
+          player.stockpileCount === playerState.stockpileCount &&
+          player.stockpileTop === playerState.stockpileTop
+        )
+          continue;
         const distances = opponentDistances(gameState, player.stockpileTop);
         const dist = distances[play.pileIndex];
         if (dist == null) continue;
@@ -179,20 +188,33 @@ class StateEvaluator {
     const pileNeeds = gameState.buildingPiles.map((p) => getNextCardValue(p));
     const ownStock = playerState.stockpileTop;
     for (const need of pileNeeds) {
-      if (need === card) { value += 15; break; }
+      if (need === card) {
+        value += 15;
+        break;
+      }
     }
     for (const need of pileNeeds) {
-      if (need != null && card > need && card <= need + 2) { value += 8; break; }
+      if (need != null && card > need && card <= need + 2) {
+        value += 8;
+        break;
+      }
     }
     if (typeof ownStock === 'number') {
       for (const need of pileNeeds) {
-        if (need != null && card >= need && card <= ownStock) { value += 12; break; }
+        if (need != null && card >= need && card <= ownStock) {
+          value += 12;
+          break;
+        }
       }
     }
     const handNums = playerState.hand.filter((c) => typeof c === 'number').sort((a, b) => a - b);
     for (let i = 0; i < handNums.length - 1; i++) {
-      if (handNums[i + 1] === handNums[i] + 1 && (handNums[i] === card || handNums[i + 1] === card)) {
-        value += 6; break;
+      if (
+        handNums[i + 1] === handNums[i] + 1 &&
+        (handNums[i] === card || handNums[i + 1] === card)
+      ) {
+        value += 6;
+        break;
       }
     }
     const remaining = this.cc.remaining(card);

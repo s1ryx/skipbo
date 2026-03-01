@@ -74,6 +74,7 @@ limiting, send/receive abstraction.
 **Hides:** Socket.IO API, connection pooling, serialization format.
 
 **Interface:**
+
 ```
 send(connectionId, event, data)
 sendToGroup(groupId, event, data)
@@ -95,6 +96,7 @@ player), connection-to-room lookup.
 **Hides:** Token format, lookup structures, ID swap mechanics.
 
 **Interface:**
+
 ```
 createSession(connectionId, roomId) → token
 validateSession(connectionId, token) → { playerId, roomId }
@@ -115,6 +117,7 @@ completed-game cleanup timers.
 **Hides:** Room ID generation, timer scheduling, host transfer rules.
 
 **Interface:**
+
 ```
 createRoom(hostId, options) → roomId
 joinRoom(playerId, roomId) → success
@@ -134,6 +137,7 @@ advancement, win condition, state serialization.
 **Hides:** Shuffle algorithm, pile recycling, hand size management.
 
 **Interface:**
+
 ```
 addPlayer(id, name) → success
 startGame() → success
@@ -169,6 +173,7 @@ move selection, discard strategy.
 **Hides:** Scoring heuristics, search depth, evaluation weights.
 
 **Interface:**
+
 ```
 choosePlay(state) → { card, source, pileIndex } | null
 chooseDiscard(state) → { card, pileIndex }
@@ -210,12 +215,12 @@ into `useGameConnection` (god hook, 337 lines) and `App.js`. `GameBoard`
 These are not layers — they are services injected into any layer that
 needs them.
 
-| Concern | Current state | Target |
-|---------|---------------|--------|
-| **Logging** | `console.log` in coordinator only | Structured logger injected via config |
-| **Configuration** | Constants scattered across files | Single config module with defaults |
-| **Error handling** | Inconsistent (silent drops, error events, return objects) | Typed error objects, centralized handler |
-| **Validation** | Duplicated between coordinator and game engine | Single source of truth in game engine; coordinator sanitizes I/O only |
+| Concern            | Current state                                             | Target                                                                |
+| ------------------ | --------------------------------------------------------- | --------------------------------------------------------------------- |
+| **Logging**        | `console.log` in coordinator only                         | Structured logger injected via config                                 |
+| **Configuration**  | Constants scattered across files                          | Single config module with defaults                                    |
+| **Error handling** | Inconsistent (silent drops, error events, return objects) | Typed error objects, centralized handler                              |
+| **Validation**     | Duplicated between coordinator and game engine            | Single source of truth in game engine; coordinator sanitizes I/O only |
 
 ---
 
@@ -232,9 +237,13 @@ this is encoded as two booleans (`gameStarted`, `gameOver`). Every
 handler that behaves differently per phase contains:
 
 ```js
-if (!game.gameStarted) { /* lobby */ }
-else if (game.gameOver) { /* post-game */ }
-else { /* mid-game */ }
+if (!game.gameStarted) {
+  /* lobby */
+} else if (game.gameOver) {
+  /* post-game */
+} else {
+  /* mid-game */
+}
 ```
 
 This three-way branch is duplicated in `handleDisconnect`,
@@ -244,7 +253,7 @@ This three-way branch is duplicated in `handleDisconnect`,
 
 ```js
 const Phase = { LOBBY: 'lobby', PLAYING: 'playing', FINISHED: 'finished' };
-game.phase  // single field, exhaustive switch
+game.phase; // single field, exhaustive switch
 ```
 
 Handlers dispatch on `game.phase` with a switch statement. Adding a
@@ -320,7 +329,9 @@ across human and bot code paths.
 **Pattern:** Represent each action as a command object:
 
 ```js
-{ type: 'playCard', playerId, card, source, pileIndex }
+{
+  type: ('playCard', playerId, card, source, pileIndex);
+}
 ```
 
 A single `executeCommand(roomId, command)` method validates, applies to
@@ -342,8 +353,13 @@ creating tight coupling between business logic and in-memory storage.
 **Pattern:** Wrap storage behind a repository interface:
 
 ```js
-{ getGame(roomId), saveGame(game), deleteGame(roomId),
-  getPlayerRoom(playerId), setPlayerRoom(playerId, roomId) }
+{
+  (getGame(roomId),
+    saveGame(game),
+    deleteGame(roomId),
+    getPlayerRoom(playerId),
+    setPlayerRoom(playerId, roomId));
+}
 ```
 
 **Benefit:** Enables future persistence (Redis, database) without

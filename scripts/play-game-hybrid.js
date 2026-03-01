@@ -21,7 +21,9 @@
 const path = require('path');
 const { firefox } = require(path.join(__dirname, '..', 'server', 'node_modules', 'playwright'));
 const { io } = require(path.join(__dirname, '..', 'server', 'node_modules', 'socket.io-client'));
-const gameAI = require(path.join(__dirname, '..', 'server', 'tests', 'integration', 'helpers', 'gameAI'));
+const gameAI = require(
+  path.join(__dirname, '..', 'server', 'tests', 'integration', 'helpers', 'gameAI')
+);
 
 const args = process.argv.slice(2);
 const headed = args.includes('--headed');
@@ -150,14 +152,20 @@ async function browserPlayTurn(page) {
     const hand = await getHandCards(page);
     const discardCards = await getDiscardTopCards(page);
 
-    log(`    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`);
+    log(
+      `    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`
+    );
 
     // 1. Stockpile
     if (stock) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(stock.value, nextValues[i])) {
           log(`    >> STOCKPILE ${stock.value} -> pile ${i}`);
-          if (await tryPlayOnPile(page, stock.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, stock.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) continue;
@@ -169,7 +177,11 @@ async function browserPlayTurn(page) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(card.value, nextValues[i])) {
           log(`    -> Hand ${card.value} -> pile ${i}`);
-          if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, card.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) break;
@@ -181,7 +193,11 @@ async function browserPlayTurn(page) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(card.value, nextValues[i])) {
           log(`    -> Discard ${card.value} -> pile ${i}`);
-          if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, card.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) break;
@@ -194,7 +210,11 @@ async function browserPlayTurn(page) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(card.value, nextValues[i])) {
           log(`    -> SKIP-BO -> pile ${i} (as ${nextValues[i]})`);
-          if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, card.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) break;
@@ -217,9 +237,11 @@ async function browserPlayTurnCooperative(page, targetStockpileTop, isTargetPlay
     const hand = await getHandCards(page);
     const discardCards = await getDiscardTopCards(page);
     const targetTop = targetStockpileTop;
-    const reservedValue = (targetTop != null && targetTop !== 'SKIP-BO') ? targetTop : null;
+    const reservedValue = targetTop != null && targetTop !== 'SKIP-BO' ? targetTop : null;
 
-    log(`    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`);
+    log(
+      `    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`
+    );
     log(`    Target stockpile: ${targetTop}, Role: ${isTargetPlayer ? 'TARGET' : 'HELPER'}`);
 
     // 1. Target: play own stockpile first (this wins the game)
@@ -228,14 +250,22 @@ async function browserPlayTurnCooperative(page, targetStockpileTop, isTargetPlay
         for (let i = 0; i < nextValues.length; i++) {
           if (nextValues[i] !== null) {
             log(`    >> TARGET STOCKPILE SKIP-BO -> pile ${i} (as ${nextValues[i]})`);
-            if (await tryPlayOnPile(page, stock.element, i)) { played++; foundMove = true; break; }
+            if (await tryPlayOnPile(page, stock.element, i)) {
+              played++;
+              foundMove = true;
+              break;
+            }
           }
         }
       } else {
         for (let i = 0; i < nextValues.length; i++) {
           if (canPlay(stock.value, nextValues[i])) {
             log(`    >> TARGET STOCKPILE ${stock.value} -> pile ${i} (win progress!)`);
-            if (await tryPlayOnPile(page, stock.element, i)) { played++; foundMove = true; break; }
+            if (await tryPlayOnPile(page, stock.element, i)) {
+              played++;
+              foundMove = true;
+              break;
+            }
           }
         }
       }
@@ -258,7 +288,11 @@ async function browserPlayTurnCooperative(page, targetStockpileTop, isTargetPlay
           continue;
         }
         log(`    -> Hand ${card.value} -> pile ${i}`);
-        if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+        if (await tryPlayOnPile(page, card.element, i)) {
+          played++;
+          foundMove = true;
+          break;
+        }
       }
       if (foundMove) break;
     }
@@ -272,7 +306,11 @@ async function browserPlayTurnCooperative(page, targetStockpileTop, isTargetPlay
         if (card.value !== nextValues[i]) continue;
         if (!isTargetPlayer && nextValues[i] === reservedValue) continue;
         log(`    -> Discard ${card.value} -> pile ${i}`);
-        if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+        if (await tryPlayOnPile(page, card.element, i)) {
+          played++;
+          foundMove = true;
+          break;
+        }
       }
       if (foundMove) break;
     }
@@ -287,8 +325,14 @@ async function browserPlayTurnCooperative(page, targetStockpileTop, isTargetPlay
         if (nextValues[i] === reservedValue - 1 || nextValues[i] === reservedValue) {
           const skipBo = hand.find((c) => c.value === 'SKIP-BO');
           if (skipBo) {
-            log(`    -> SKIP-BO -> pile ${i} (as ${nextValues[i]}, bridging to target ${reservedValue})`);
-            if (await tryPlayOnPile(page, skipBo.element, i)) { played++; foundMove = true; break; }
+            log(
+              `    -> SKIP-BO -> pile ${i} (as ${nextValues[i]}, bridging to target ${reservedValue})`
+            );
+            if (await tryPlayOnPile(page, skipBo.element, i)) {
+              played++;
+              foundMove = true;
+              break;
+            }
           }
         }
       }
@@ -302,7 +346,11 @@ async function browserPlayTurnCooperative(page, targetStockpileTop, isTargetPlay
         if (nextValues[i] === null) continue;
         if (!isTargetPlayer && nextValues[i] === reservedValue) continue;
         log(`    -> Last resort SKIP-BO -> pile ${i} (as ${nextValues[i]})`);
-        if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+        if (await tryPlayOnPile(page, card.element, i)) {
+          played++;
+          foundMove = true;
+          break;
+        }
       }
       if (foundMove) break;
     }
@@ -315,16 +363,18 @@ async function browserPlayTurnCooperative(page, targetStockpileTop, isTargetPlay
 
 async function browserDiscard(page) {
   const btn = await page.$('button.btn-end-turn');
-  if (btn) { await btn.click({ force: true }); await page.waitForTimeout(300); }
+  if (btn) {
+    await btn.click({ force: true });
+    await page.waitForTimeout(300);
+  }
 
   const hand = await getHandCards(page);
   if (hand.length === 0) return;
 
   // Pick highest non-SKIP-BO card to discard
   const nonSkipBo = hand.filter((c) => c.value !== 'SKIP-BO');
-  const cardToDiscard = nonSkipBo.length > 0
-    ? nonSkipBo.sort((a, b) => b.value - a.value)[0]
-    : hand[0];
+  const cardToDiscard =
+    nonSkipBo.length > 0 ? nonSkipBo.sort((a, b) => b.value - a.value)[0] : hand[0];
   log(`    Discard ${cardToDiscard.value}`);
   await cardToDiscard.element.click({ force: true });
   await page.waitForTimeout(200);
@@ -385,7 +435,10 @@ async function browserDiscard(page) {
     for (let d = 0; d < tops.length; d++) {
       if (typeof tops[d] === 'number' && tops[d] > cardNum) {
         const gap = tops[d] - cardNum;
-        if (gap < bestGap) { bestGap = gap; bestPile = d; }
+        if (gap < bestGap) {
+          bestGap = gap;
+          bestPile = d;
+        }
       }
     }
     if (bestPile !== -1) log(`    -> pile ${bestPile} (closest above ${tops[bestPile]})`);
@@ -549,7 +602,10 @@ async function main() {
         process.stdout.write(`  Turn ${turns} (Alice${tag}): played ${played} cards`);
 
         const gameOverCheck = await page.$('.game-over-overlay');
-        if (gameOverCheck) { process.stdout.write(' -> GAME OVER\n'); continue; }
+        if (gameOverCheck) {
+          process.stdout.write(' -> GAME OVER\n');
+          continue;
+        }
 
         await browserDiscard(page);
         process.stdout.write(' -> discarded\n');
@@ -564,7 +620,13 @@ async function main() {
         // Play cards via Socket.IO
         let move;
         if (cooperative) {
-          move = gameAI.findPlayableCardCooperative(bobPlayerState, bobGameState, alicePlayerId, false, log);
+          move = gameAI.findPlayableCardCooperative(
+            bobPlayerState,
+            bobGameState,
+            alicePlayerId,
+            false,
+            log
+          );
         } else {
           move = gameAI.findPlayableCard(bobPlayerState, bobGameState, log);
         }
@@ -583,7 +645,13 @@ async function main() {
           if (bobGameState.gameOver) break;
 
           if (cooperative) {
-            move = gameAI.findPlayableCardCooperative(bobPlayerState, bobGameState, alicePlayerId, false, log);
+            move = gameAI.findPlayableCardCooperative(
+              bobPlayerState,
+              bobGameState,
+              alicePlayerId,
+              false,
+              log
+            );
           } else {
             move = gameAI.findPlayableCard(bobPlayerState, bobGameState, log);
           }
@@ -600,7 +668,13 @@ async function main() {
         // Discard
         let discard;
         if (cooperative) {
-          discard = gameAI.chooseDiscardCooperative(bobPlayerState, bobGameState, alicePlayerId, turns, log);
+          discard = gameAI.chooseDiscardCooperative(
+            bobPlayerState,
+            bobGameState,
+            alicePlayerId,
+            turns,
+            log
+          );
         } else {
           discard = gameAI.chooseDiscard(bobPlayerState, turns, log);
         }
@@ -620,8 +694,10 @@ async function main() {
   }
 }
 
-main().then(() => process.exit(0)).catch((err) => {
-  console.error('Error:', err.message);
-  if (err.stack) console.error(err.stack);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error('Error:', err.message);
+    if (err.stack) console.error(err.stack);
+    process.exit(1);
+  });

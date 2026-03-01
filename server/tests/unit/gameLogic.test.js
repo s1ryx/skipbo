@@ -76,13 +76,15 @@ describe('SkipBoGame', () => {
       const result = game.addPlayer('p1', 'Alice');
       expect(result).toBe(true);
       expect(game.players).toHaveLength(1);
-      expect(game.players[0]).toEqual(expect.objectContaining({
-        connectionId: 'p1',
-        name: 'Alice',
-        stockpile: [],
-        hand: [],
-        discardPiles: [[], [], [], []],
-      }));
+      expect(game.players[0]).toEqual(
+        expect.objectContaining({
+          connectionId: 'p1',
+          name: 'Alice',
+          stockpile: [],
+          hand: [],
+          discardPiles: [[], [], [], []],
+        })
+      );
       expect(game.players[0].internalId).toBeDefined();
       expect(game.players[0].publicId).toHaveLength(8);
     });
@@ -813,10 +815,7 @@ describe('SkipBoGame', () => {
       game.addRematchVote(p1);
       const ids = game.getRematchVoterPublicIds();
       // Order follows players array, not vote order
-      expect(ids).toEqual([
-        game.players[0].publicId,
-        game.players[1].publicId,
-      ]);
+      expect(ids).toEqual([game.players[0].publicId, game.players[1].publicId]);
     });
 
     it('ignores votes from removed players', () => {

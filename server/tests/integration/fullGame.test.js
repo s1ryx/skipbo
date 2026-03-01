@@ -26,10 +26,7 @@ async function setupGame(stockpileSize = 5) {
   const room = await c1.createRoom('Alice', 2, stockpileSize);
   await c2.joinRoom(room.roomId, 'Bob');
 
-  const [started1, started2] = await Promise.all([
-    c1.startGame(),
-    c2.waitFor('gameStarted'),
-  ]);
+  const [started1, started2] = await Promise.all([c1.startGame(), c2.waitFor('gameStarted')]);
 
   const aliceId = room.playerId;
   const bobId = started2.gameState.players.find((p) => p.name === 'Bob').id;

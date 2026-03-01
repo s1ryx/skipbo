@@ -190,7 +190,8 @@ describe('AIPlayer', () => {
       const plays = [];
       let state = { ...playerState, hand: [...playerState.hand] };
 
-      for (let i = 0; i < 20; i++) { // safety limit
+      for (let i = 0; i < 20; i++) {
+        // safety limit
         const play = ai.findPlayableCard(state, gameState);
         if (!play) break;
         plays.push(play);

@@ -5,12 +5,12 @@ const { BOT_ID_PREFIX } = require('./config');
 
 class BotManager {
   constructor() {
-    this.botAIs = new Map();        // `${roomId}:${publicId}` → AIPlayer instance
+    this.botAIs = new Map(); // `${roomId}:${publicId}` → AIPlayer instance
     this.botTurnTimers = new Map(); // roomId → [timeoutId...]
   }
 
   createBot(roomId, game, aiType) {
-    const validAiType = (aiType === 'improved' || aiType === 'baseline') ? aiType : 'improved';
+    const validAiType = aiType === 'improved' || aiType === 'baseline' ? aiType : 'improved';
     const botConnectionId = BOT_ID_PREFIX + crypto.randomUUID();
     const botNumber = game.players.filter((p) => p.isBot).length + 1;
     const botName = `Bot ${botNumber}`;

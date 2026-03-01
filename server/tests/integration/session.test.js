@@ -99,10 +99,7 @@ describe('Session and reconnection', () => {
     const tokenData = await c2.joinRoom(room.roomId, 'Bob');
 
     // Start game
-    const [s1] = await Promise.all([
-      c1.startGame(),
-      c2.waitFor('gameStarted'),
-    ]);
+    const [s1] = await Promise.all([c1.startGame(), c2.waitFor('gameStarted')]);
 
     // Disconnect c1 (Alice)
     const disconnectP = c2.waitFor('playerDisconnected');
@@ -242,10 +239,7 @@ describe('Session and reconnection', () => {
     const room = await c1.createRoom('Alice', 2, 5);
     await c2.joinRoom(room.roomId, 'Bob');
 
-    const [started] = await Promise.all([
-      c1.startGame(),
-      c2.waitFor('gameStarted'),
-    ]);
+    const [started] = await Promise.all([c1.startGame(), c2.waitFor('gameStarted')]);
 
     const originalAliceId = room.playerId;
 

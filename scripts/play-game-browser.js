@@ -184,14 +184,20 @@ async function playTurn(page) {
     const hand = await getHandCards(page);
     const discardCards = await getDiscardTopCards(page);
 
-    log(`    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`);
+    log(
+      `    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`
+    );
 
     // 1. Stockpile
     if (stock) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(stock.value, nextValues[i])) {
           log(`    >> STOCKPILE ${stock.value} -> pile ${i}`);
-          if (await tryPlayOnPile(page, stock.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, stock.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) continue;
@@ -203,7 +209,11 @@ async function playTurn(page) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(card.value, nextValues[i])) {
           log(`    -> Hand ${card.value} -> pile ${i}`);
-          if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, card.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) break;
@@ -215,7 +225,11 @@ async function playTurn(page) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(card.value, nextValues[i])) {
           log(`    -> Discard ${card.value} -> pile ${i}`);
-          if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, card.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) break;
@@ -228,7 +242,11 @@ async function playTurn(page) {
       for (let i = 0; i < nextValues.length; i++) {
         if (canPlay(card.value, nextValues[i])) {
           log(`    -> SKIP-BO -> pile ${i} (as ${nextValues[i]})`);
-          if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+          if (await tryPlayOnPile(page, card.element, i)) {
+            played++;
+            foundMove = true;
+            break;
+          }
         }
       }
       if (foundMove) break;
@@ -251,9 +269,11 @@ async function playTurnCooperative(page, targetStockpileTop, isTargetPlayer) {
     const hand = await getHandCards(page);
     const discardCards = await getDiscardTopCards(page);
     const targetTop = targetStockpileTop;
-    const reservedValue = (targetTop != null && targetTop !== 'SKIP-BO') ? targetTop : null;
+    const reservedValue = targetTop != null && targetTop !== 'SKIP-BO' ? targetTop : null;
 
-    log(`    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`);
+    log(
+      `    Piles: [${nextValues.map((v) => v ?? 'done').join(', ')}], Hand: [${hand.map((c) => c.value).join(', ')}], Stock: ${stock?.value ?? '-'}`
+    );
     log(`    Target stockpile: ${targetTop}, Role: ${isTargetPlayer ? 'TARGET' : 'HELPER'}`);
 
     // 1. Target: play own stockpile first (this wins the game)
@@ -263,14 +283,22 @@ async function playTurnCooperative(page, targetStockpileTop, isTargetPlayer) {
         for (let i = 0; i < nextValues.length; i++) {
           if (nextValues[i] !== null) {
             log(`    >> TARGET STOCKPILE SKIP-BO -> pile ${i} (as ${nextValues[i]})`);
-            if (await tryPlayOnPile(page, stock.element, i)) { played++; foundMove = true; break; }
+            if (await tryPlayOnPile(page, stock.element, i)) {
+              played++;
+              foundMove = true;
+              break;
+            }
           }
         }
       } else {
         for (let i = 0; i < nextValues.length; i++) {
           if (canPlay(stock.value, nextValues[i])) {
             log(`    >> TARGET STOCKPILE ${stock.value} -> pile ${i} (win progress!)`);
-            if (await tryPlayOnPile(page, stock.element, i)) { played++; foundMove = true; break; }
+            if (await tryPlayOnPile(page, stock.element, i)) {
+              played++;
+              foundMove = true;
+              break;
+            }
           }
         }
       }
@@ -293,7 +321,11 @@ async function playTurnCooperative(page, targetStockpileTop, isTargetPlayer) {
           continue;
         }
         log(`    -> Hand ${card.value} -> pile ${i}`);
-        if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+        if (await tryPlayOnPile(page, card.element, i)) {
+          played++;
+          foundMove = true;
+          break;
+        }
       }
       if (foundMove) break;
     }
@@ -307,7 +339,11 @@ async function playTurnCooperative(page, targetStockpileTop, isTargetPlayer) {
         if (card.value !== nextValues[i]) continue;
         if (!isTargetPlayer && nextValues[i] === reservedValue) continue;
         log(`    -> Discard ${card.value} -> pile ${i}`);
-        if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+        if (await tryPlayOnPile(page, card.element, i)) {
+          played++;
+          foundMove = true;
+          break;
+        }
       }
       if (foundMove) break;
     }
@@ -322,8 +358,14 @@ async function playTurnCooperative(page, targetStockpileTop, isTargetPlayer) {
         if (nextValues[i] === reservedValue - 1 || nextValues[i] === reservedValue) {
           const skipBo = hand.find((c) => c.value === 'SKIP-BO');
           if (skipBo) {
-            log(`    -> SKIP-BO -> pile ${i} (as ${nextValues[i]}, bridging to target ${reservedValue})`);
-            if (await tryPlayOnPile(page, skipBo.element, i)) { played++; foundMove = true; break; }
+            log(
+              `    -> SKIP-BO -> pile ${i} (as ${nextValues[i]}, bridging to target ${reservedValue})`
+            );
+            if (await tryPlayOnPile(page, skipBo.element, i)) {
+              played++;
+              foundMove = true;
+              break;
+            }
           }
         }
       }
@@ -337,7 +379,11 @@ async function playTurnCooperative(page, targetStockpileTop, isTargetPlayer) {
         if (nextValues[i] === null) continue;
         if (!isTargetPlayer && nextValues[i] === reservedValue) continue;
         log(`    -> Last resort SKIP-BO -> pile ${i} (as ${nextValues[i]})`);
-        if (await tryPlayOnPile(page, card.element, i)) { played++; foundMove = true; break; }
+        if (await tryPlayOnPile(page, card.element, i)) {
+          played++;
+          foundMove = true;
+          break;
+        }
       }
       if (foundMove) break;
     }
@@ -360,9 +406,8 @@ async function discardCard(page) {
 
   // Pick highest non-SKIP-BO card to discard
   const nonSkipBo = handCards.filter((c) => c.value !== 'SKIP-BO');
-  const cardToDiscard = nonSkipBo.length > 0
-    ? nonSkipBo.sort((a, b) => b.value - a.value)[0]
-    : handCards[0];
+  const cardToDiscard =
+    nonSkipBo.length > 0 ? nonSkipBo.sort((a, b) => b.value - a.value)[0] : handCards[0];
 
   log(`    Discard ${cardToDiscard.value}`);
   await cardToDiscard.element.click({ force: true });
@@ -424,7 +469,10 @@ async function discardCard(page) {
     for (let d = 0; d < tops.length; d++) {
       if (typeof tops[d] === 'number' && tops[d] > cardNum) {
         const gap = tops[d] - cardNum;
-        if (gap < bestGap) { bestGap = gap; bestPile = d; }
+        if (gap < bestGap) {
+          bestGap = gap;
+          bestPile = d;
+        }
       }
     }
     if (bestPile !== -1) log(`    -> pile ${bestPile} (closest above ${tops[bestPile]})`);
@@ -567,7 +615,10 @@ async function main() {
       process.stdout.write(`  Turn ${turns} (${currentName}${tag}): played ${cardsPlayed} cards`);
 
       const gameOverCheck = await currentPage.$('.game-over-overlay');
-      if (gameOverCheck) { process.stdout.write(' -> GAME OVER\n'); continue; }
+      if (gameOverCheck) {
+        process.stdout.write(' -> GAME OVER\n');
+        continue;
+      }
 
       await discardCard(currentPage);
       process.stdout.write(' -> discarded\n');
@@ -583,9 +634,11 @@ async function main() {
   }
 }
 
-main().then(() => process.exit(0)).catch((err) => {
-  console.error('Error:', err.message);
-  if (err.stack) console.error(err.stack);
-  stopServers();
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error('Error:', err.message);
+    if (err.stack) console.error(err.stack);
+    stopServers();
+    process.exit(1);
+  });

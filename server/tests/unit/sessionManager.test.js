@@ -11,9 +11,7 @@ describe('SessionManager', () => {
     it('returns a UUID string', () => {
       const token = sm.generateToken();
       expect(typeof token).toBe('string');
-      expect(token).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-      );
+      expect(token).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     });
 
     it('returns unique tokens', () => {

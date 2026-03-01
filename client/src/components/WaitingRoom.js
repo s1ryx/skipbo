@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 import './WaitingRoom.css';
 import { useTranslation } from '../i18n';
 
-function WaitingRoom({ gameState, playerId, roomId, onStartGame, onLeaveLobby, onAddBot, onRemoveBot }) {
+function WaitingRoom({
+  gameState,
+  playerId,
+  roomId,
+  onStartGame,
+  onLeaveLobby,
+  onAddBot,
+  onRemoveBot,
+}) {
   const { t } = useTranslation();
   const [copySuccess, setCopySuccess] = useState(false);
   const [aiType, setAiType] = useState('improved');

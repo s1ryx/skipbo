@@ -149,10 +149,7 @@ function GameBoard({
       )}
 
       {showLeaveConfirm && (
-        <LeaveConfirmDialog
-          onConfirm={onLeaveGame}
-          onCancel={() => setShowLeaveConfirm(false)}
-        />
+        <LeaveConfirmDialog onConfirm={onLeaveGame} onCancel={() => setShowLeaveConfirm(false)} />
       )}
 
       {gameState.gameOver && (

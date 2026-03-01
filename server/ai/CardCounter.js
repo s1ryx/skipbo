@@ -9,8 +9,18 @@
  */
 
 const CARD_TOTALS = Object.freeze({
-  1: 12, 2: 12, 3: 12, 4: 12, 5: 12, 6: 12,
-  7: 12, 8: 12, 9: 12, 10: 12, 11: 12, 12: 12,
+  1: 12,
+  2: 12,
+  3: 12,
+  4: 12,
+  5: 12,
+  6: 12,
+  7: 12,
+  8: 12,
+  9: 12,
+  10: 12,
+  11: 12,
+  12: 12,
   'SKIP-BO': 18,
 });
 
@@ -18,7 +28,7 @@ const TOTAL_CARDS = 162;
 
 class CardCounter {
   constructor() {
-    this._visible = {};   // value → count of visible copies
+    this._visible = {}; // value → count of visible copies
     this._unknownPool = 0; // total cards in unknown locations
     this._deckCount = 0;
   }
@@ -128,7 +138,7 @@ class CardCounter {
     const D = this._deckCount;
     if (U <= 0 || D <= 0 || n <= 0) return 0;
 
-    const d = r * D / U; // expected copies in deck
+    const d = (r * D) / U; // expected copies in deck
     const draws = Math.min(n, D);
     let pNone = 1;
     for (let i = 0; i < draws; i++) {

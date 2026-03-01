@@ -154,9 +154,15 @@ without a real Socket.IO server:
 
 ```js
 class MockTransport {
-  constructor() { this.sent = []; }
-  send(id, event, data) { this.sent.push({ id, event, data }); }
-  sendToGroup(group, event, data) { this.sent.push({ group, event, data }); }
+  constructor() {
+    this.sent = [];
+  }
+  send(id, event, data) {
+    this.sent.push({ id, event, data });
+  }
+  sendToGroup(group, event, data) {
+    this.sent.push({ group, event, data });
+  }
   // ...
 }
 ```
@@ -175,7 +181,7 @@ function makeState(overrides = {}) {
       stockpileTop: overrides.stockpileTop ?? null,
       // ...
     },
-    gameState: { buildingPiles: overrides.buildingPiles || [[], [], [], []], /* ... */ },
+    gameState: { buildingPiles: overrides.buildingPiles || [[], [], [], []] /* ... */ },
   };
 }
 ```

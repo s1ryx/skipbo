@@ -85,7 +85,9 @@ class AIPlayer {
 
     // Return the first play of the best chain
     const firstPlay = bestChain.plays[0];
-    _log(`  >> ${firstPlay.source} ${firstPlay.card} -> pile ${firstPlay.pileIndex} (chain: ${bestChain.totalPlays} plays, score: ${bestScore})`);
+    _log(
+      `  >> ${firstPlay.source} ${firstPlay.card} -> pile ${firstPlay.pileIndex} (chain: ${bestChain.totalPlays} plays, score: ${bestScore})`
+    );
 
     return {
       card: firstPlay.card,
@@ -288,7 +290,9 @@ class AIPlayer {
 
     if (bestPile === -1) return null;
 
-    log(`  >> STOCK SKIP-BO -> pile ${bestPile} (as ${pileNeeds[bestPile]}, chain score: ${bestScore})`);
+    log(
+      `  >> STOCK SKIP-BO -> pile ${bestPile} (as ${pileNeeds[bestPile]}, chain score: ${bestScore})`
+    );
     return { card: 'SKIP-BO', source: 'stockpile', buildingPileIndex: bestPile };
   }
 

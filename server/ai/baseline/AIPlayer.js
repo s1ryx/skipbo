@@ -117,7 +117,10 @@ class AIPlayer {
           if (dist >= 0 && dist <= 2) score -= (3 - dist) * 10;
         }
       }
-      if (score > bestScore) { bestScore = score; bestPile = pi; }
+      if (score > bestScore) {
+        bestScore = score;
+        bestPile = pi;
+      }
     }
     return { card: stockTop, source: 'stockpile', buildingPileIndex: bestPile };
   }
@@ -144,7 +147,10 @@ class AIPlayer {
         for (let hi = 0; hi < playerState.hand.length; hi++) {
           if (usedHand.has(hi)) continue;
           if (playerState.hand[hi] === val || playerState.hand[hi] === 'SKIP-BO') {
-            usedHand.add(hi); chainLen++; found = true; break;
+            usedHand.add(hi);
+            chainLen++;
+            found = true;
+            break;
           }
         }
         if (!found) {
@@ -153,7 +159,10 @@ class AIPlayer {
             const dpile = playerState.discardPiles[di];
             if (dpile.length === 0) continue;
             if (dpile[dpile.length - 1] === val || dpile[dpile.length - 1] === 'SKIP-BO') {
-              usedDiscards.add(di); chainLen++; found = true; break;
+              usedDiscards.add(di);
+              chainLen++;
+              found = true;
+              break;
             }
           }
         }
@@ -175,7 +184,10 @@ class AIPlayer {
         }
       }
 
-      if (score > bestScore) { bestScore = score; bestPile = pi; }
+      if (score > bestScore) {
+        bestScore = score;
+        bestPile = pi;
+      }
     }
 
     if (bestPile === -1) return null;
@@ -189,7 +201,10 @@ class AIPlayer {
     let minLen = Infinity;
     let minPile = 0;
     for (let d = 0; d < 4; d++) {
-      if (discardPiles[d].length < minLen) { minLen = discardPiles[d].length; minPile = d; }
+      if (discardPiles[d].length < minLen) {
+        minLen = discardPiles[d].length;
+        minPile = d;
+      }
     }
     return minPile;
   }

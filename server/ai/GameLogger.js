@@ -285,10 +285,12 @@ class MoveAnalyzer {
     });
     const chosenScore = chosenEntry ? chosenEntry.score : 0;
 
-    const agreement = best && chosenEntry
-      && best.move.card === actualMove.card
-      && best.move.source === actualMove.source
-      && best.move.buildingPileIndex === actualMove.buildingPileIndex;
+    const agreement =
+      best &&
+      chosenEntry &&
+      best.move.card === actualMove.card &&
+      best.move.source === actualMove.source &&
+      best.move.buildingPileIndex === actualMove.buildingPileIndex;
 
     return {
       chosenScore,
@@ -345,14 +347,16 @@ class MoveAnalyzer {
     const best = unique[0];
 
     // Find the score of the actual move
-    const chosenEntry = unique.find((s) =>
-      s.move.card === actualMove.card && s.move.discardPileIndex === actualMove.discardPileIndex
+    const chosenEntry = unique.find(
+      (s) =>
+        s.move.card === actualMove.card && s.move.discardPileIndex === actualMove.discardPileIndex
     );
     const chosenScore = chosenEntry ? chosenEntry.score : 0;
 
-    const agreement = best
-      && best.move.card === actualMove.card
-      && best.move.discardPileIndex === actualMove.discardPileIndex;
+    const agreement =
+      best &&
+      best.move.card === actualMove.card &&
+      best.move.discardPileIndex === actualMove.discardPileIndex;
 
     return {
       chosenScore,
