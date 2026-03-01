@@ -134,9 +134,9 @@ class GameCoordinator {
     game.addPlayer(connectionId, validName);
 
     const sessionToken = crypto.randomUUID();
-    game.players[game.players.length - 1].sessionToken = sessionToken;
+    game.setSessionToken(connectionId, sessionToken);
     game.players[game.players.length - 1].isBot = !!isBot;
-    game.hostPublicId = game.players[0].publicId;
+    game.setHost(game.players[0].publicId);
 
     this.games.set(roomId, game);
     this.playerRooms.set(connectionId, roomId);
@@ -182,7 +182,7 @@ class GameCoordinator {
     }
 
     const sessionToken = crypto.randomUUID();
-    game.players[game.players.length - 1].sessionToken = sessionToken;
+    game.setSessionToken(connectionId, sessionToken);
     game.players[game.players.length - 1].isBot = !!isBot;
 
     this.playerRooms.set(connectionId, roomId);
@@ -241,7 +241,7 @@ class GameCoordinator {
         }
 
         const newToken = crypto.randomUUID();
-        game.players[game.players.length - 1].sessionToken = newToken;
+        game.setSessionToken(connectionId, newToken);
 
         this.playerRooms.set(connectionId, roomId);
         this.transport.addToGroup(connectionId, roomId);
@@ -272,9 +272,9 @@ class GameCoordinator {
 
     // Update player's connection ID and issue new session token
     const oldConnectionId = player.id;
-    player.id = connectionId;
+    game.updatePlayerId(oldConnectionId, connectionId);
     const newToken = crypto.randomUUID();
-    player.sessionToken = newToken;
+    game.setSessionToken(connectionId, newToken);
 
     game.removeRematchVote(oldConnectionId);
 
@@ -547,7 +547,7 @@ class GameCoordinator {
     const botPlayer = game.players[game.players.length - 1];
     botPlayer.isBot = true;
     botPlayer.aiType = validAiType;
-    botPlayer.sessionToken = crypto.randomUUID();
+    game.setSessionToken(botPlayer.id, crypto.randomUUID());
 
     const AIClass = validAiType === 'baseline' ? BaselineAIPlayer : AIPlayer;
     this.botAIs.set(`${roomId}:${botPlayer.publicId}`, new AIClass());
@@ -623,7 +623,7 @@ class GameCoordinator {
     } else {
       if (game.hostPublicId === publicId) {
         // Transfer host to next human player (never a bot)
-        game.hostPublicId = humanPlayers[0].publicId;
+        game.setHost(humanPlayers[0].publicId);
       }
       this.transport.sendToGroup(roomId, 'playerLeft', {
         playerId: publicId,
@@ -764,7 +764,7 @@ class GameCoordinator {
         this.scheduleRoomDeletion(roomId);
       } else {
         if (game.hostPublicId === publicId) {
-          game.hostPublicId = humanPlayers[0].publicId;
+          game.setHost(humanPlayers[0].publicId);
         }
         this.transport.sendToGroup(roomId, 'playerLeft', {
           playerId: publicId,
