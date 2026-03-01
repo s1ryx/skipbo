@@ -14,6 +14,7 @@ const {
   MIN_STOCKPILE_SIZE,
   Phase,
 } = require('./config');
+const { ErrorCodes } = require('./errors');
 
 const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'discard2', 'discard3']);
 
@@ -219,16 +220,16 @@ class SkipBoGame {
     const player = this.players.find((p) => p.internalId === playerId);
 
     if (!player || this.getCurrentPlayer().internalId !== playerId) {
-      return { success: false, error: 'error.notYourTurn' };
+      return { success: false, error: ErrorCodes.NOT_YOUR_TURN };
     }
 
     if (!VALID_SOURCES.has(source)) {
-      return { success: false, error: 'error.invalidSource' };
+      return { success: false, error: ErrorCodes.INVALID_SOURCE };
     }
 
     // Validate the move
     if (!this.canPlayCard(card, buildingPileIndex)) {
-      return { success: false, error: 'error.invalidMove' };
+      return { success: false, error: ErrorCodes.INVALID_MOVE };
     }
 
     // Remove card from source
@@ -254,7 +255,7 @@ class SkipBoGame {
     }
 
     if (!cardRemoved) {
-      return { success: false, error: 'error.cardNotFound' };
+      return { success: false, error: ErrorCodes.CARD_NOT_FOUND };
     }
 
     // Add card to building pile
@@ -293,7 +294,7 @@ class SkipBoGame {
     const player = this.players.find((p) => p.internalId === playerId);
 
     if (!player || this.getCurrentPlayer().internalId !== playerId) {
-      return { success: false, error: 'error.notYourTurn' };
+      return { success: false, error: ErrorCodes.NOT_YOUR_TURN };
     }
 
     if (
@@ -301,12 +302,12 @@ class SkipBoGame {
       discardPileIndex < 0 ||
       discardPileIndex >= DISCARD_PILES
     ) {
-      return { success: false, error: 'error.invalidDiscardPile' };
+      return { success: false, error: ErrorCodes.INVALID_DISCARD_PILE };
     }
 
     const cardIndex = player.hand.indexOf(card);
     if (cardIndex === -1) {
-      return { success: false, error: 'error.cardNotInHand' };
+      return { success: false, error: ErrorCodes.CARD_NOT_IN_HAND };
     }
 
     // Remove from hand and add to discard pile
@@ -320,7 +321,7 @@ class SkipBoGame {
     const player = this.players.find((p) => p.internalId === playerId);
 
     if (!player) {
-      return { success: false, error: 'error.playerNotFoundDraw' };
+      return { success: false, error: ErrorCodes.PLAYER_NOT_FOUND_DRAW };
     }
 
     while (player.hand.length < HAND_SIZE && this.deck.length > 0) {
@@ -334,7 +335,7 @@ class SkipBoGame {
     const player = this.players.find((p) => p.internalId === playerId);
 
     if (!player || this.getCurrentPlayer().internalId !== playerId) {
-      return { success: false, error: 'error.notYourTurn' };
+      return { success: false, error: ErrorCodes.NOT_YOUR_TURN };
     }
 
     // Move to next player
