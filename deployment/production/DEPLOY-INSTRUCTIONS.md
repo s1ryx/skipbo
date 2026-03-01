@@ -98,6 +98,16 @@ docker-compose exec nginx nginx -t
 - Check certificate permissions
 - Ensure certificate is not expired
 
+**Stale build after code changes:**
+
+Docker layer caching correctly invalidates when source files change,
+so a normal `docker-compose build` is sufficient after `git pull`.
+If you suspect a stale cache, force a clean rebuild:
+
+```bash
+docker-compose build --no-cache
+```
+
 ## Rollback
 
 To restore bare metal nginx:
