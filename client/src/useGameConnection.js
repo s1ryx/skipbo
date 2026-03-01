@@ -8,6 +8,8 @@ export default function useGameConnection() {
   const [roomId, setRoomId] = useState(null);
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
+  const [rematchVotes, setRematchVotes] = useState([]);
+  const [rematchStockpileSize, setRematchStockpileSize] = useState(null);
   const [chatMessages, setChatMessages] = useState(() => {
     const savedSession = sessionStorage.getItem('skipBoSession');
     if (savedSession) {
@@ -104,6 +106,10 @@ export default function useGameConnection() {
         setPlayerState(playerState);
         setInLobby(false);
 
+        if (gameState.gameOver) {
+          setRematchVotes(gameState.rematchVotes || []);
+        }
+
         const player = gameState.players.find((p) => p.id === playerId);
         if (player) {
           sessionStorage.setItem(
@@ -126,6 +132,8 @@ export default function useGameConnection() {
         console.log('Game started');
         setGameState(gameState);
         setPlayerState(playerState);
+        setRematchVotes([]);
+        setRematchStockpileSize(null);
       },
 
       gameStateUpdate: ({ gameState, playerState }) => {
@@ -192,6 +200,19 @@ export default function useGameConnection() {
         setRoomId(null);
         setInLobby(true);
         setChatMessages([]);
+        setRematchVotes([]);
+        setRematchStockpileSize(null);
+      },
+
+      rematchVoteUpdate: ({ rematchVotes, stockpileSize }) => {
+        setRematchVotes(rematchVotes);
+        setRematchStockpileSize(stockpileSize);
+      },
+
+      playerLeftPostGame: ({ gameState }) => {
+        setGameState(gameState);
+        setRematchVotes([]);
+        setRematchStockpileSize(null);
       },
 
       chatMessage: (messageData) => {
@@ -275,6 +296,14 @@ export default function useGameConnection() {
     transportRef.current?.send('leaveGame');
   }, []);
 
+  const requestRematch = useCallback(() => {
+    transportRef.current?.send('requestRematch');
+  }, []);
+
+  const updateRematchSettings = useCallback((stockpileSize) => {
+    transportRef.current?.send('updateRematchSettings', { stockpileSize });
+  }, []);
+
   const sendChatMessage = useCallback((message) => {
     transportRef.current?.send('sendChatMessage', { message });
   }, []);
@@ -298,6 +327,10 @@ export default function useGameConnection() {
     discardCard,
     leaveLobby,
     leaveGame,
+    requestRematch,
+    updateRematchSettings,
+    rematchVotes,
+    rematchStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
   };
