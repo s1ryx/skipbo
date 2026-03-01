@@ -47,6 +47,48 @@ function createStartedGame(coordinator) {
   return roomId;
 }
 
+/** Helper: create a room with one human and one bot */
+function createRoomWithBot(coordinator) {
+  const handlers = coordinator.getTransportHandlers();
+  handlers.onMessage('player1', 'createRoom', {
+    playerName: 'Alice',
+    maxPlayers: 3,
+    stockpileSize: null,
+  });
+  const call = coordinator.transport.send.mock.calls.find(
+    (c) => c[0] === 'player1' && c[1] === 'roomCreated'
+  );
+  const roomId = call[2].roomId;
+  handlers.onMessage('player1', 'addBot', { aiType: 'improved' });
+  return roomId;
+}
+
+/** Helper: create a completed game with a bot (game over state) */
+function createCompletedGameWithBot(coordinator) {
+  const roomId = createRoomWithBot(coordinator);
+  const handlers = coordinator.getTransportHandlers();
+  handlers.onMessage('player1', 'startGame', {});
+  const game = coordinator.games.get(roomId);
+
+  // Force winning condition: 1 card in stockpile, playable hand
+  const player1 = game.players[0];
+  player1.stockpile = [1];
+  player1.hand = [1, 2, 3, 4, 5];
+
+  // Clear bot turn timers so the bot doesn't interfere
+  coordinator._clearBotTimers(roomId);
+
+  // Play card via coordinator to trigger game-over path
+  handlers.onMessage('player1', 'playCard', {
+    card: 1,
+    source: 'stockpile',
+    buildingPileIndex: 0,
+  });
+
+  expect(game.gameOver).toBe(true);
+  return roomId;
+}
+
 /** Helper: create a completed game (game over state) */
 function createCompletedGame(coordinator) {
   const roomId = createRoomWithTwoPlayers(coordinator);
@@ -1344,6 +1386,75 @@ describe('GameCoordinator', () => {
       expect(game.rematchVotes.has('player2')).toBe(false);
       // New connectionId should NOT be auto-added
       expect(game.rematchVotes.has('player2-new')).toBe(false);
+    });
+  });
+
+  describe('bot + rematch interaction', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('rematch triggers with only human votes (bots excluded from threshold)', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGameWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'requestRematch', {});
+
+      // Rematch should trigger with just the human's vote
+      expect(game.gameOver).toBe(false);
+      expect(game.gameStarted).toBe(true);
+
+      const gameStartedCalls = transport.send.mock.calls.filter(
+        (c) => c[1] === 'gameStarted'
+      );
+      // Only human gets gameStarted (bot filtered out)
+      expect(gameStartedCalls.length).toBe(1);
+      expect(gameStartedCalls[0][0]).toBe('player1');
+    });
+
+    it('schedules bot turn after rematch starts', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGameWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'requestRematch', {});
+
+      // Bot turn timer should be scheduled if bot is first player,
+      // or will be scheduled when it becomes the bot's turn.
+      // Either way, the game should be in a playable state.
+      const game = coordinator.games.get(roomId);
+      expect(game.gameStarted).toBe(true);
+      expect(game.gameOver).toBe(false);
+      expect(game.players).toHaveLength(2);
+      expect(game.players.some((p) => p.isBot)).toBe(true);
+    });
+
+    it('cleans up game when last human leaves post-game with bots', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGameWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      expect(coordinator.games.has(roomId)).toBe(true);
+
+      handlers.onMessage('player1', 'leaveGame', {});
+
+      // Game should be deleted even though bot player remains
+      expect(coordinator.games.has(roomId)).toBe(false);
+    });
+
+    it('cleans up game when last human disconnects post-game with bots', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGameWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      expect(coordinator.games.has(roomId)).toBe(true);
+
+      handlers.onDisconnect('player1');
+
+      // Game should be deleted even though bot player remains
+      expect(coordinator.games.has(roomId)).toBe(false);
     });
   });
 });

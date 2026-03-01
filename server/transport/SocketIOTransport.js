@@ -16,6 +16,8 @@ const CLIENT_EVENTS = [
   'leaveGame',
   'requestRematch',
   'updateRematchSettings',
+  'addBot',
+  'removeBot',
 ];
 
 class SocketIOTransport {

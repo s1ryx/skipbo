@@ -144,8 +144,9 @@ function GameBoard({
             >
               <h4>
                 {player.name}
+                {player.isBot && <span className="bot-badge"> {t('game.bot')}</span>}
                 {gameState.currentPlayerId === player.id && ' ' + t('game.playing')}
-                {player.disconnected && (
+                {player.disconnected && !player.isBot && (
                   <span className="disconnected-indicator"> {t('game.disconnected')}</span>
                 )}
               </h4>

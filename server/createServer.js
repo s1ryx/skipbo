@@ -19,7 +19,10 @@ function createServer(options = {}) {
   });
 
   // Wire coordinator and transport together
-  const coordinator = new GameCoordinator();
+  const coordinator = new GameCoordinator({
+    logging: process.env.GAME_LOGGING === '1',
+    logAnalysis: process.env.GAME_LOG_ANALYSIS === '1',
+  });
   const transport = new SocketIOTransport(coordinator.getTransportHandlers(), {
     rateLimitMax: options.rateLimitMax,
   });

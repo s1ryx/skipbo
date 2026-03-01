@@ -68,6 +68,12 @@
   "game.leave": "Verlassen",
   "game.rematchStockpile": "Kartenstapel: {{count}} Karten",
 
+  "game.bot": "(Bot)",
+  "game.addBot": "Bot hinzufügen",
+  "game.removeBot": "Entfernen",
+  "game.aiImproved": "Verbesserte KI",
+  "game.aiBaseline": "Basis-KI",
+
   "card.wild": "JOKER",
 
   "chat.title": "Chat",
@@ -91,6 +97,10 @@
   "error.invalidDiscardPile": "Ungültiger Hilfsstapel",
   "error.cardNotInHand": "Karte nicht auf der Hand",
   "error.playerNotFoundDraw": "Spieler nicht gefunden",
+  "error.onlyHostCanAddBot": "Nur der Gastgeber kann Bots hinzufügen",
+  "error.onlyHostCanRemoveBot": "Nur der Gastgeber kann Bots entfernen",
+  "error.notABot": "Spieler ist kein Bot",
+  "error.cannotAddBotDuringGame": "Bots können nicht nach Spielstart hinzugefügt werden",
 
   "language.en": "English",
   "language.de": "Deutsch",
