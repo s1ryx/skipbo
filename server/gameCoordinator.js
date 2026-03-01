@@ -19,6 +19,7 @@ const {
   BOT_ID_PREFIX,
   Phase,
 } = require('./config');
+const { ErrorCodes } = require('./errors');
 
 function isBotId(id) {
   return typeof id === 'string' && id.startsWith(BOT_ID_PREFIX);
@@ -119,12 +120,12 @@ class GameCoordinator {
   handleCreateRoom(connectionId, { playerName, maxPlayers, stockpileSize, isBot }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
-      this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.INVALID_PLAYER_NAME });
       return;
     }
 
     if (this.gameRepository.size >= MAX_TOTAL_ROOMS) {
-      this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.SERVER_FULL });
       return;
     }
 
@@ -137,7 +138,7 @@ class GameCoordinator {
 
     const roomId = generateRoomId(this.gameRepository);
     if (!roomId) {
-      this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.SERVER_FULL });
       return;
     }
     const game = new SkipBoGame(roomId, validMaxPlayers, validStockpileSize);
@@ -167,28 +168,28 @@ class GameCoordinator {
   handleJoinRoom(connectionId, { roomId, playerName, isBot }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
-      this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.INVALID_PLAYER_NAME });
       return;
     }
 
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
     this.cancelPendingDeletion(roomId);
 
     if (game.phase !== Phase.LOBBY) {
-      this.transport.send(connectionId, 'error', { message: 'error.gameAlreadyStarted' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.GAME_ALREADY_STARTED });
       return;
     }
 
     const added = game.addPlayer(connectionId, validName);
 
     if (!added) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomFull' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_FULL });
       return;
     }
 
@@ -218,14 +219,14 @@ class GameCoordinator {
     const validName = validatePlayerName(playerName);
     if (!validName) {
       this.transport.send(connectionId, 'reconnectFailed', {
-        message: 'error.invalidPlayerName',
+        message: ErrorCodes.INVALID_PLAYER_NAME,
       });
       return;
     }
 
     if (!sessionToken || typeof sessionToken !== 'string') {
       this.transport.send(connectionId, 'reconnectFailed', {
-        message: 'error.invalidSession',
+        message: ErrorCodes.INVALID_SESSION,
       });
       return;
     }
@@ -234,7 +235,7 @@ class GameCoordinator {
 
     if (!game) {
       this.transport.send(connectionId, 'reconnectFailed', {
-        message: 'error.roomNoLongerExists',
+        message: ErrorCodes.ROOM_NO_LONGER_EXISTS,
       });
       return;
     }
@@ -248,7 +249,7 @@ class GameCoordinator {
       if (game.phase === Phase.LOBBY) {
         const added = game.addPlayer(connectionId, validName);
         if (!added) {
-          this.transport.send(connectionId, 'reconnectFailed', { message: 'error.roomFull' });
+          this.transport.send(connectionId, 'reconnectFailed', { message: ErrorCodes.ROOM_FULL });
           return;
         }
 
@@ -277,7 +278,7 @@ class GameCoordinator {
         return;
       }
 
-      this.transport.send(connectionId, 'reconnectFailed', { message: 'error.playerNotFound' });
+      this.transport.send(connectionId, 'reconnectFailed', { message: ErrorCodes.PLAYER_NOT_FOUND });
       return;
     }
 
@@ -315,20 +316,20 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
     const sender = game.getPlayerByConnectionId(connectionId);
     if (!sender || sender.publicId !== game.hostPublicId) {
-      this.transport.send(connectionId, 'error', { message: 'error.onlyHostCanStart' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ONLY_HOST_CAN_START });
       return;
     }
 
     const started = game.startGame();
 
     if (!started) {
-      this.transport.send(connectionId, 'error', { message: 'error.needMorePlayers' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NEED_MORE_PLAYERS });
       return;
     }
 
@@ -365,13 +366,13 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
     const player = game.getPlayerByConnectionId(connectionId);
     if (!player) {
-      this.transport.send(connectionId, 'error', { message: 'error.notYourTurn' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NOT_YOUR_TURN });
       return;
     }
 
@@ -386,13 +387,13 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
     const player = game.getPlayerByConnectionId(connectionId);
     if (!player) {
-      this.transport.send(connectionId, 'error', { message: 'error.notYourTurn' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NOT_YOUR_TURN });
       return;
     }
 
@@ -432,24 +433,24 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
     if (game.phase !== Phase.LOBBY) {
-      this.transport.send(connectionId, 'error', { message: 'error.cannotAddBotDuringGame' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.CANNOT_ADD_BOT_DURING_GAME });
       return;
     }
 
     const sender = game.getPlayerByConnectionId(connectionId);
     if (!sender || sender.publicId !== game.hostPublicId) {
-      this.transport.send(connectionId, 'error', { message: 'error.onlyHostCanAddBot' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ONLY_HOST_CAN_ADD_BOT });
       return;
     }
 
     const result = this.botManager.createBot(roomId, game, aiType);
     if (!result) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomFull' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_FULL });
       return;
     }
 
@@ -469,23 +470,23 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
     if (game.phase !== Phase.LOBBY) {
-      this.transport.send(connectionId, 'error', { message: 'error.cannotAddBotDuringGame' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.CANNOT_ADD_BOT_DURING_GAME });
       return;
     }
 
     const sender = game.getPlayerByConnectionId(connectionId);
     if (!sender || sender.publicId !== game.hostPublicId) {
-      this.transport.send(connectionId, 'error', { message: 'error.onlyHostCanRemoveBot' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ONLY_HOST_CAN_REMOVE_BOT });
       return;
     }
 
     if (!this.botManager.removeBot(roomId, game, botPlayerId)) {
-      this.transport.send(connectionId, 'error', { message: 'error.notABot' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NOT_A_BOT });
       return;
     }
 
