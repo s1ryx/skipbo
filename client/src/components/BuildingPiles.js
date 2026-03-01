@@ -1,25 +1,7 @@
 import React from 'react';
 import Card from './Card';
+import { getNextCardForPile } from '../utils/cardUtils';
 import { useTranslation } from '../i18n';
-
-function getNextCardForPile(pile) {
-  if (pile.length === 0) return 1;
-
-  const lastCard = pile[pile.length - 1];
-  if (lastCard === 'SKIP-BO') {
-    let value = 0;
-    for (let i = 0; i < pile.length; i++) {
-      if (pile[i] !== 'SKIP-BO') {
-        value = pile[i];
-      } else {
-        value++;
-      }
-    }
-    return value === 12 ? null : value + 1;
-  }
-
-  return lastCard === 12 ? null : lastCard + 1;
-}
 
 function BuildingPiles({ piles, isClickable, onPileClick }) {
   const { t } = useTranslation();
@@ -61,5 +43,4 @@ function BuildingPiles({ piles, isClickable, onPileClick }) {
   );
 }
 
-export { getNextCardForPile };
 export default BuildingPiles;
