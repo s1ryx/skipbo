@@ -46,8 +46,6 @@ class GameCoordinator {
     this.gameRepository = new GameRepository();
     this.sessionManager = new SessionManager();
     this.botManager = new BotManager();
-    this.pendingDeletions = new Map();
-    this.completedGameTimers = new Map();
 
     // Game logging
     this.loggingEnabled = options.logging ?? false;
@@ -59,6 +57,14 @@ class GameCoordinator {
 
   get games() {
     return this.gameRepository.games;
+  }
+
+  get pendingDeletions() {
+    return this.gameRepository.pendingDeletions;
+  }
+
+  get completedGameTimers() {
+    return this.gameRepository.completedGameTimers;
   }
 
   setTransport(transport) {
@@ -708,31 +714,26 @@ class GameCoordinator {
   }
 
   scheduleRoomDeletion(roomId) {
-    if (this.pendingDeletions.size >= MAX_PENDING_ROOMS) {
+    if (this.gameRepository.pendingDeletions.size >= MAX_PENDING_ROOMS) {
       this.gameRepository.deleteGame(roomId);
       this.logger.info('empty lobby deleted immediately', { roomId });
     } else {
-      const timeoutId = setTimeout(() => {
+      this.gameRepository.scheduleDeletion(roomId, () => {
         this.gameRepository.deleteGame(roomId);
-        this.pendingDeletions.delete(roomId);
         this.logger.info('empty lobby deleted after grace period', { roomId });
       }, LOBBY_GRACE_PERIOD_MS);
-      this.pendingDeletions.set(roomId, timeoutId);
       this.logger.info('empty lobby scheduled for deletion', { roomId, delaySec: LOBBY_GRACE_PERIOD_MS / 1000 });
     }
   }
 
   cancelPendingDeletion(roomId) {
-    const timeoutId = this.pendingDeletions.get(roomId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      this.pendingDeletions.delete(roomId);
+    if (this.gameRepository.cancelDeletion(roomId)) {
       this.logger.info('cancelled pending deletion', { roomId });
     }
   }
 
   scheduleCompletedGameCleanup(roomId) {
-    const timeoutId = setTimeout(() => {
+    this.gameRepository.scheduleCompletedCleanup(roomId, () => {
       const game = this.gameRepository.getGame(roomId);
       if (game) {
         game.players.forEach((p) => {
@@ -741,18 +742,12 @@ class GameCoordinator {
       }
       this.botManager.clearAIs(roomId);
       this.gameRepository.deleteGame(roomId);
-      this.completedGameTimers.delete(roomId);
       this.logger.info('completed game cleaned up after TTL', { roomId });
     }, COMPLETED_GAME_TTL_MS);
-    this.completedGameTimers.set(roomId, timeoutId);
   }
 
   cancelCompletedGameCleanup(roomId) {
-    const timeoutId = this.completedGameTimers.get(roomId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      this.completedGameTimers.delete(roomId);
-    }
+    this.gameRepository.cancelCompletedCleanup(roomId);
   }
 
   _cleanupLogger(roomId) {
