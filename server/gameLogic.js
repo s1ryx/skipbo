@@ -96,6 +96,13 @@ class SkipBoGame {
     return true;
   }
 
+  setSessionToken(playerId, token) {
+    const player = this.players.find((p) => p.id === playerId);
+    if (!player) return false;
+    player.sessionToken = token;
+    return true;
+  }
+
   startGame() {
     if (this.players.length < MIN_PLAYERS) {
       return false;
