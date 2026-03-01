@@ -3,6 +3,7 @@ const SkipBoGame = require('./gameLogic');
 const SessionManager = require('./SessionManager');
 const BotManager = require('./BotManager');
 const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
+const { createLogger } = require('./logger');
 const {
   LOBBY_GRACE_PERIOD_MS,
   MAX_PENDING_ROOMS,
@@ -40,6 +41,7 @@ function validatePlayerName(name) {
 class GameCoordinator {
   constructor(options = {}) {
     this.transport = null;
+    this.logger = options.logger || createLogger();
     this.games = new Map();
     this.sessionManager = new SessionManager();
     this.botManager = new BotManager();
@@ -67,7 +69,7 @@ class GameCoordinator {
   }
 
   handleConnect(connectionId) {
-    console.log(`Player connected: ${connectionId}`);
+    this.logger.debug('player connected', { connectionId });
   }
 
   handleMessage(connectionId, event, data) {
@@ -99,7 +101,7 @@ class GameCoordinator {
       case 'removeBot':
         return this.handleRemoveBot(connectionId, data);
       default:
-        console.log(`Unknown event: ${event}`);
+        this.logger.warn('unknown event', { event });
     }
   }
 
@@ -147,7 +149,7 @@ class GameCoordinator {
       gameState: this._getDecoratedGameState(game),
     });
 
-    console.log(`Room created: ${roomId} by ${sanitizeForLog(validName)}`);
+    this.logger.info('room created', { roomId, playerName: sanitizeForLog(validName) });
   }
 
   handleJoinRoom(connectionId, { roomId, playerName, isBot }) {
@@ -196,7 +198,7 @@ class GameCoordinator {
       sessionToken,
     });
 
-    console.log(`${sanitizeForLog(validName)} joined room: ${roomId}`);
+    this.logger.info('player joined room', { roomId, playerName: sanitizeForLog(validName) });
   }
 
   handleReconnect(connectionId, { roomId, sessionToken, playerName }) {
@@ -259,7 +261,7 @@ class GameCoordinator {
           gameState: this._getDecoratedGameState(game),
         });
 
-        console.log(`${sanitizeForLog(validName)} rejoined lobby: ${roomId}`);
+        this.logger.info('player rejoined lobby', { roomId, playerName: sanitizeForLog(validName) });
         return;
       }
 
@@ -293,7 +295,7 @@ class GameCoordinator {
       playerName: player.name,
     });
 
-    console.log(`${sanitizeForLog(validName)} reconnected to room: ${roomId}`);
+    this.logger.info('player reconnected', { roomId, playerName: sanitizeForLog(validName) });
   }
 
   handleStartGame(connectionId) {
@@ -340,7 +342,7 @@ class GameCoordinator {
       logger.logTurnStart(1, game);
     }
 
-    console.log(`Game started in room: ${roomId}`);
+    this.logger.info('game started', { roomId });
 
     // Check if first player is a bot
     this._scheduleBotTurnIfNeeded(roomId);
@@ -398,7 +400,7 @@ class GameCoordinator {
       timestamp: Date.now(),
     });
 
-    console.log(`Chat message in room ${roomId} from ${sanitizeForLog(player.name)}: ${sanitizeForLog(sanitized)}`);
+    this.logger.debug('chat message', { roomId, playerName: sanitizeForLog(player.name) });
   }
 
   handleAddBot(connectionId, { aiType }) {
@@ -435,7 +437,7 @@ class GameCoordinator {
       gameState: this._getDecoratedGameState(game),
     });
 
-    console.log(`Bot "${result.botName}" (${result.aiType}) added to room ${roomId}`);
+    this.logger.info('bot added', { roomId, botName: result.botName, aiType: result.aiType });
   }
 
   handleRemoveBot(connectionId, { botPlayerId }) {
@@ -468,7 +470,7 @@ class GameCoordinator {
       gameState: this._getDecoratedGameState(game),
     });
 
-    console.log(`Bot removed from room ${roomId}`);
+    this.logger.info('bot removed', { roomId });
   }
 
   handleLeaveLobby(connectionId) {
@@ -479,7 +481,7 @@ class GameCoordinator {
     if (!game || game.phase !== Phase.LOBBY) return;
 
     const publicId = game.getPublicId(connectionId);
-    console.log(`Player ${connectionId} is leaving lobby ${roomId}`);
+    this.logger.info('player leaving lobby', { roomId, connectionId });
 
     game.removePlayer(connectionId);
     this.transport.removeFromGroup(connectionId, roomId);
@@ -504,7 +506,7 @@ class GameCoordinator {
   }
 
   handleLeaveGame(connectionId) {
-    console.log(`Player ${connectionId} is leaving the game`);
+    this.logger.info('player leaving game', { connectionId });
 
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
@@ -533,7 +535,7 @@ class GameCoordinator {
         });
       }
 
-      console.log(`Player ${connectionId} left post-game room ${roomId}`);
+      this.logger.info('player left post-game room', { roomId, connectionId });
     } else {
       // Mid-game: abort entire game
       this.transport.sendToGroup(roomId, 'gameAborted');
@@ -549,7 +551,7 @@ class GameCoordinator {
       this.botManager.cleanup(roomId);
       this.games.delete(roomId);
 
-      console.log(`Game in room ${roomId} has been aborted`);
+      this.logger.info('game aborted', { roomId });
     }
   }
 
@@ -575,7 +577,7 @@ class GameCoordinator {
         });
       });
 
-      console.log(`Rematch started in room ${roomId}`);
+      this.logger.info('rematch started', { roomId });
 
       this._scheduleBotTurnIfNeeded(roomId);
     } else {
@@ -603,11 +605,11 @@ class GameCoordinator {
       stockpileSize: game.stockpileSize,
     });
 
-    console.log(`Rematch settings updated in room ${roomId}: stockpile=${game.stockpileSize}`);
+    this.logger.info('rematch settings updated', { roomId, stockpileSize: game.stockpileSize });
   }
 
   handleDisconnect(connectionId) {
-    console.log(`Player disconnected: ${connectionId}`);
+    this.logger.info('player disconnected', { connectionId });
 
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
@@ -668,7 +670,7 @@ class GameCoordinator {
           this.sessionManager.removeRoom(player.id);
         });
         this.games.delete(roomId);
-        console.log(`Game in room ${roomId} aborted — no human players remain`);
+        this.logger.info('game aborted — no human players remain', { roomId });
       } else {
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
@@ -682,17 +684,15 @@ class GameCoordinator {
   scheduleRoomDeletion(roomId) {
     if (this.pendingDeletions.size >= MAX_PENDING_ROOMS) {
       this.games.delete(roomId);
-      console.log(`Empty lobby ${roomId} deleted immediately (pending limit reached)`);
+      this.logger.info('empty lobby deleted immediately', { roomId });
     } else {
       const timeoutId = setTimeout(() => {
         this.games.delete(roomId);
         this.pendingDeletions.delete(roomId);
-        console.log(`Empty lobby ${roomId} deleted after grace period`);
+        this.logger.info('empty lobby deleted after grace period', { roomId });
       }, LOBBY_GRACE_PERIOD_MS);
       this.pendingDeletions.set(roomId, timeoutId);
-      console.log(
-        `Empty lobby ${roomId} scheduled for deletion in ${LOBBY_GRACE_PERIOD_MS / 1000}s`
-      );
+      this.logger.info('empty lobby scheduled for deletion', { roomId, delaySec: LOBBY_GRACE_PERIOD_MS / 1000 });
     }
   }
 
@@ -701,7 +701,7 @@ class GameCoordinator {
     if (timeoutId) {
       clearTimeout(timeoutId);
       this.pendingDeletions.delete(roomId);
-      console.log(`Cancelled pending deletion for lobby ${roomId}`);
+      this.logger.info('cancelled pending deletion', { roomId });
     }
   }
 
@@ -716,7 +716,7 @@ class GameCoordinator {
       this.botManager.clearAIs(roomId);
       this.games.delete(roomId);
       this.completedGameTimers.delete(roomId);
-      console.log(`Completed game ${roomId} cleaned up after TTL`);
+      this.logger.info('completed game cleaned up after TTL', { roomId });
     }, COMPLETED_GAME_TTL_MS);
     this.completedGameTimers.set(roomId, timeoutId);
   }

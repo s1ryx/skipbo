@@ -650,15 +650,21 @@ describe('GameCoordinator', () => {
     });
 
     it('sanitizes user data in log output', () => {
-      const { coordinator } = createCoordinator();
-      createRoomWithTwoPlayers(coordinator);
+      const { createLogger } = require('../../logger');
+      const coordinator = new GameCoordinator({ logger: createLogger({ level: 'debug' }) });
+      const transport = createMockTransport();
+      coordinator.setTransport(transport);
+
       const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('player1', 'createRoom', { playerName: 'Alice', maxPlayers: 2 });
+      const roomId = transport.send.mock.calls[0][2].roomId;
+      handlers.onMessage('player2', 'joinRoom', { roomId, playerName: 'Bob' });
 
       const logSpy = jest.spyOn(console, 'log').mockImplementation();
       handlers.onMessage('player1', 'sendChatMessage', {
         message: 'Hello',
       });
-      const chatLog = logSpy.mock.calls.find((c) => c[0].includes('Chat message'));
+      const chatLog = logSpy.mock.calls.find((c) => c[0].includes('chat message'));
       expect(chatLog[0]).not.toMatch(/[\r\n]/);
       expect(chatLog[0]).not.toMatch(/\x1B/);
       logSpy.mockRestore();
