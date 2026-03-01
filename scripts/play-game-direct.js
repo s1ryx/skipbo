@@ -55,10 +55,10 @@ function playGame(aiType, gameIndex) {
   const playerIds = [];
   const playerNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'].slice(0, playerCount);
   for (let i = 0; i < playerCount; i++) {
-    const id = `player-${i}`;
-    game.addPlayer(id, playerNames[i]);
-    game.players[game.players.length - 1].isBot = true;
-    playerIds.push(id);
+    game.addPlayer(`player-${i}`, playerNames[i]);
+    const player = game.players[game.players.length - 1];
+    player.isBot = true;
+    playerIds.push(player.internalId);
   }
 
   game.startGame();
@@ -90,7 +90,7 @@ function playGame(aiType, gameIndex) {
 
   while (!game.gameOver && turns < MAX_TURNS) {
     const currentPlayer = game.getCurrentPlayer();
-    const playerId = currentPlayer.id;
+    const playerId = currentPlayer.internalId;
     const playerIndex = playerIds.indexOf(playerId);
     const ai = ais[playerIndex];
 

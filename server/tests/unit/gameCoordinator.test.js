@@ -484,7 +484,7 @@ describe('GameCoordinator', () => {
 
       // Inject a known card into player1's hand so the test is deterministic
       const game = [...coordinator.games.values()][0];
-      const player1 = game.players.find((p) => p.id === 'player1');
+      const player1 = game.getPlayerByConnectionId('player1');
       player1.hand[0] = 1;
 
       transport.send.mockClear();
@@ -533,7 +533,7 @@ describe('GameCoordinator', () => {
       const handlers = coordinator.getTransportHandlers();
 
       const game = [...coordinator.games.values()][0];
-      const player1 = game.players.find((p) => p.id === 'player1');
+      const player1 = game.getPlayerByConnectionId('player1');
       const card = player1.hand[0];
 
       transport.send.mockClear();
@@ -1108,7 +1108,8 @@ describe('GameCoordinator', () => {
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
       const game = coordinator.games.get(roomId);
-      const player1PublicId = game.getPublicId('player1');
+      const player1 = game.getPlayerByConnectionId('player1');
+      const player1PublicId = player1.publicId;
 
       transport.sendToGroup.mockClear();
       handlers.onMessage('player1', 'requestRematch', {});
@@ -1371,11 +1372,12 @@ describe('GameCoordinator', () => {
       const game = coordinator.games.get(roomId);
 
       // Player2 votes then disconnects
+      const player2 = game.getPlayerByConnectionId('player2');
+      const player2InternalId = player2.internalId;
       handlers.onMessage('player2', 'requestRematch', {});
-      expect(game.rematchVotes.has('player2')).toBe(true);
+      expect(game.rematchVotes.has(player2InternalId)).toBe(true);
 
       // Get player2's session token
-      const player2 = game.players.find((p) => p.id === 'player2');
       const sessionToken = player2.sessionToken;
 
       handlers.onDisconnect('player2');
@@ -1388,8 +1390,8 @@ describe('GameCoordinator', () => {
         playerName: 'Bob',
       });
 
-      // Old vote should be removed
-      expect(game.rematchVotes.has('player2')).toBe(false);
+      // Old vote should be removed (votes keyed by internalId)
+      expect(game.rematchVotes.has(player2InternalId)).toBe(false);
       // New connectionId should NOT be auto-added
       expect(game.rematchVotes.has('player2-new')).toBe(false);
     });

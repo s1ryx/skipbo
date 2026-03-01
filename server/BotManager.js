@@ -32,7 +32,7 @@ class BotManager {
     const botPlayer = game.players.find((p) => p.publicId === botPublicId);
     if (!botPlayer || !botPlayer.isBot) return false;
 
-    game.removePlayer(botPlayer.id);
+    game.removePlayer(botPlayer.internalId);
     this.botAIs.delete(`${roomId}:${botPublicId}`);
     return true;
   }

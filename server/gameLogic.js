@@ -65,9 +65,8 @@ class SkipBoGame {
     }
 
     const player = {
-      internalId: connectionId,
+      internalId: crypto.randomUUID(),
       connectionId,
-      id: connectionId,
       publicId: crypto.randomUUID().slice(0, 8),
       name: playerName,
       stockpile: [],
@@ -94,14 +93,6 @@ class SkipBoGame {
       return false;
     }
     this.players.splice(index, 1);
-    return true;
-  }
-
-  updatePlayerId(oldId, newId) {
-    const player = this.players.find((p) => p.internalId === oldId);
-    if (!player) return false;
-    player.id = newId;
-    player.internalId = newId;
     return true;
   }
 
