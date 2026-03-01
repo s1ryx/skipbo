@@ -278,14 +278,14 @@ describe('GameCoordinator', () => {
       const { coordinator } = createCoordinator();
       const handlers = coordinator.getTransportHandlers();
 
-      // Invalid → undefined (uses game default)
+      // Invalid → null (uses game default)
       handlers.onMessage('p1', 'createRoom', { playerName: 'A', maxPlayers: 2, stockpileSize: -1 });
       let game = [...coordinator.games.values()][0];
-      expect(game.stockpileSize).toBeUndefined();
+      expect(game.stockpileSize).toBeNull();
 
       handlers.onMessage('p2', 'createRoom', { playerName: 'B', maxPlayers: 2, stockpileSize: 31 });
       game = [...coordinator.games.values()][1];
-      expect(game.stockpileSize).toBeUndefined();
+      expect(game.stockpileSize).toBeNull();
 
       // Valid
       handlers.onMessage('p3', 'createRoom', { playerName: 'C', maxPlayers: 2, stockpileSize: 10 });
@@ -1208,15 +1208,15 @@ describe('GameCoordinator', () => {
       expect(game.stockpileSize).toBe(originalSize);
     });
 
-    it('clamps stockpile size to minimum of 5', () => {
+    it('clamps stockpile size to minimum of MIN_STOCKPILE_SIZE', () => {
       const { coordinator } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
       const game = coordinator.games.get(roomId);
 
-      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 1 });
+      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 0 });
 
-      expect(game.stockpileSize).toBe(5);
+      expect(game.stockpileSize).toBe(1);
     });
 
     it('clamps stockpile size to max 30 for <=4 players', () => {

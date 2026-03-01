@@ -726,8 +726,7 @@ class GameCoordinator {
 
     if (game.getPublicId(connectionId) !== game.hostPublicId) return;
 
-    const maxAllowed = game.players.length <= 4 ? 30 : 20;
-    game.stockpileSize = Math.min(Math.max(stockpileSize, 5), maxAllowed);
+    game.updateStockpileSize(stockpileSize);
     game.clearRematchVotes();
 
     this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
