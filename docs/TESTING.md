@@ -34,7 +34,7 @@ confidence that the application works correctly, not a coverage number.
 - **[Jest](https://jestjs.io/)** (v30) for unit and integration tests
 - Run: `cd server && npx jest`
 - Watch mode: `cd server && npx jest --watch`
-- Single suite: `cd server && npx jest --testPathPattern=ai/ChainDetector`
+- Single suite: `cd server && npx jest --testPathPattern=unit/gameLogic`
 
 ### Client
 
@@ -56,15 +56,8 @@ server/
 │   │   ├── session.test.js        # Reconnection and session persistence
 │   │   ├── chat.test.js           # Chat messaging
 │   │   ├── gameAbort.test.js      # Game abort and cleanup
-│   │   ├── bot.test.js            # Bot integration
 │   │   ├── raceConditions.test.js # Concurrent event handling
 │   │   └── rateLimiting.test.js   # Rate limiter behavior
-│   └── ai/                        # AI module tests
-│       ├── CardCounter.test.js
-│       ├── ChainDetector.test.js
-│       ├── StateEvaluator.test.js
-│       ├── AIPlayer.test.js
-│       └── GameLogger.test.js
 ├── transport/
 │   └── SocketIOTransport.test.js  # Transport adapter tests
 
@@ -86,7 +79,6 @@ client/src/
 
 - **Server unit tests** go in `server/tests/unit/`
 - **Server integration tests** go in `server/tests/integration/`
-- **Server AI tests** go in `server/tests/ai/`
 - **Transport tests** live next to their adapter (`server/transport/`)
 - **Client tests** are co-located with their source file
 
@@ -133,7 +125,7 @@ Test rendering and user interaction, not implementation details:
 
 - State transitions in response to server events
 - Action functions send correct events through transport
-- Session persistence to localStorage
+- Session persistence to sessionStorage
 - Reconnection flow
 
 ### AI modules (when present)
