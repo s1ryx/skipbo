@@ -77,4 +77,78 @@ describe('GameRepository', () => {
       expect(repo.getAllRoomIds().sort()).toEqual(['A', 'B']);
     });
   });
+
+  describe('scheduleDeletion / cancelDeletion', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('calls callback after delay', () => {
+      const cb = jest.fn();
+      repo.scheduleDeletion('ROOM01', cb, 5000);
+      expect(cb).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(5000);
+      expect(cb).toHaveBeenCalledTimes(1);
+    });
+
+    it('tracks pending deletion in map', () => {
+      repo.scheduleDeletion('ROOM01', jest.fn(), 5000);
+      expect(repo.pendingDeletions.has('ROOM01')).toBe(true);
+    });
+
+    it('removes from map after callback fires', () => {
+      repo.scheduleDeletion('ROOM01', jest.fn(), 5000);
+      jest.advanceTimersByTime(5000);
+      expect(repo.pendingDeletions.has('ROOM01')).toBe(false);
+    });
+
+    it('cancelDeletion prevents callback and returns true', () => {
+      const cb = jest.fn();
+      repo.scheduleDeletion('ROOM01', cb, 5000);
+      expect(repo.cancelDeletion('ROOM01')).toBe(true);
+      jest.advanceTimersByTime(5000);
+      expect(cb).not.toHaveBeenCalled();
+      expect(repo.pendingDeletions.has('ROOM01')).toBe(false);
+    });
+
+    it('cancelDeletion returns false for unknown room', () => {
+      expect(repo.cancelDeletion('NOPE')).toBe(false);
+    });
+  });
+
+  describe('scheduleCompletedCleanup / cancelCompletedCleanup', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('calls callback after delay', () => {
+      const cb = jest.fn();
+      repo.scheduleCompletedCleanup('ROOM01', cb, 10000);
+      expect(cb).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(10000);
+      expect(cb).toHaveBeenCalledTimes(1);
+    });
+
+    it('tracks timer in map', () => {
+      repo.scheduleCompletedCleanup('ROOM01', jest.fn(), 10000);
+      expect(repo.completedGameTimers.has('ROOM01')).toBe(true);
+    });
+
+    it('removes from map after callback fires', () => {
+      repo.scheduleCompletedCleanup('ROOM01', jest.fn(), 10000);
+      jest.advanceTimersByTime(10000);
+      expect(repo.completedGameTimers.has('ROOM01')).toBe(false);
+    });
+
+    it('cancelCompletedCleanup prevents callback and returns true', () => {
+      const cb = jest.fn();
+      repo.scheduleCompletedCleanup('ROOM01', cb, 10000);
+      expect(repo.cancelCompletedCleanup('ROOM01')).toBe(true);
+      jest.advanceTimersByTime(10000);
+      expect(cb).not.toHaveBeenCalled();
+      expect(repo.completedGameTimers.has('ROOM01')).toBe(false);
+    });
+
+    it('cancelCompletedCleanup returns false for unknown room', () => {
+      expect(repo.cancelCompletedCleanup('NOPE')).toBe(false);
+    });
+  });
 });
