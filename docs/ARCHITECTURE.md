@@ -1,7 +1,8 @@
 # Architecture & Program Flow
 
 > Part of the [project documentation](../README.md#documentation).
-> See also: [Technical Debt](TECH_DEBT.md) for known coupling issues.
+> See also: [Technical Debt](TECH_DEBT.md) for known coupling issues,
+> [Design Principles](DESIGN_PRINCIPLES.md) for the target architecture.
 
 This document describes how the client and server interact, how data flows
 through the system, and how the React component tree is structured.

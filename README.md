@@ -522,6 +522,7 @@ skip-bo/
 | [Git Workflow](docs/GIT_WORKFLOW.md) | Branching model, PR process, release flow |
 | [Testing](docs/TESTING.md) | Test frameworks, organization, patterns, and what must be tested |
 | [Technical Debt](docs/TECH_DEBT.md) | Known coupling issues and refactoring roadmap |
+| [Design Principles](docs/DESIGN_PRINCIPLES.md) | Target architecture, abstraction layers, design patterns |
 
 ## Future Enhancements
 
