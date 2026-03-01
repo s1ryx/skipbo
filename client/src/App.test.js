@@ -63,6 +63,17 @@ const renderApp = () => {
 beforeEach(() => {
   mockSocket._reset();
   sessionStorage.clear();
+  // Lobby.js creates a BroadcastChannel on mount; provide a mock for jsdom
+  global.BroadcastChannel = jest.fn().mockImplementation(() => ({
+    postMessage: jest.fn(),
+    close: jest.fn(),
+    onmessage: null,
+  }));
+});
+
+afterEach(() => {
+  delete global.BroadcastChannel;
+  window.history.replaceState({}, '', '/');
 });
 
 describe('App', () => {
@@ -120,6 +131,38 @@ describe('App', () => {
         mockSocket._trigger('reconnectFailed', { message: 'error.roomNoLongerExists' });
       });
       expect(screen.getByText('Room no longer exists')).toBeInTheDocument();
+    });
+  });
+
+  describe('invite link handoff', () => {
+    it('extracts room from URL and passes to Lobby', () => {
+      window.history.pushState({}, '', '/?room=abc');
+      renderApp();
+      expect(screen.getByText('Join a Game')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter room ID').value).toBe('ABC');
+    });
+
+    it('cleans room parameter from URL', () => {
+      const replaceStateSpy = jest.spyOn(window.history, 'replaceState');
+      window.history.pushState({}, '', '/?room=TEST');
+      renderApp();
+      // Called by App for URL cleanup (plus the afterEach cleanup call)
+      expect(replaceStateSpy).toHaveBeenCalledWith({}, document.title, '/');
+      replaceStateSpy.mockRestore();
+    });
+
+    it('creates BroadcastChannel and posts joinRoom message', () => {
+      window.history.pushState({}, '', '/?room=xyz');
+      renderApp();
+      // App.js creates a second BroadcastChannel for the handoff
+      const appCall = global.BroadcastChannel.mock.results.find(
+        (r) => r.value && r.value.postMessage.mock.calls.length > 0
+      );
+      expect(appCall).toBeTruthy();
+      expect(appCall.value.postMessage).toHaveBeenCalledWith({
+        type: 'joinRoom',
+        roomId: 'XYZ',
+      });
     });
   });
 
