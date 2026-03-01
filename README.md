@@ -497,26 +497,36 @@ docker-compose logs nginx
 ## Project Structure
 
 ```
-skip-bo-game/
+skip-bo/
 ├── server/
-│   ├── server.js          # Socket.IO server and event handlers
-│   ├── gameLogic.js       # Skip-Bo game rules and state management
-│   └── package.json       # Server dependencies
+│   ├── server.js              # Entry point (wiring)
+│   ├── createServer.js        # HTTP + Socket.IO server factory
+│   ├── gameCoordinator.js     # Event handling and game lifecycle
+│   ├── gameLogic.js           # Skip-Bo game rules (SkipBoGame class)
+│   ├── transport/
+│   │   └── SocketIOTransport.js   # Server-side transport adapter
+│   └── tests/
+│       ├── unit/              # Unit tests (gameLogic, gameCoordinator)
+│       └── integration/       # Integration tests (lobby, session, chat, ...)
 │
-└── client/
-    ├── public/
-    │   └── index.html     # HTML template
-    ├── src/
-    │   ├── components/
-    │   │   ├── Lobby.js           # Room creation/joining
-    │   │   ├── GameBoard.js       # Main game interface
-    │   │   ├── Card.js            # Card component
-    │   │   ├── PlayerHand.js      # Player's hand display
-    │   │   └── *.css              # Component styles
-    │   ├── App.js         # Main app component
-    │   ├── index.js       # React entry point
-    │   └── *.css          # Global styles
-    └── package.json       # Client dependencies
+├── client/
+│   └── src/
+│       ├── App.js             # Top-level routing
+│       ├── useGameConnection.js   # Hook: server state + actions
+│       ├── components/        # UI components (+ co-located tests)
+│       │   ├── GameBoard.js / .test.js / .css
+│       │   ├── Lobby.js / .test.js / .css
+│       │   ├── WaitingRoom.js / .test.js / .css
+│       │   ├── Card.js / .test.js / .css
+│       │   ├── PlayerHand.js / .test.js / .css
+│       │   └── Chat.js / .test.js / .css
+│       ├── transport/
+│       │   └── SocketIOClientTransport.js / .test.js
+│       └── i18n/              # Internationalization (en, de, tr)
+│
+├── docs/                      # Project documentation
+├── deployment/                # Docker and production configs
+└── scripts/                   # Development and testing scripts
 ```
 
 ## Game Architecture
@@ -553,16 +563,6 @@ skip-bo-game/
 - `turnChanged` - Turn moved to next player
 - `gameOver` - Game finished
 - `error` - Error message
-
-## Future Enhancements
-
-- [ ] AI players for single-player mode
-- [ ] Game statistics and leaderboards
-- [ ] Sound effects and music
-- [ ] Animations for card movements
-- [ ] Chat system
-- [ ] Game replay feature
-- [ ] Mobile app version
 
 ## Troubleshooting
 
