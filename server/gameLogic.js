@@ -12,7 +12,6 @@ const {
   MIN_PLAYERS,
   MAX_PLAYERS,
   MIN_STOCKPILE_SIZE,
-  MAX_STOCKPILE_SIZE,
   Phase,
 } = require('./config');
 
@@ -396,8 +395,6 @@ class SkipBoGame {
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
         handCount: p.hand.length,
         discardPiles: p.discardPiles,
-        isBot: !!p.isBot,
-        aiType: p.aiType || null,
       })),
       maxPlayers: this.playerCount,
       buildingPiles: this.buildingPiles,

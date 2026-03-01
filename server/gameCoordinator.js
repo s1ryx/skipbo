@@ -147,7 +147,7 @@ class GameCoordinator {
       roomId,
       playerId: game.getPublicId(connectionId),
       sessionToken,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
     console.log(`Room created: ${roomId} by ${sanitizeForLog(validName)}`);
@@ -191,7 +191,7 @@ class GameCoordinator {
     this.transport.sendToGroup(roomId, 'playerJoined', {
       playerId: game.getPublicId(connectionId),
       playerName: validName,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
     this.transport.send(connectionId, 'sessionToken', {
@@ -252,14 +252,14 @@ class GameCoordinator {
           roomId,
           playerId: publicId,
           sessionToken: newToken,
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
           playerState: game.getPlayerState(connectionId),
         });
 
         this.transport.sendToGroupExcept(roomId, connectionId, 'playerJoined', {
           playerId: publicId,
           playerName: validName,
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
 
         console.log(`${sanitizeForLog(validName)} rejoined lobby: ${roomId}`);
@@ -287,7 +287,7 @@ class GameCoordinator {
       roomId,
       playerId: player.publicId,
       sessionToken: newToken,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
       playerState: game.getPlayerState(connectionId),
     });
 
@@ -323,7 +323,7 @@ class GameCoordinator {
 
     game.players.filter((p) => !p.isBot).forEach((player) => {
       this.transport.send(player.id, 'gameStarted', {
-        gameState: game.getGameState(),
+        gameState: this._getDecoratedGameState(game),
         playerState: game.getPlayerState(player.id),
       });
     });
@@ -366,7 +366,7 @@ class GameCoordinator {
       stateBefore = logger._snapshot(game);
       if (this.moveAnalyzer) {
         const ps = game.getPlayerState(connectionId);
-        const gs = game.getGameState();
+        const gs = this._getDecoratedGameState(game);
         aiAnalysis = this.moveAnalyzer.analyzePlay(ps, gs, { card, source, buildingPileIndex });
       }
     }
@@ -392,7 +392,7 @@ class GameCoordinator {
 
     game.players.forEach((player) => {
       this.transport.send(player.id, 'gameStateUpdate', {
-        gameState: game.getGameState(),
+        gameState: this._getDecoratedGameState(game),
         playerState: game.getPlayerState(player.id),
       });
     });
@@ -400,7 +400,7 @@ class GameCoordinator {
     if (game.phase === Phase.FINISHED) {
       this.transport.sendToGroup(roomId, 'gameOver', {
         winner: game.winner,
-        gameState: game.getGameState(),
+        gameState: this._getDecoratedGameState(game),
       });
       if (logger) {
         const counter = this.turnCounters.get(roomId);
@@ -431,7 +431,7 @@ class GameCoordinator {
       stateBefore = logger._snapshot(game);
       if (this.moveAnalyzer) {
         const ps = game.getPlayerState(connectionId);
-        const gs = game.getGameState();
+        const gs = this._getDecoratedGameState(game);
         aiAnalysis = this.moveAnalyzer.analyzeDiscard(ps, gs, { card, discardPileIndex });
       }
     }
@@ -475,7 +475,7 @@ class GameCoordinator {
 
     game.players.forEach((player) => {
       this.transport.send(player.id, 'gameStateUpdate', {
-        gameState: game.getGameState(),
+        gameState: this._getDecoratedGameState(game),
         playerState: game.getPlayerState(player.id),
       });
     });
@@ -555,7 +555,7 @@ class GameCoordinator {
     this.transport.sendToGroup(roomId, 'playerJoined', {
       playerId: botPlayer.publicId,
       playerName: botName,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
     console.log(`Bot "${botName}" (${validAiType}) added to room ${roomId}`);
@@ -592,7 +592,7 @@ class GameCoordinator {
 
     this.transport.sendToGroup(roomId, 'playerLeft', {
       playerId: botPlayerId,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
     console.log(`Bot removed from room ${roomId}`);
@@ -627,7 +627,7 @@ class GameCoordinator {
       }
       this.transport.sendToGroup(roomId, 'playerLeft', {
         playerId: publicId,
-        gameState: game.getGameState(),
+        gameState: this._getDecoratedGameState(game),
       });
     }
   }
@@ -659,7 +659,7 @@ class GameCoordinator {
         this.games.delete(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
       }
 
@@ -701,7 +701,7 @@ class GameCoordinator {
 
       game.players.filter((p) => !p.isBot).forEach((player) => {
         this.transport.send(player.id, 'gameStarted', {
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
           playerState: game.getPlayerState(player.id),
         });
       });
@@ -767,7 +767,7 @@ class GameCoordinator {
         }
         this.transport.sendToGroup(roomId, 'playerLeft', {
           playerId: publicId,
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
       }
     } else if (game.phase === Phase.FINISHED) {
@@ -785,7 +785,7 @@ class GameCoordinator {
         this.games.delete(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
       }
     } else {
@@ -909,7 +909,7 @@ class GameCoordinator {
       if (!this.games.has(roomId) || game.phase === Phase.FINISHED) return;
       if (game.getCurrentPlayer()?.id !== botId) return;
 
-      const gameState = game.getGameState();
+      const gameState = this._getDecoratedGameState(game);
       const playerState = game.getPlayerState(botId);
       const move = ai.findPlayableCard(playerState, gameState);
 
@@ -967,7 +967,7 @@ class GameCoordinator {
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || currentPlayer.id !== botId) return;
 
-    const discardGameState = game.getGameState();
+    const discardGameState = this._getDecoratedGameState(game);
     const discardPlayerState = game.getPlayerState(botId);
     const discard = ai.chooseDiscard(discardPlayerState, discardGameState);
 
@@ -1036,7 +1036,7 @@ class GameCoordinator {
 
     this.transport.sendToGroup(roomId, 'gameOver', {
       winner: game.winner,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
     // Also send final gameStateUpdate to humans
@@ -1046,11 +1046,24 @@ class GameCoordinator {
     this.scheduleCompletedGameCleanup(roomId);
   }
 
+  _getDecoratedGameState(game) {
+    const state = game.getGameState();
+    state.players = state.players.map((p) => {
+      const player = game.players.find((gp) => gp.publicId === p.id);
+      return {
+        ...p,
+        isBot: player ? !!player.isBot : false,
+        aiType: player ? player.aiType || null : null,
+      };
+    });
+    return state;
+  }
+
   _broadcastToHumans(roomId, game) {
     game.players.forEach((player) => {
       if (!player.isBot) {
         this.transport.send(player.id, 'gameStateUpdate', {
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
           playerState: game.getPlayerState(player.id),
         });
       }
