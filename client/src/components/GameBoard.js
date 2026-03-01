@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import './GameBoard.css';
-import Card from './Card';
-import PlayerHand from './PlayerHand';
 import Chat from './Chat';
 import LeaveConfirmDialog from './LeaveConfirmDialog';
 import GameOverOverlay from './GameOverOverlay';
 import OpponentArea from './OpponentArea';
 import BuildingPiles from './BuildingPiles';
+import PlayerArea from './PlayerArea';
 import { useTranslation } from '../i18n';
 
 function GameBoard({
@@ -129,125 +128,24 @@ function GameBoard({
         onPileClick={handleBuildingPileClick}
       />
 
-      {/* Current Player Area */}
       {playerState && (
-        <div className={`player-area ${!isMyTurn ? 'inactive' : ''}`}>
-          <h3>{t('game.yourArea')}</h3>
-
-          <div className="player-piles">
-            {/* Stockpile */}
-            <div className="stockpile-section">
-              <div className="pile-label">
-                {t('game.yourStockpile', { count: playerState.stockpileCount })}
-              </div>
-              {playerState.stockpileTop ? (
-                <div
-                  className={`card-clickable ${selectedCard === playerState.stockpileTop && selectedSource === 'stockpile' ? 'selected' : ''}`}
-                  onClick={() => handleCardSelect(playerState.stockpileTop, 'stockpile')}
-                >
-                  <Card value={playerState.stockpileTop} isVisible={true} />
-                </div>
-              ) : (
-                <div className="empty-message">{t('game.emptyWin')}</div>
-              )}
-            </div>
-
-            {/* Discard Piles */}
-            <div className="discard-piles-section">
-              <div className="pile-label">{t('game.yourDiscardPiles')}</div>
-              <div className="discard-piles-container">
-                {playerState.discardPiles.map((pile, index) => (
-                  <div
-                    key={index}
-                    className={`discard-pile ${discardMode ? 'discard-mode' : ''}`}
-                    onClick={() => handleDiscardPileClick(index)}
-                  >
-                    <div className="pile-label-small">{t('game.pile', { index: index + 1 })}</div>
-                    {pile.length > 0 ? (
-                      <div className="discard-pile-stack">
-                        {pile.map((card, cardIndex) => (
-                          <div
-                            key={`${index}-${cardIndex}-${card}-${pile.length}`}
-                            className={`card-in-pile ${cardIndex === pile.length - 1 ? 'top-card' : ''} ${selectedCard === card && cardIndex === pile.length - 1 && selectedSource === `discard${index}` ? 'selected' : ''}`}
-                            style={{ marginTop: cardIndex > 0 ? '-50px' : '0' }}
-                            onClick={(e) => {
-                              // If in discard mode, allow click to bubble up to discard
-                              if (discardMode) {
-                                return;
-                              }
-                              // If a hand card is selected and quick discard is enabled, allow click to bubble up
-                              const sourceType = getSourceType(selectedSource);
-                              if (quickDiscardEnabled && selectedCard && sourceType === 'hand') {
-                                return;
-                              }
-                              // Only allow selecting the top card for playing
-                              if (cardIndex === pile.length - 1) {
-                                e.stopPropagation();
-                                handleCardSelect(card, `discard${index}`);
-                              }
-                            }}
-                          >
-                            <Card value={card} isVisible={true} />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="empty-pile-small">
-                        {discardMode ? t('game.clickToDiscard') : t('game.empty')}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Player Hand */}
-          <PlayerHand
-            hand={playerState.hand}
-            selectedCard={selectedCard}
-            selectedSource={selectedSource}
-            onCardSelect={handleCardSelect}
-            disabled={!isMyTurn}
-          />
-
-          {/* Actions */}
-          <div className="actions">
-            {isMyTurn && !discardMode && (
-              <button onClick={handleEndTurn} className="btn-end-turn">
-                {t('game.endTurn')}
-              </button>
-            )}
-            {isMyTurn && discardMode && (
-              <button onClick={handleCancelDiscard} className="btn-cancel-discard">
-                {t('game.cancel')}
-              </button>
-            )}
-            {selectedCard && (
-              <div className="selected-card-info">
-                {t('game.selected')} <Card value={selectedCard} isVisible={true} size="small" />
-                <button
-                  onClick={() => {
-                    setSelectedCard(null);
-                    setSelectedSource(null);
-                  }}
-                >
-                  {t('game.cancel')}
-                </button>
-              </div>
-            )}
-            <div className="settings-toggle">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={quickDiscardEnabled}
-                  onChange={toggleQuickDiscard}
-                />
-                {t('game.quickDiscard')}
-              </label>
-            </div>
-          </div>
-        </div>
+        <PlayerArea
+          playerState={playerState}
+          isMyTurn={isMyTurn}
+          selectedCard={selectedCard}
+          selectedSource={selectedSource}
+          discardMode={discardMode}
+          quickDiscardEnabled={quickDiscardEnabled}
+          onCardSelect={handleCardSelect}
+          onDiscardPileClick={handleDiscardPileClick}
+          onEndTurn={handleEndTurn}
+          onCancelDiscard={handleCancelDiscard}
+          onClearSelection={() => {
+            setSelectedCard(null);
+            setSelectedSource(null);
+          }}
+          onToggleQuickDiscard={toggleQuickDiscard}
+        />
       )}
 
       {showLeaveConfirm && (
