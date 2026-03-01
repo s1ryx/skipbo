@@ -15,6 +15,7 @@ const {
   MAX_PLAYER_NAME_LENGTH,
   MAX_CHAT_MESSAGE_LENGTH,
   BOT_ID_PREFIX,
+  Phase,
 } = require('./config');
 
 function stripHtml(str) {
@@ -164,7 +165,7 @@ class GameCoordinator {
 
     this.cancelPendingDeletion(roomId);
 
-    if (game.gameStarted) {
+    if (game.phase !== Phase.LOBBY) {
       this.transport.send(connectionId, 'error', { message: 'error.gameAlreadyStarted' });
       return;
     }
@@ -228,7 +229,7 @@ class GameCoordinator {
 
     if (!player) {
       // Player was removed — rejoin if game hasn't started
-      if (!game.gameStarted) {
+      if (game.phase === Phase.LOBBY) {
         const added = game.addPlayer(connectionId, validName);
         if (!added) {
           this.transport.send(connectionId, 'reconnectFailed', { message: 'error.roomFull' });
@@ -392,7 +393,7 @@ class GameCoordinator {
       });
     });
 
-    if (game.gameOver) {
+    if (game.phase === Phase.FINISHED) {
       this.transport.sendToGroup(roomId, 'gameOver', {
         winner: game.winner,
         gameState: game.getGameState(),
@@ -517,7 +518,7 @@ class GameCoordinator {
       return;
     }
 
-    if (game.gameStarted) {
+    if (game.phase !== Phase.LOBBY) {
       this.transport.send(connectionId, 'error', { message: 'error.cannotAddBotDuringGame' });
       return;
     }
@@ -565,7 +566,7 @@ class GameCoordinator {
       return;
     }
 
-    if (game.gameStarted) {
+    if (game.phase !== Phase.LOBBY) {
       this.transport.send(connectionId, 'error', { message: 'error.cannotAddBotDuringGame' });
       return;
     }
@@ -598,7 +599,7 @@ class GameCoordinator {
     if (!roomId) return;
 
     const game = this.games.get(roomId);
-    if (!game || game.gameStarted) return;
+    if (!game || game.phase !== Phase.LOBBY) return;
 
     const publicId = game.getPublicId(connectionId);
     console.log(`Player ${connectionId} is leaving lobby ${roomId}`);
@@ -636,7 +637,7 @@ class GameCoordinator {
     const game = this.games.get(roomId);
     if (!game) return;
 
-    if (game.gameOver) {
+    if (game.phase === Phase.FINISHED) {
       // Post-game: soft leave (only the leaving player exits)
       game.removePlayer(connectionId);
       this.transport.removeFromGroup(connectionId, roomId);
@@ -684,7 +685,7 @@ class GameCoordinator {
     if (!roomId) return;
 
     const game = this.games.get(roomId);
-    if (!game || !game.gameOver) return;
+    if (!game || game.phase !== Phase.FINISHED) return;
 
     game.rematchVotes.add(connectionId);
 
@@ -719,7 +720,7 @@ class GameCoordinator {
     if (!roomId) return;
 
     const game = this.games.get(roomId);
-    if (!game || !game.gameOver) return;
+    if (!game || game.phase !== Phase.FINISHED) return;
 
     if (game.getPublicId(connectionId) !== game.hostPublicId) return;
 
@@ -749,7 +750,7 @@ class GameCoordinator {
 
     const publicId = game.getPublicId(connectionId);
 
-    if (!game.gameStarted) {
+    if (game.phase === Phase.LOBBY) {
       game.removePlayer(connectionId);
       this.transport.removeFromGroup(connectionId, roomId);
       const humanPlayers = game.players.filter((p) => !p.isBot);
@@ -768,7 +769,7 @@ class GameCoordinator {
           gameState: game.getGameState(),
         });
       }
-    } else if (game.gameOver) {
+    } else if (game.phase === Phase.FINISHED) {
       // Post-game: soft remove, cancel rematch votes
       game.removePlayer(connectionId);
       game.rematchVotes.clear();
@@ -873,7 +874,7 @@ class GameCoordinator {
 
   _scheduleBotTurnIfNeeded(roomId) {
     const game = this.games.get(roomId);
-    if (!game || !game.gameStarted || game.gameOver) return;
+    if (!game || game.phase !== Phase.PLAYING) return;
 
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || !currentPlayer.isBot) return;
@@ -890,7 +891,7 @@ class GameCoordinator {
 
   _playBotTurn(roomId) {
     const game = this.games.get(roomId);
-    if (!game || !game.gameStarted || game.gameOver) return;
+    if (!game || game.phase !== Phase.PLAYING) return;
 
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || !currentPlayer.isBot) return;
@@ -904,14 +905,14 @@ class GameCoordinator {
 
     const playNext = () => {
       // Re-check guards — game state may have changed
-      if (!this.games.has(roomId) || game.gameOver) return;
+      if (!this.games.has(roomId) || game.phase === Phase.FINISHED) return;
       if (game.getCurrentPlayer()?.id !== botId) return;
 
       const gameState = game.getGameState();
       const playerState = game.getPlayerState(botId);
       const move = ai.findPlayableCard(playerState, gameState);
 
-      if (move && !game.gameOver) {
+      if (move && game.phase === Phase.PLAYING) {
         // Log before play
         let stateBefore = null;
         let aiAnalysis = null;
@@ -941,7 +942,7 @@ class GameCoordinator {
         // Broadcast to humans
         this._broadcastToHumans(roomId, game);
 
-        if (game.gameOver) {
+        if (game.phase === Phase.FINISHED) {
           this._handleBotGameOver(roomId, game, logger);
           return;
         }
