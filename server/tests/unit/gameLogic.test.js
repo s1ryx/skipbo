@@ -545,6 +545,63 @@ describe('SkipBoGame', () => {
     });
   });
 
+  describe('updatePlayerId', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+    });
+
+    it('updates player ID and returns true', () => {
+      expect(game.updatePlayerId('p1', 'p1-new')).toBe(true);
+      expect(game.players[0].id).toBe('p1-new');
+    });
+
+    it('preserves other player properties', () => {
+      const publicId = game.players[0].publicId;
+      game.updatePlayerId('p1', 'p1-new');
+      expect(game.players[0].publicId).toBe(publicId);
+      expect(game.players[0].name).toBe('Alice');
+    });
+
+    it('returns false for unknown player', () => {
+      expect(game.updatePlayerId('unknown', 'new')).toBe(false);
+    });
+  });
+
+  describe('setSessionToken', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+    });
+
+    it('sets token and returns true', () => {
+      expect(game.setSessionToken('p1', 'token-abc')).toBe(true);
+      expect(game.players[0].sessionToken).toBe('token-abc');
+    });
+
+    it('overwrites existing token', () => {
+      game.setSessionToken('p1', 'old-token');
+      game.setSessionToken('p1', 'new-token');
+      expect(game.players[0].sessionToken).toBe('new-token');
+    });
+
+    it('returns false for unknown player', () => {
+      expect(game.setSessionToken('unknown', 'token')).toBe(false);
+    });
+  });
+
+  describe('setHost', () => {
+    it('sets hostPublicId', () => {
+      game.setHost('abc123');
+      expect(game.hostPublicId).toBe('abc123');
+    });
+
+    it('overwrites previous host', () => {
+      game.setHost('first');
+      game.setHost('second');
+      expect(game.hostPublicId).toBe('second');
+    });
+  });
+
   describe('addRematchVote', () => {
     it('adds a new vote and returns true', () => {
       expect(game.addRematchVote('p1')).toBe(true);
