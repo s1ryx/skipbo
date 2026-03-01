@@ -1,4 +1,4 @@
-const SkipBoGame = require('./gameLogic');
+const SkipBoGame = require('../../gameLogic');
 
 describe('SkipBoGame', () => {
   let game;

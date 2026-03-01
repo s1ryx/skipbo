@@ -1,4 +1,4 @@
-const GameCoordinator = require('./gameCoordinator');
+const GameCoordinator = require('../../gameCoordinator');
 
 function createMockTransport() {
   return {
