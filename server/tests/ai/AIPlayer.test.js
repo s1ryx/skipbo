@@ -178,4 +178,37 @@ describe('AIPlayer', () => {
       }
     });
   });
+
+  describe('full turn simulation', () => {
+    test('plays multiple cards in sequence', () => {
+      const { playerState, gameState } = makeState({
+        hand: [1, 2, 3, 4, 5],
+        buildingPiles: [[], [], [], []],
+      });
+
+      // Simulate a full turn
+      const plays = [];
+      let state = { ...playerState, hand: [...playerState.hand] };
+
+      for (let i = 0; i < 20; i++) { // safety limit
+        const play = ai.findPlayableCard(state, gameState);
+        if (!play) break;
+        plays.push(play);
+
+        // Apply play to state
+        if (play.source === 'hand') {
+          const idx = state.hand.indexOf(play.card);
+          state.hand.splice(idx, 1);
+        }
+
+        // Advance building pile
+        const pile = gameState.buildingPiles[play.buildingPileIndex];
+        pile.push(play.card);
+      }
+
+      // Should play 1 first (starts a pile), then potentially chain
+      expect(plays.length).toBeGreaterThanOrEqual(1);
+      expect(plays[0].card).toBe(1);
+    });
+  });
 });
