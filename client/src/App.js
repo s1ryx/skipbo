@@ -17,8 +17,22 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
     if (roomParam) {
-      setRoomIdFromUrl(roomParam.toUpperCase());
+      const roomIdUpper = roomParam.toUpperCase();
       window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Try to hand off the room code to an existing tab
+      const channel = new BroadcastChannel('skipbo-lobby');
+      channel.onmessage = (e) => {
+        if (e.data.type === 'joinRoom:ack') {
+          channel.close();
+          window.close();
+        }
+      };
+      channel.postMessage({ type: 'joinRoom', roomId: roomIdUpper });
+      setTimeout(() => channel.close(), 1000);
+
+      // Also proceed normally in case close fails or no other tab is listening
+      setRoomIdFromUrl(roomIdUpper);
     }
   }, []);
 
