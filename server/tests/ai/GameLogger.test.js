@@ -7,13 +7,13 @@ const { GameLogger, MoveAnalyzer } = require('../../ai/GameLogger');
 function makeGame(overrides = {}) {
   const players = overrides.players || [
     {
-      id: 'p1', name: 'Alice', isBot: false,
+      internalId: 'p1', name: 'Alice', isBot: false,
       hand: [1, 2, 3, 4, 5],
       stockpile: [7],
       discardPiles: [[], [], [], []],
     },
     {
-      id: 'p2', name: 'Bob', isBot: true,
+      internalId: 'p2', name: 'Bob', isBot: true,
       hand: [6, 7, 8, 9, 10],
       stockpile: [3, 5],
       discardPiles: [[4], [], [], []],
@@ -36,7 +36,7 @@ function makeGame(overrides = {}) {
       return {
         roomId: this.roomId,
         players: this.players.map((p) => ({
-          id: p.id,
+          id: p.internalId,
           name: p.name,
           stockpileCount: p.stockpile.length,
           stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
@@ -45,15 +45,15 @@ function makeGame(overrides = {}) {
         })),
         buildingPiles: this.buildingPiles,
         currentPlayerIndex: this.currentPlayerIndex,
-        currentPlayerId: this.players[this.currentPlayerIndex]?.id,
+        currentPlayerId: this.players[this.currentPlayerIndex]?.internalId,
         deckCount: this.deck.length,
         gameStarted: true,
         gameOver: this.gameOver,
-        winner: this.winner ? { id: this.winner.id, name: this.winner.name } : null,
+        winner: this.winner ? { id: this.winner.internalId, name: this.winner.name } : null,
       };
     },
     getPlayerState(playerId) {
-      const p = this.players.find((pl) => pl.id === playerId);
+      const p = this.players.find((pl) => pl.internalId === playerId);
       if (!p) return null;
       return {
         hand: p.hand,
@@ -202,7 +202,7 @@ describe('GameLogger', () => {
 
   test('endGame writes game_end with winner and final state', () => {
     const logger = new GameLogger({ outputDir: tmpDir, roomId: 'T8' });
-    const game = makeGame({ gameOver: true, winner: { id: 'p1', name: 'Alice' } });
+    const game = makeGame({ gameOver: true, winner: { internalId: 'p1', name: 'Alice' } });
     logger.startGame(game);
     logger.endGame(game);
     logger.close();

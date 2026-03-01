@@ -84,12 +84,12 @@ class SkipBoGame {
   }
 
   getPublicId(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
     return player ? player.publicId : null;
   }
 
   removePlayer(playerId) {
-    const index = this.players.findIndex((p) => p.id === playerId);
+    const index = this.players.findIndex((p) => p.internalId === playerId);
     if (index === -1) {
       return false;
     }
@@ -98,9 +98,10 @@ class SkipBoGame {
   }
 
   updatePlayerId(oldId, newId) {
-    const player = this.players.find((p) => p.id === oldId);
+    const player = this.players.find((p) => p.internalId === oldId);
     if (!player) return false;
     player.id = newId;
+    player.internalId = newId;
     return true;
   }
 
@@ -112,7 +113,7 @@ class SkipBoGame {
   }
 
   setSessionToken(playerId, token) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
     if (!player) return false;
     player.sessionToken = token;
     return true;
@@ -224,9 +225,9 @@ class SkipBoGame {
   }
 
   playCard(playerId, card, source, buildingPileIndex, _discardIndex = null) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
-    if (!player || this.getCurrentPlayer().id !== playerId) {
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
       return { success: false, error: 'error.notYourTurn' };
     }
 
@@ -298,9 +299,9 @@ class SkipBoGame {
   }
 
   discardCard(playerId, card, discardPileIndex) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
-    if (!player || this.getCurrentPlayer().id !== playerId) {
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
       return { success: false, error: 'error.notYourTurn' };
     }
 
@@ -325,7 +326,7 @@ class SkipBoGame {
   }
 
   drawCards(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
     if (!player) {
       return { success: false, error: 'error.playerNotFoundDraw' };
@@ -339,9 +340,9 @@ class SkipBoGame {
   }
 
   endTurn(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
-    if (!player || this.getCurrentPlayer().id !== playerId) {
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
       return { success: false, error: 'error.notYourTurn' };
     }
 
@@ -350,9 +351,9 @@ class SkipBoGame {
 
     // Draw cards at the START of the new player's turn
     const nextPlayer = this.getCurrentPlayer();
-    this.drawCards(nextPlayer.id);
+    this.drawCards(nextPlayer.internalId);
 
-    return { success: true, nextPlayer: nextPlayer.id };
+    return { success: true, nextPlayer: nextPlayer.internalId };
   }
 
   addRematchVote(playerId) {
@@ -375,7 +376,7 @@ class SkipBoGame {
 
   getRematchVoterPublicIds() {
     return this.players
-      .filter((p) => this.rematchVotes.has(p.id))
+      .filter((p) => this.rematchVotes.has(p.internalId))
       .map((p) => p.publicId);
   }
 
@@ -425,7 +426,7 @@ class SkipBoGame {
   }
 
   getPlayerState(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
     if (!player) return null;
 
     return {

@@ -168,7 +168,7 @@ class GameLogger {
   _snapshot(gameObj) {
     const gs = gameObj.getGameState();
     const players = gameObj.players.map((p) => {
-      const ps = gameObj.getPlayerState(p.id);
+      const ps = gameObj.getPlayerState(p.internalId);
       return {
         name: p.name,
         isBot: !!p.isBot,
