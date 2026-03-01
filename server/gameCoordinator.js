@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const SkipBoGame = require('./gameLogic');
 const SessionManager = require('./SessionManager');
 const BotManager = require('./BotManager');
+const GameRepository = require('./GameRepository');
 const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
 const { createLogger } = require('./logger');
 const {
@@ -42,7 +43,7 @@ class GameCoordinator {
   constructor(options = {}) {
     this.transport = null;
     this.logger = options.logger || createLogger();
-    this.games = new Map();
+    this.gameRepository = new GameRepository();
     this.sessionManager = new SessionManager();
     this.botManager = new BotManager();
     this.pendingDeletions = new Map();
@@ -54,6 +55,10 @@ class GameCoordinator {
     this.gameLoggers = new Map();   // roomId → GameLogger
     this.turnCounters = new Map();  // roomId → { turn, plays, playerName, isBot }
     this.moveAnalyzer = this.logAnalysis ? new MoveAnalyzer() : null;
+  }
+
+  get games() {
+    return this.gameRepository.games;
   }
 
   setTransport(transport) {
