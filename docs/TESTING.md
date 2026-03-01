@@ -59,8 +59,15 @@ server/
 │   │   ├── session.test.js        # Reconnection and session persistence
 │   │   ├── chat.test.js           # Chat messaging
 │   │   ├── gameAbort.test.js      # Game abort and cleanup
+│   │   ├── bot.test.js            # Bot integration
 │   │   ├── raceConditions.test.js # Concurrent event handling
 │   │   └── rateLimiting.test.js   # Rate limiter behavior
+│   └── ai/                        # AI module tests
+│       ├── CardCounter.test.js
+│       ├── ChainDetector.test.js
+│       ├── StateEvaluator.test.js
+│       ├── AIPlayer.test.js
+│       └── GameLogger.test.js
 ├── transport/
 │   └── SocketIOTransport.test.js  # Transport adapter tests
 
@@ -82,6 +89,7 @@ client/src/
 
 - **Server unit tests** go in `server/tests/unit/`
 - **Server integration tests** go in `server/tests/integration/`
+- **Server AI tests** go in `server/tests/ai/`
 - **Transport tests** live next to their adapter (`server/transport/`)
 - **Client tests** are co-located with their source file
 
