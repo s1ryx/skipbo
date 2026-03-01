@@ -103,6 +103,10 @@ class SkipBoGame {
     return true;
   }
 
+  setHost(publicId) {
+    this.hostPublicId = publicId;
+  }
+
   startGame() {
     if (this.players.length < MIN_PLAYERS) {
       return false;
