@@ -18,6 +18,10 @@ const {
   Phase,
 } = require('./config');
 
+function isBotId(id) {
+  return typeof id === 'string' && id.startsWith(BOT_ID_PREFIX);
+}
+
 function stripHtml(str) {
   return str.replace(/<[^>]*>/g, '');
 }
@@ -530,7 +534,7 @@ class GameCoordinator {
     }
 
     const validAiType = (aiType === 'improved' || aiType === 'baseline') ? aiType : 'improved';
-    const botConnectionId = 'bot-' + crypto.randomUUID();
+    const botConnectionId = BOT_ID_PREFIX + crypto.randomUUID();
     const botNumber = game.players.filter((p) => p.isBot).length + 1;
     const botName = `Bot ${botNumber}`;
 
