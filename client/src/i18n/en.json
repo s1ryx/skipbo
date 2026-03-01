@@ -101,6 +101,11 @@
   "error.onlyHostCanRemoveBot": "Only the host can remove bots",
   "error.notABot": "Player is not a bot",
   "error.cannotAddBotDuringGame": "Cannot add bots after game has started",
+  "error.invalidPlayerName": "Invalid player name",
+  "error.invalidSession": "Invalid session",
+  "error.invalidSource": "Invalid card source",
+  "error.onlyHostCanStart": "Only the host can start the game",
+  "error.serverFull": "Server is full",
 
   "language.en": "English",
   "language.de": "Deutsch",

@@ -101,6 +101,11 @@
   "error.onlyHostCanRemoveBot": "Nur der Gastgeber kann Bots entfernen",
   "error.notABot": "Spieler ist kein Bot",
   "error.cannotAddBotDuringGame": "Bots können nicht nach Spielstart hinzugefügt werden",
+  "error.invalidPlayerName": "Ungültiger Spielername",
+  "error.invalidSession": "Ungültige Sitzung",
+  "error.invalidSource": "Ungültige Kartenquelle",
+  "error.onlyHostCanStart": "Nur der Gastgeber kann das Spiel starten",
+  "error.serverFull": "Server ist voll",
 
   "language.en": "English",
   "language.de": "Deutsch",

@@ -101,6 +101,11 @@
   "error.onlyHostCanRemoveBot": "Sadece oda sahibi botu kaldırabilir",
   "error.notABot": "Oyuncu bir bot değil",
   "error.cannotAddBotDuringGame": "Oyun başladıktan sonra bot eklenemez",
+  "error.invalidPlayerName": "Geçersiz oyuncu adı",
+  "error.invalidSession": "Geçersiz oturum",
+  "error.invalidSource": "Geçersiz kart kaynağı",
+  "error.onlyHostCanStart": "Sadece oda sahibi oyunu başlatabilir",
+  "error.serverFull": "Sunucu dolu",
 
   "language.en": "English",
   "language.de": "Deutsch",
