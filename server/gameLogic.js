@@ -75,8 +75,8 @@ class SkipBoGame {
     return true;
   }
 
-  getPublicId(connectionId) {
-    const player = this.players.find((p) => p.id === connectionId);
+  getPublicId(playerId) {
+    const player = this.players.find((p) => p.id === playerId);
     return player ? player.publicId : null;
   }
 
