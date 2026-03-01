@@ -156,3 +156,31 @@ describe('discardPlacementScore', () => {
     expect(discardPlacementScore(9, [10], 4)).toBe(10);
   });
 });
+
+// ── isPileFrozen ──────────────────────────────────────────────────────
+
+describe('isPileFrozen', () => {
+  test('frozen when stockpile value in pile and no pile needs it', () => {
+    expect(isPileFrozen([7, 7], 7, [3, 5, 1, 2])).toBe(true);
+  });
+
+  test('not frozen when a building pile needs the value', () => {
+    expect(isPileFrozen([7, 7], 7, [7, 5, 1, 2])).toBe(false);
+  });
+
+  test('not frozen when stockpile value not in pile', () => {
+    expect(isPileFrozen([3, 5], 7, [3, 5, 1, 2])).toBe(false);
+  });
+
+  test('not frozen for non-numeric stockpile', () => {
+    expect(isPileFrozen([7, 7], 'SKIP-BO', [3, 5, 1, 2])).toBe(false);
+  });
+
+  test('not frozen for null stockpile', () => {
+    expect(isPileFrozen([7, 7], null, [3, 5, 1, 2])).toBe(false);
+  });
+
+  test('not frozen for empty pile', () => {
+    expect(isPileFrozen([], 7, [3, 5, 1, 2])).toBe(false);
+  });
+});
