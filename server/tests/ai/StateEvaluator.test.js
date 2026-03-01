@@ -184,3 +184,58 @@ describe('isPileFrozen', () => {
     expect(isPileFrozen([], 7, [3, 5, 1, 2])).toBe(false);
   });
 });
+
+// ── detectRunway ──────────────────────────────────────────────────────
+
+describe('detectRunway', () => {
+  test('detects sequence from hand matching pile need', () => {
+    const { playerState, gameState } = makeState({
+      hand: [3, 4, 5, 8, 9],
+      buildingPiles: [[1, 2], [], [], []], // pile 0 needs 3
+    });
+    const runway = detectRunway(playerState, gameState);
+    expect(runway.length).toBe(3); // 3,4,5
+    expect(runway.cards.has(3)).toBe(true);
+    expect(runway.cards.has(4)).toBe(true);
+    expect(runway.cards.has(5)).toBe(true);
+  });
+
+  test('includes discard pile tops in runway', () => {
+    const { playerState, gameState } = makeState({
+      hand: [4, 5, 8, 9, 10],
+      discardPiles: [[3], [], [], []], // discard top = 3
+      buildingPiles: [[1, 2], [], [], []], // pile needs 3
+    });
+    const runway = detectRunway(playerState, gameState);
+    expect(runway.length).toBe(3); // 3(discard),4,5
+  });
+
+  test('SKIP-BO wildcards extend runway', () => {
+    const { playerState, gameState } = makeState({
+      hand: [3, 'SKIP-BO', 5, 8, 9],
+      buildingPiles: [[1, 2], [], [], []], // needs 3
+    });
+    const runway = detectRunway(playerState, gameState);
+    expect(runway.length).toBe(3); // 3, SKIP-BO as 4, 5
+  });
+
+  test('returns length 0 when no pile needs match available cards', () => {
+    const { playerState, gameState } = makeState({
+      hand: [5, 6, 7, 8, 9],
+      buildingPiles: [[], [], [], []], // all need 1
+    });
+    const runway = detectRunway(playerState, gameState);
+    expect(runway.length).toBe(0);
+  });
+
+  test('picks the longest runway across all piles', () => {
+    const { playerState, gameState } = makeState({
+      hand: [3, 4, 5, 6, 7],
+      buildingPiles: [[1, 2], [1, 2, 3, 4], [], []], // pile 0 needs 3, pile 1 needs 5
+    });
+    const runway = detectRunway(playerState, gameState);
+    // Pile 0: 3,4,5,6,7 = length 5
+    // Pile 1: 5,6,7 = length 3
+    expect(runway.length).toBe(5);
+  });
+});
