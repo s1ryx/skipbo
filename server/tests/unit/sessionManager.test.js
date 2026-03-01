@@ -88,7 +88,7 @@ describe('SessionManager', () => {
       sm.setRoom('p1', 'ROOM1');
       sm.setRoom('p2', 'ROOM1');
       sm.setRoom('p3', 'ROOM2');
-      sm.removeAllForPlayers([{ id: 'p1' }, { id: 'p2' }]);
+      sm.removeAllForPlayers([{ connectionId: 'p1' }, { connectionId: 'p2' }]);
       expect(sm.getRoom('p1')).toBeUndefined();
       expect(sm.getRoom('p2')).toBeUndefined();
       expect(sm.getRoom('p3')).toBe('ROOM2');

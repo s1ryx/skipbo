@@ -35,7 +35,7 @@ class SessionManager {
 
   removeAllForPlayers(players) {
     for (const player of players) {
-      this.playerRooms.delete(player.id);
+      this.playerRooms.delete(player.connectionId);
     }
   }
 }
