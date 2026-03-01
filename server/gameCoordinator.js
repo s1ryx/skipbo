@@ -272,7 +272,7 @@ class GameCoordinator {
 
     // Update player's connection ID and issue new session token
     const oldConnectionId = player.connectionId;
-    game.updatePlayerId(oldConnectionId, connectionId);
+    game.updateConnectionId(player.internalId, connectionId);
     const newToken = this.sessionManager.generateToken();
     game.setSessionToken(player.internalId, newToken);
 
