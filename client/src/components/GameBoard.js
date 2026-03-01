@@ -3,6 +3,7 @@ import './GameBoard.css';
 import Card from './Card';
 import PlayerHand from './PlayerHand';
 import Chat from './Chat';
+import LeaveConfirmDialog from './LeaveConfirmDialog';
 import { useTranslation } from '../i18n';
 
 function GameBoard({
@@ -357,19 +358,10 @@ function GameBoard({
       )}
 
       {showLeaveConfirm && (
-        <div className="leave-confirm-overlay">
-          <div className="leave-confirm-dialog">
-            <p>{t('game.leaveConfirm')}</p>
-            <div className="leave-confirm-buttons">
-              <button onClick={onLeaveGame} className="btn-leave-confirm">
-                {t('game.leaveYes')}
-              </button>
-              <button onClick={() => setShowLeaveConfirm(false)} className="btn-leave-cancel">
-                {t('game.cancel')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <LeaveConfirmDialog
+          onConfirm={onLeaveGame}
+          onCancel={() => setShowLeaveConfirm(false)}
+        />
       )}
 
       {gameState.gameOver && (
