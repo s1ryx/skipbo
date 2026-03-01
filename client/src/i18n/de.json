@@ -63,6 +63,10 @@
   "game.quickDiscard": "Schnell ablegen (Hilfsstapel mit gewählter Karte anklicken)",
   "game.gameOver": "Spiel vorbei!",
   "game.winner": "Gewinner: {{name}}",
+  "game.rematch": "Revanche",
+  "game.rematchVoted": "Abgestimmt \u2713",
+  "game.leave": "Verlassen",
+  "game.rematchStockpile": "Kartenstapel: {{count}} Karten",
 
   "card.wild": "JOKER",
 

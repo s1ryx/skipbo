@@ -63,6 +63,10 @@
   "game.quickDiscard": "Quick Discard (click discard pile with selected card)",
   "game.gameOver": "Game Over!",
   "game.winner": "Winner: {{name}}",
+  "game.rematch": "Rematch",
+  "game.rematchVoted": "Voted \u2713",
+  "game.leave": "Leave",
+  "game.rematchStockpile": "Stockpile: {{count}} cards",
 
   "card.wild": "WILD",
 

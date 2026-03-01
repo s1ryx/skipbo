@@ -63,6 +63,10 @@
   "game.quickDiscard": "Hızlı Iskarta (seçili kartla Iskarta destene tıkla)",
   "game.gameOver": "Oyun Bitti!",
   "game.winner": "Kazanan: {{name}}",
+  "game.rematch": "Rövanş",
+  "game.rematchVoted": "Oy verildi \u2713",
+  "game.leave": "Ayrıl",
+  "game.rematchStockpile": "Kart destesi: {{count}} kart",
 
   "card.wild": "JOKER",
 

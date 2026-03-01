@@ -331,6 +331,7 @@ class SkipBoGame {
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
+      stockpileSize: this.stockpileSize || (this.players.length <= 4 ? 30 : 20),
       rematchVotes: [...this.rematchVotes],
     };
   }
