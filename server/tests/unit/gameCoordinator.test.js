@@ -76,7 +76,7 @@ function createCompletedGameWithBot(coordinator) {
   player1.hand = [1, 2, 3, 4, 5];
 
   // Clear bot turn timers so the bot doesn't interfere
-  coordinator._clearBotTimers(roomId);
+  coordinator.botManager.clearTimers(roomId);
 
   // Play card via coordinator to trigger game-over path
   handlers.onMessage('player1', 'playCard', {

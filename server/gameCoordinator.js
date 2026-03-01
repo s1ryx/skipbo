@@ -1,9 +1,8 @@
 const crypto = require('crypto');
 const SkipBoGame = require('./gameLogic');
 const SessionManager = require('./SessionManager');
+const BotManager = require('./BotManager');
 const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
-const { AIPlayer } = require('./ai/AIPlayer');
-const { AIPlayer: BaselineAIPlayer } = require('./ai/baseline/AIPlayer');
 const {
   LOBBY_GRACE_PERIOD_MS,
   MAX_PENDING_ROOMS,
@@ -43,6 +42,7 @@ class GameCoordinator {
     this.transport = null;
     this.games = new Map();
     this.sessionManager = new SessionManager();
+    this.botManager = new BotManager();
     this.pendingDeletions = new Map();
     this.completedGameTimers = new Map();
 
@@ -52,10 +52,6 @@ class GameCoordinator {
     this.gameLoggers = new Map();   // roomId → GameLogger
     this.turnCounters = new Map();  // roomId → { turn, plays, playerName, isBot }
     this.moveAnalyzer = this.logAnalysis ? new MoveAnalyzer() : null;
-
-    // Bot management
-    this.botAIs = new Map();          // `${roomId}:${publicId}` → AIPlayer instance
-    this.botTurnTimers = new Map();   // roomId → [timeoutId...]
   }
 
   setTransport(transport) {
@@ -534,32 +530,21 @@ class GameCoordinator {
       return;
     }
 
-    const validAiType = (aiType === 'improved' || aiType === 'baseline') ? aiType : 'improved';
-    const botConnectionId = BOT_ID_PREFIX + crypto.randomUUID();
-    const botNumber = game.players.filter((p) => p.isBot).length + 1;
-    const botName = `Bot ${botNumber}`;
-
-    const added = game.addPlayer(botConnectionId, botName);
-    if (!added) {
+    const result = this.botManager.createBot(roomId, game, aiType);
+    if (!result) {
       this.transport.send(connectionId, 'error', { message: 'error.roomFull' });
       return;
     }
 
-    const botPlayer = game.players[game.players.length - 1];
-    botPlayer.isBot = true;
-    botPlayer.aiType = validAiType;
-    game.setSessionToken(botPlayer.id, this.sessionManager.generateToken());
-
-    const AIClass = validAiType === 'baseline' ? BaselineAIPlayer : AIPlayer;
-    this.botAIs.set(`${roomId}:${botPlayer.publicId}`, new AIClass());
+    game.setSessionToken(result.botId, this.sessionManager.generateToken());
 
     this.transport.sendToGroup(roomId, 'playerJoined', {
-      playerId: botPlayer.publicId,
-      playerName: botName,
+      playerId: result.publicId,
+      playerName: result.botName,
       gameState: this._getDecoratedGameState(game),
     });
 
-    console.log(`Bot "${botName}" (${validAiType}) added to room ${roomId}`);
+    console.log(`Bot "${result.botName}" (${result.aiType}) added to room ${roomId}`);
   }
 
   handleRemoveBot(connectionId, { botPlayerId }) {
@@ -582,14 +567,10 @@ class GameCoordinator {
       return;
     }
 
-    const botPlayer = game.players.find((p) => p.publicId === botPlayerId);
-    if (!botPlayer || !botPlayer.isBot) {
+    if (!this.botManager.removeBot(roomId, game, botPlayerId)) {
       this.transport.send(connectionId, 'error', { message: 'error.notABot' });
       return;
     }
-
-    game.removePlayer(botPlayer.id);
-    this.botAIs.delete(`${roomId}:${botPlayerId}`);
 
     this.transport.sendToGroup(roomId, 'playerLeft', {
       playerId: botPlayerId,
@@ -617,9 +598,7 @@ class GameCoordinator {
     const humanPlayers = game.players.filter((p) => !p.isBot);
     if (humanPlayers.length === 0) {
       // Remove all bots and schedule room deletion
-      for (const bot of game.players.filter((p) => p.isBot)) {
-        this.botAIs.delete(`${roomId}:${bot.publicId}`);
-      }
+      this.botManager.clearAIs(roomId);
       this.scheduleRoomDeletion(roomId);
     } else {
       if (game.hostPublicId === publicId) {
@@ -654,8 +633,7 @@ class GameCoordinator {
       if (humanPlayers.length === 0) {
         this.cancelCompletedGameCleanup(roomId);
         this._cleanupLogger(roomId);
-        this._clearBotTimers(roomId);
-        this._clearBotAIs(roomId);
+        this.botManager.cleanup(roomId);
         this.sessionManager.removeAllForPlayers(game.players);
         this.games.delete(roomId);
       } else {
@@ -677,8 +655,7 @@ class GameCoordinator {
       this.cancelPendingDeletion(roomId);
       this.cancelCompletedGameCleanup(roomId);
       this._cleanupLogger(roomId);
-      this._clearBotTimers(roomId);
-      this._clearBotAIs(roomId);
+      this.botManager.cleanup(roomId);
       this.games.delete(roomId);
 
       console.log(`Game in room ${roomId} has been aborted`);
@@ -758,9 +735,7 @@ class GameCoordinator {
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
         // No humans left — clean up bots and schedule deletion
-        for (const bot of game.players.filter((p) => p.isBot)) {
-          this.botAIs.delete(`${roomId}:${bot.publicId}`);
-        }
+        this.botManager.clearAIs(roomId);
         this.scheduleRoomDeletion(roomId);
       } else {
         if (game.hostPublicId === publicId) {
@@ -780,8 +755,7 @@ class GameCoordinator {
       if (humanPlayers.length === 0) {
         this.cancelCompletedGameCleanup(roomId);
         this._cleanupLogger(roomId);
-        this._clearBotTimers(roomId);
-        this._clearBotAIs(roomId);
+        this.botManager.cleanup(roomId);
         this.sessionManager.removeAllForPlayers(game.players);
         this.games.delete(roomId);
       } else {
@@ -797,8 +771,7 @@ class GameCoordinator {
       if (!humansRemaining) {
         // No humans left in-game — abort
         this._cleanupLogger(roomId);
-        this._clearBotTimers(roomId);
-        this._clearBotAIs(roomId);
+        this.botManager.cleanup(roomId);
         game.players.forEach((player) => {
           this.transport.removeFromGroup(player.id, roomId);
           this.sessionManager.removeRoom(player.id);
@@ -849,7 +822,7 @@ class GameCoordinator {
           this.sessionManager.removeRoom(player.id);
         });
       }
-      this._clearBotAIs(roomId);
+      this.botManager.clearAIs(roomId);
       this.games.delete(roomId);
       this.completedGameTimers.delete(roomId);
       console.log(`Completed game ${roomId} cleaned up after TTL`);
@@ -881,14 +854,9 @@ class GameCoordinator {
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || !currentPlayer.isBot) return;
 
-    const timerId = setTimeout(() => {
+    this.botManager.scheduleTimer(roomId, () => {
       this._playBotTurn(roomId);
-    }, 500);
-
-    if (!this.botTurnTimers.has(roomId)) {
-      this.botTurnTimers.set(roomId, []);
-    }
-    this.botTurnTimers.get(roomId).push(timerId);
+    });
   }
 
   _playBotTurn(roomId) {
@@ -899,8 +867,7 @@ class GameCoordinator {
     if (!currentPlayer || !currentPlayer.isBot) return;
 
     const botId = currentPlayer.id;
-    const aiKey = `${roomId}:${currentPlayer.publicId}`;
-    const ai = this.botAIs.get(aiKey);
+    const ai = this.botManager.getAI(roomId, currentPlayer.publicId);
     if (!ai) return;
 
     const logger = this.gameLoggers.get(roomId);
@@ -950,10 +917,7 @@ class GameCoordinator {
         }
 
         // Schedule next play with delay
-        const timerId = setTimeout(playNext, 500 + Math.random() * 300);
-        if (this.botTurnTimers.has(roomId)) {
-          this.botTurnTimers.get(roomId).push(timerId);
-        }
+        this.botManager.scheduleTimer(roomId, playNext, 500 + Math.random() * 300);
         return;
       }
 
@@ -1043,7 +1007,7 @@ class GameCoordinator {
     // Also send final gameStateUpdate to humans
     this._broadcastToHumans(roomId, game);
 
-    this._clearBotTimers(roomId);
+    this.botManager.clearTimers(roomId);
     this.scheduleCompletedGameCleanup(roomId);
   }
 
@@ -1071,21 +1035,6 @@ class GameCoordinator {
     });
   }
 
-  _clearBotTimers(roomId) {
-    const timers = this.botTurnTimers.get(roomId);
-    if (timers) {
-      timers.forEach((id) => clearTimeout(id));
-      this.botTurnTimers.delete(roomId);
-    }
-  }
-
-  _clearBotAIs(roomId) {
-    for (const key of this.botAIs.keys()) {
-      if (key.startsWith(roomId + ':')) {
-        this.botAIs.delete(key);
-      }
-    }
-  }
 }
 
 // Exclude confusing characters: 0, O, I, 1, 5, S, 8, B, 2, Z
