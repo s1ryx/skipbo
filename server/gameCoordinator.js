@@ -370,69 +370,10 @@ class GameCoordinator {
       return;
     }
 
-    // Snapshot state before the discard for logging
-    const logger = this.gameLoggers.get(roomId);
-    let stateBefore = null;
-    let aiAnalysis = null;
-    if (logger) {
-      stateBefore = logger._snapshot(game);
-      if (this.moveAnalyzer) {
-        const ps = game.getPlayerState(connectionId);
-        const gs = this._getDecoratedGameState(game);
-        aiAnalysis = this.moveAnalyzer.analyzeDiscard(ps, gs, { card, discardPileIndex });
-      }
-    }
-
-    const result = game.discardCard(connectionId, card, discardPileIndex);
-
+    const result = this._executeDiscard(roomId, game, connectionId, card, discardPileIndex);
     if (!result.success) {
       this.transport.send(connectionId, 'error', { message: result.error });
-      return;
     }
-
-    // Log the discard and turn end
-    if (logger) {
-      const counter = this.turnCounters.get(roomId);
-      const player = game.players.find((p) => p.id === connectionId);
-      logger.logDiscard(
-        counter.turn, player.name, !!player.isBot,
-        { card, discardPileIndex },
-        stateBefore, aiAnalysis
-      );
-      logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
-    }
-
-    const endTurnResult = game.endTurn(connectionId);
-
-    if (!endTurnResult.success) {
-      this.transport.send(connectionId, 'error', { message: endTurnResult.error });
-      return;
-    }
-
-    // Log the new turn start
-    if (logger) {
-      const counter = this.turnCounters.get(roomId);
-      counter.turn++;
-      counter.plays = 0;
-      const nextPlayer = game.getCurrentPlayer();
-      counter.playerName = nextPlayer.name;
-      counter.isBot = !!nextPlayer.isBot;
-      logger.logTurnStart(counter.turn, game);
-    }
-
-    game.players.forEach((player) => {
-      this.transport.send(player.id, 'gameStateUpdate', {
-        gameState: this._getDecoratedGameState(game),
-        playerState: game.getPlayerState(player.id),
-      });
-    });
-
-    this.transport.sendToGroup(roomId, 'turnChanged', {
-      currentPlayerId: game.getPublicId(endTurnResult.nextPlayer),
-    });
-
-    // Check if next player is a bot
-    this._scheduleBotTurnIfNeeded(roomId);
   }
 
   handleSendChatMessage(connectionId, { message }) {
@@ -973,6 +914,56 @@ class GameCoordinator {
     }
 
     return result;
+  }
+
+  _executeDiscard(roomId, game, playerId, card, discardPileIndex) {
+    const logger = this.gameLoggers.get(roomId);
+    let stateBefore = null;
+    let aiAnalysis = null;
+    if (logger) {
+      stateBefore = logger._snapshot(game);
+      if (this.moveAnalyzer) {
+        const ps = game.getPlayerState(playerId);
+        const gs = this._getDecoratedGameState(game);
+        aiAnalysis = this.moveAnalyzer.analyzeDiscard(ps, gs, { card, discardPileIndex });
+      }
+    }
+
+    const result = game.discardCard(playerId, card, discardPileIndex);
+    if (!result.success) return result;
+
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      const player = game.players.find((p) => p.id === playerId);
+      logger.logDiscard(
+        counter.turn, player.name, !!player.isBot,
+        { card, discardPileIndex },
+        stateBefore, aiAnalysis
+      );
+      logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
+    }
+
+    const endTurnResult = game.endTurn(playerId);
+    if (!endTurnResult.success) return endTurnResult;
+
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      counter.turn++;
+      counter.plays = 0;
+      const nextPlayer = game.getCurrentPlayer();
+      counter.playerName = nextPlayer.name;
+      counter.isBot = !!nextPlayer.isBot;
+      logger.logTurnStart(counter.turn, game);
+    }
+
+    this._broadcastToHumans(roomId, game);
+    this.transport.sendToGroup(roomId, 'turnChanged', {
+      currentPlayerId: game.getCurrentPlayer()?.publicId,
+    });
+
+    this._scheduleBotTurnIfNeeded(roomId);
+
+    return endTurnResult;
   }
 
   _handleGameOver(roomId, game) {
