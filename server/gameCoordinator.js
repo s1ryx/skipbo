@@ -355,47 +355,9 @@ class GameCoordinator {
       return;
     }
 
-    // Snapshot state before the play for logging
-    const logger = this.gameLoggers.get(roomId);
-    let stateBefore = null;
-    let aiAnalysis = null;
-    if (logger) {
-      stateBefore = logger._snapshot(game);
-      if (this.moveAnalyzer) {
-        const ps = game.getPlayerState(connectionId);
-        const gs = this._getDecoratedGameState(game);
-        aiAnalysis = this.moveAnalyzer.analyzePlay(ps, gs, { card, source, buildingPileIndex });
-      }
-    }
-
-    const result = game.playCard(connectionId, card, source, buildingPileIndex);
-
+    const result = this._executePlay(roomId, game, connectionId, card, source, buildingPileIndex);
     if (!result.success) {
       this.transport.send(connectionId, 'error', { message: result.error });
-      return;
-    }
-
-    // Log the play
-    if (logger) {
-      const counter = this.turnCounters.get(roomId);
-      const player = game.players.find((p) => p.id === connectionId);
-      logger.logPlay(
-        counter.turn, player.name, !!player.isBot,
-        { card, source, buildingPileIndex },
-        stateBefore, aiAnalysis
-      );
-      counter.plays++;
-    }
-
-    game.players.forEach((player) => {
-      this.transport.send(player.id, 'gameStateUpdate', {
-        gameState: this._getDecoratedGameState(game),
-        playerState: game.getPlayerState(player.id),
-      });
-    });
-
-    if (game.phase === Phase.FINISHED) {
-      this._handleGameOver(roomId, game);
     }
   }
 
@@ -975,6 +937,42 @@ class GameCoordinator {
 
     // Check if next player is also a bot
     this._scheduleBotTurnIfNeeded(roomId);
+  }
+
+  _executePlay(roomId, game, playerId, card, source, buildingPileIndex) {
+    const logger = this.gameLoggers.get(roomId);
+    let stateBefore = null;
+    let aiAnalysis = null;
+    if (logger) {
+      stateBefore = logger._snapshot(game);
+      if (this.moveAnalyzer) {
+        const ps = game.getPlayerState(playerId);
+        const gs = this._getDecoratedGameState(game);
+        aiAnalysis = this.moveAnalyzer.analyzePlay(ps, gs, { card, source, buildingPileIndex });
+      }
+    }
+
+    const result = game.playCard(playerId, card, source, buildingPileIndex);
+    if (!result.success) return result;
+
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      const player = game.players.find((p) => p.id === playerId);
+      logger.logPlay(
+        counter.turn, player.name, !!player.isBot,
+        { card, source, buildingPileIndex },
+        stateBefore, aiAnalysis
+      );
+      counter.plays++;
+    }
+
+    this._broadcastToHumans(roomId, game);
+
+    if (game.phase === Phase.FINISHED) {
+      this._handleGameOver(roomId, game);
+    }
+
+    return result;
   }
 
   _handleGameOver(roomId, game) {
