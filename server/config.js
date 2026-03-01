@@ -29,6 +29,13 @@ const MAX_CHAT_MESSAGE_LENGTH = 500;
 const RATE_LIMIT_WINDOW_MS = 10000;
 const RATE_LIMIT_MAX_EVENTS = 30;
 
+// Game phases
+const Phase = Object.freeze({
+  LOBBY: 'lobby',
+  PLAYING: 'playing',
+  FINISHED: 'finished',
+});
+
 // Bot ID convention
 const BOT_ID_PREFIX = 'bot-';
 
@@ -54,5 +61,6 @@ module.exports = {
   MAX_CHAT_MESSAGE_LENGTH,
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_EVENTS,
+  Phase,
   BOT_ID_PREFIX,
 };
