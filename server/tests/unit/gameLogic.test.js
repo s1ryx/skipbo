@@ -19,6 +19,21 @@ describe('SkipBoGame', () => {
       expect(game.gameOver).toBe(false);
       expect(game.winner).toBe(null);
     });
+
+    it('clamps playerCount to minimum of 2', () => {
+      const g = new SkipBoGame('R', 1, null);
+      expect(g.playerCount).toBe(2);
+    });
+
+    it('clamps playerCount to maximum of 6', () => {
+      const g = new SkipBoGame('R', 10, null);
+      expect(g.playerCount).toBe(6);
+    });
+
+    it('defaults playerCount when falsy', () => {
+      const g = new SkipBoGame('R', null, null);
+      expect(g.playerCount).toBe(2);
+    });
   });
 
   describe('createDeck', () => {
@@ -542,6 +557,47 @@ describe('SkipBoGame', () => {
 
     it('returns null for unknown player', () => {
       expect(game.getPlayerState('unknown')).toBeNull();
+    });
+  });
+
+  describe('getMaxStockpileSize', () => {
+    it('returns 30 for 2-4 players', () => {
+      game.addPlayer('p1', 'A');
+      game.addPlayer('p2', 'B');
+      expect(game.getMaxStockpileSize()).toBe(30);
+    });
+
+    it('returns 20 for 5+ players', () => {
+      const bigGame = new SkipBoGame('R', 6, null);
+      for (let i = 0; i < 5; i++) bigGame.addPlayer(`p${i}`, `P${i}`);
+      expect(bigGame.getMaxStockpileSize()).toBe(20);
+    });
+  });
+
+  describe('updateStockpileSize', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'A');
+      game.addPlayer('p2', 'B');
+    });
+
+    it('sets valid stockpile size', () => {
+      game.updateStockpileSize(15);
+      expect(game.stockpileSize).toBe(15);
+    });
+
+    it('clamps to minimum of 1', () => {
+      game.updateStockpileSize(0);
+      expect(game.stockpileSize).toBe(1);
+    });
+
+    it('clamps to max for player count', () => {
+      game.updateStockpileSize(50);
+      expect(game.stockpileSize).toBe(30);
+    });
+
+    it('clamps negative values to minimum', () => {
+      game.updateStockpileSize(-5);
+      expect(game.stockpileSize).toBe(1);
     });
   });
 
