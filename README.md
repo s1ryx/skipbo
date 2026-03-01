@@ -18,28 +18,10 @@ A multiplayer Skip-Bo card game built with React and Node.js using Socket.IO for
 
 ## Game Rules
 
-### Objective
-
-Be the first player to play all cards from your stockpile.
-
-### Setup
-
-- 2-6 players
-- Each player receives a stockpile (30 cards for 2-4 players, 20 cards for 5-6 players)
-- Each player gets 5 cards in hand
-- 4 building piles in the center (shared by all players)
-- Each player has 4 discard piles
-
-### Gameplay
-
-1. **Turn Start**: Each turn begins by drawing cards from the deck until you have 5 cards in hand
-2. **Building Piles**: Must be built sequentially from 1 to 12
-3. **Skip-Bo Cards**: Wild cards that can represent any number
-4. **Playing Cards**: Can play from hand, stockpile top, or discard pile tops
-5. **Mid-Turn Draw**: If your hand becomes empty during your turn, you automatically draw 5 more cards
-6. **Turn End**: Must discard one card from hand to a discard pile to end turn
-7. **Quick Discard**: Select a card from hand and click any discard pile to end your turn immediately
-8. **Winning**: First player to empty their stockpile wins!
+Be the first player to empty your stockpile by building sequential piles
+(1–12) in the center. Players take turns drawing, playing cards from hand,
+stockpile, or discard piles, and discarding a card to end their turn. Skip-Bo
+cards are wild. For complete rules, see [docs/RULES.md](docs/RULES.md).
 
 ## Installation & Setup
 
@@ -529,59 +511,17 @@ skip-bo/
 └── scripts/                   # Development and testing scripts
 ```
 
-## Game Architecture
+## Documentation
 
-### Server-Side
-
-- **Game State Management**: All game logic runs on server
-- **Room System**: Multiple concurrent games in different rooms
-- **Event Handling**: Validates moves and broadcasts updates
-
-### Client-Side
-
-- **Socket.IO Connection**: Communicates with server
-- **React State**: Manages local UI state
-- **Component-Based**: Modular, reusable components
-
-## Socket.IO Events
-
-### Client → Server
-
-- `createRoom` - Create a new game room
-- `joinRoom` - Join an existing room
-- `startGame` - Start the game
-- `playCard` - Play a card to building pile
-- `discardCard` - Discard a card
-- `endTurn` - End current turn
-
-### Server → Client
-
-- `roomCreated` - Room successfully created
-- `playerJoined` - New player joined
-- `gameStarted` - Game has started
-- `gameStateUpdate` - Game state changed
-- `turnChanged` - Turn moved to next player
-- `gameOver` - Game finished
-- `error` - Error message
-
-## Troubleshooting
-
-### Connection Issues
-
-- Ensure server is running before starting client
-- Check that ports 3000 and 3001 are available
-- Verify firewall settings for local connections
-
-### Game Not Starting
-
-- Need at least 2 players to start
-- Ensure all players are connected
-
-### Cards Not Playing
-
-- Verify it's your turn
-- Check card follows sequence rules
-- Ensure building pile isn't complete (hasn't reached 12)
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | Transport layer, component tree, event reference, game flow diagrams |
+| [Game Rules](docs/RULES.md) | Complete Skip-Bo rules with examples |
+| [Code Standards](docs/CODE_STANDARDS.md) | ESLint, Prettier, naming conventions, CI checks |
+| [Commit Guidelines](docs/COMMIT_GUIDELINES.md) | Commit message format and atomic commit rules |
+| [Git Workflow](docs/GIT_WORKFLOW.md) | Branching model, PR process, release flow |
+| [Testing](docs/TESTING.md) | Test frameworks, organization, patterns, and what must be tested |
+| [Technical Debt](docs/TECH_DEBT.md) | Known coupling issues and refactoring roadmap |
 
 ## Future Enhancements
 
