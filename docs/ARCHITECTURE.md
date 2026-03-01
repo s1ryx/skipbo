@@ -76,7 +76,7 @@ implements:
 | `disconnect()` | `socket.close()` | [61-66](https://github.com/s1ryx/skipbo/blob/760826fa15e14d031bccbcd18d89a48139873ed2/client/src/transport/SocketIOClientTransport.js#L61-L66) |
 
 All 16 known server events are forwarded through `onMessage(event, data)`
-([SocketIOClientTransport.js:4-19](https://github.com/s1ryx/skipbo/blob/760826fa15e14d031bccbcd18d89a48139873ed2/client/src/transport/SocketIOClientTransport.js#L4-L19)).
+([SocketIOClientTransport.js:4-21](https://github.com/s1ryx/skipbo/blob/fdee842/client/src/transport/SocketIOClientTransport.js#L4-L21)).
 
 ### How a Future Transport Would Slot In
 
