@@ -3,17 +3,19 @@ const SkipBoGame = require('./gameLogic');
 const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
 const { AIPlayer } = require('./ai/AIPlayer');
 const { AIPlayer: BaselineAIPlayer } = require('./ai/baseline/AIPlayer');
-
-const LOBBY_GRACE_PERIOD_MS = 30000;
-const MAX_PENDING_ROOMS = 50;
-const MAX_TOTAL_ROOMS = 200;
-const COMPLETED_GAME_TTL_MS = 300000;
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 6;
-const MIN_STOCKPILE_SIZE = 1;
-const MAX_STOCKPILE_SIZE = 30;
-const MAX_PLAYER_NAME_LENGTH = 30;
-const MAX_CHAT_MESSAGE_LENGTH = 500;
+const {
+  LOBBY_GRACE_PERIOD_MS,
+  MAX_PENDING_ROOMS,
+  MAX_TOTAL_ROOMS,
+  COMPLETED_GAME_TTL_MS,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+  MIN_STOCKPILE_SIZE,
+  MAX_STOCKPILE_SIZE,
+  MAX_PLAYER_NAME_LENGTH,
+  MAX_CHAT_MESSAGE_LENGTH,
+  BOT_ID_PREFIX,
+} = require('./config');
 
 function stripHtml(str) {
   return str.replace(/<[^>]*>/g, '');

@@ -1,4 +1,16 @@
 const crypto = require('crypto');
+const {
+  HAND_SIZE,
+  MAX_CARD_VALUE,
+  BUILDING_PILES,
+  DISCARD_PILES,
+  CARDS_PER_VALUE,
+  SKIPBO_WILDS,
+  DEFAULT_STOCKPILE_LARGE,
+  DEFAULT_STOCKPILE_SMALL,
+  LARGE_GAME_THRESHOLD,
+  MIN_PLAYERS,
+} = require('./config');
 
 const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'discard2', 'discard3']);
 
@@ -9,7 +21,7 @@ class SkipBoGame {
     this.stockpileSize = stockpileSize; // Custom stockpile size
     this.players = [];
     this.deck = [];
-    this.buildingPiles = [[], [], [], []]; // 4 building piles
+    this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
     this.currentPlayerIndex = 0;
     this.gameStarted = false;
     this.gameOver = false;
@@ -20,14 +32,12 @@ class SkipBoGame {
   // Create and shuffle the deck
   createDeck() {
     const deck = [];
-    // 12 cards of each number (1-12), plus 18 Skip-Bo cards
-    for (let i = 1; i <= 12; i++) {
-      for (let j = 0; j < 12; j++) {
+    for (let i = 1; i <= MAX_CARD_VALUE; i++) {
+      for (let j = 0; j < CARDS_PER_VALUE; j++) {
         deck.push(i);
       }
     }
-    // Add 18 Skip-Bo (wild) cards
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < SKIPBO_WILDS; i++) {
       deck.push('SKIP-BO');
     }
     return this.shuffleDeck(deck);
@@ -52,7 +62,7 @@ class SkipBoGame {
       name: playerName,
       stockpile: [],
       hand: [],
-      discardPiles: [[], [], [], []], // 4 discard piles per player
+      discardPiles: Array.from({ length: DISCARD_PILES }, () => []),
     };
 
     this.players.push(player);
@@ -74,7 +84,7 @@ class SkipBoGame {
   }
 
   startGame() {
-    if (this.players.length < 2) {
+    if (this.players.length < MIN_PLAYERS) {
       return false;
     }
 
@@ -85,11 +95,16 @@ class SkipBoGame {
 
     this.deck = this.createDeck();
 
-    // Use custom stockpile size if provided, otherwise use default based on player count
-    const stockpileSize = this.stockpileSize || (this.players.length <= 4 ? 30 : 20);
+    const defaultSize =
+      this.players.length <= LARGE_GAME_THRESHOLD
+        ? DEFAULT_STOCKPILE_LARGE
+        : DEFAULT_STOCKPILE_SMALL;
+    const stockpileSize = this.stockpileSize || defaultSize;
 
-    // Validate stockpile size against game rules
-    const maxAllowed = this.players.length <= 4 ? 30 : 20;
+    const maxAllowed =
+      this.players.length <= LARGE_GAME_THRESHOLD
+        ? DEFAULT_STOCKPILE_LARGE
+        : DEFAULT_STOCKPILE_SMALL;
     const actualStockpileSize = Math.min(stockpileSize, maxAllowed);
 
     // Deal stockpiles and hands to each player
@@ -99,8 +114,7 @@ class SkipBoGame {
         player.stockpile.push(this.deck.pop());
       }
 
-      // Deal hand (5 cards)
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < HAND_SIZE; i++) {
         player.hand.push(this.deck.pop());
       }
     });
@@ -123,7 +137,7 @@ class SkipBoGame {
     const lastValue =
       lastCard === 'SKIP-BO' ? this.getActualValue(pileCards, pileCards.length - 1) : lastCard;
 
-    if (lastValue === 12) {
+    if (lastValue === MAX_CARD_VALUE) {
       return null; // Pile is complete
     }
 
@@ -144,7 +158,11 @@ class SkipBoGame {
   }
 
   canPlayCard(card, buildingPileIndex) {
-    if (!Number.isInteger(buildingPileIndex) || buildingPileIndex < 0 || buildingPileIndex > 3) {
+    if (
+      !Number.isInteger(buildingPileIndex) ||
+      buildingPileIndex < 0 ||
+      buildingPileIndex >= BUILDING_PILES
+    ) {
       return false;
     }
 
@@ -213,7 +231,7 @@ class SkipBoGame {
       this.buildingPiles[buildingPileIndex].length - 1
     );
 
-    if (pileValue === 12) {
+    if (pileValue === MAX_CARD_VALUE) {
       // Shuffle completed pile back into deck
       const completedPile = this.buildingPiles[buildingPileIndex];
       this.deck = this.deck.concat(completedPile);
@@ -223,7 +241,6 @@ class SkipBoGame {
       this.buildingPiles[buildingPileIndex] = [];
     }
 
-    // If hand is empty after playing, automatically draw 5 more cards
     if (player.hand.length === 0 && this.deck.length > 0) {
       this.drawCards(playerId);
     }
@@ -244,7 +261,11 @@ class SkipBoGame {
       return { success: false, error: 'error.notYourTurn' };
     }
 
-    if (!Number.isInteger(discardPileIndex) || discardPileIndex < 0 || discardPileIndex > 3) {
+    if (
+      !Number.isInteger(discardPileIndex) ||
+      discardPileIndex < 0 ||
+      discardPileIndex >= DISCARD_PILES
+    ) {
       return { success: false, error: 'error.invalidDiscardPile' };
     }
 
@@ -267,8 +288,7 @@ class SkipBoGame {
       return { success: false, error: 'error.playerNotFoundDraw' };
     }
 
-    // Draw cards until hand has 5 cards
-    while (player.hand.length < 5 && this.deck.length > 0) {
+    while (player.hand.length < HAND_SIZE && this.deck.length > 0) {
       player.hand.push(this.deck.pop());
     }
 
@@ -297,7 +317,7 @@ class SkipBoGame {
     this.gameOver = false;
     this.winner = null;
     this.deck = [];
-    this.buildingPiles = [[], [], [], []];
+    this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
     this.currentPlayerIndex = 0;
     this.rematchVotes = new Set();
 
@@ -308,7 +328,7 @@ class SkipBoGame {
     this.players.forEach((player) => {
       player.stockpile = [];
       player.hand = [];
-      player.discardPiles = [[], [], [], []];
+      player.discardPiles = Array.from({ length: DISCARD_PILES }, () => []);
     });
   }
 
@@ -334,7 +354,11 @@ class SkipBoGame {
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
-      stockpileSize: this.stockpileSize || (this.players.length <= 4 ? 30 : 20),
+      stockpileSize:
+        this.stockpileSize ||
+        (this.players.length <= LARGE_GAME_THRESHOLD
+          ? DEFAULT_STOCKPILE_LARGE
+          : DEFAULT_STOCKPILE_SMALL),
       rematchVotes: [...this.rematchVotes],
     };
   }
