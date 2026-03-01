@@ -18,23 +18,11 @@ This directory contains configuration files for deploying Skip-Bo to example.com
 
 ## Deployment Steps
 
-### 1. Copy files to the server
-
-From your local machine (WSL):
+### 1. Clone the repository
 
 ```bash
-cd /home/maint/skip-bo-game
-
-# Copy entire project to server
-rsync -avz --exclude 'node_modules' --exclude '.git' \
-  ./ root@example.com:/root/skip-bo-game/
-```
-
-### 2. On the server
-
-```bash
-ssh root@example.com
-cd /root/skip-bo-game
+git clone https://github.com/your-org/skip-bo-game.git
+cd skip-bo-game
 
 # Copy override file to docker directory
 cp deployment/production/docker-compose.override.yml deployment/docker/
@@ -46,7 +34,7 @@ chmod +x deployment/production/deploy-to-server.sh
 ./deployment/production/deploy-to-server.sh
 ```
 
-### 3. Manual deployment (alternative)
+### 2. Manual deployment (alternative)
 
 If you prefer manual control:
 
