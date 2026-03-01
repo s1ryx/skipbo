@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import ErrorBoundary from './components/ErrorBoundary';
 import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
@@ -62,6 +63,7 @@ function App() {
   } = useGameConnection();
 
   return (
+    <ErrorBoundary>
     <div className="App">
       <header className="App-header">
         <h1>{t('app.title')}</h1>
@@ -118,6 +120,7 @@ function App() {
         </select>
       </footer>
     </div>
+    </ErrorBoundary>
   );
 }
 
