@@ -761,10 +761,7 @@ class GameCoordinator {
     const ai = this.botManager.getAI(roomId, currentPlayer.publicId);
     if (!ai) return;
 
-    const logger = this.gameLoggers.get(roomId);
-
     const playNext = () => {
-      // Re-check guards — game state may have changed
       if (!this.games.has(roomId) || game.phase === Phase.FINISHED) return;
       if (game.getCurrentPlayer()?.id !== botId) return;
 
@@ -773,111 +770,31 @@ class GameCoordinator {
       const move = ai.findPlayableCard(playerState, gameState);
 
       if (move && game.phase === Phase.PLAYING) {
-        // Log before play
-        let stateBefore = null;
-        let aiAnalysis = null;
-        if (logger) {
-          stateBefore = logger._snapshot(game);
-          if (this.moveAnalyzer) {
-            aiAnalysis = this.moveAnalyzer.analyzePlay(playerState, gameState, {
-              card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex,
-            });
-          }
-        }
+        const result = this._executePlay(roomId, game, botId, move.card, move.source, move.buildingPileIndex);
+        if (!result.success) return this._botDiscard(roomId, game, botId, ai);
+        if (game.phase === Phase.FINISHED) return;
 
-        const result = game.playCard(botId, move.card, move.source, move.buildingPileIndex);
-        if (!result.success) return this._botDiscard(roomId, game, botId, ai, logger);
-
-        // Log the play
-        if (logger) {
-          const counter = this.turnCounters.get(roomId);
-          logger.logPlay(
-            counter.turn, currentPlayer.name, true,
-            { card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex },
-            stateBefore, aiAnalysis
-          );
-          counter.plays++;
-        }
-
-        // Broadcast to humans
-        this._broadcastToHumans(roomId, game);
-
-        if (game.phase === Phase.FINISHED) {
-          this._handleGameOver(roomId, game);
-          return;
-        }
-
-        // Schedule next play with delay
         this.botManager.scheduleTimer(roomId, playNext, 500 + Math.random() * 300);
         return;
       }
 
-      // No more plays — discard
-      this._botDiscard(roomId, game, botId, ai, logger);
+      this._botDiscard(roomId, game, botId, ai);
     };
 
     playNext();
   }
 
-  _botDiscard(roomId, game, botId, ai, logger) {
+  _botDiscard(roomId, game, botId, ai) {
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || currentPlayer.id !== botId) return;
 
-    const discardGameState = this._getDecoratedGameState(game);
-    const discardPlayerState = game.getPlayerState(botId);
-    const discard = ai.chooseDiscard(discardPlayerState, discardGameState);
+    const gameState = this._getDecoratedGameState(game);
+    const playerState = game.getPlayerState(botId);
+    const discard = ai.chooseDiscard(playerState, gameState);
 
     if (discard) {
-      // Log before discard
-      let stateBefore = null;
-      let aiAnalysis = null;
-      if (logger) {
-        stateBefore = logger._snapshot(game);
-        if (this.moveAnalyzer) {
-          aiAnalysis = this.moveAnalyzer.analyzeDiscard(discardPlayerState, discardGameState, {
-            card: discard.card, discardPileIndex: discard.discardPileIndex,
-          });
-        }
-      }
-
-      const result = game.discardCard(botId, discard.card, discard.discardPileIndex);
-      if (!result.success) return;
-
-      // Log the discard
-      if (logger) {
-        const counter = this.turnCounters.get(roomId);
-        logger.logDiscard(
-          counter.turn, currentPlayer.name, true,
-          { card: discard.card, discardPileIndex: discard.discardPileIndex },
-          stateBefore, aiAnalysis
-        );
-        logger.logTurnEnd(counter.turn, currentPlayer.name, true, counter.plays);
-      }
+      this._executeDiscard(roomId, game, botId, discard.card, discard.discardPileIndex);
     }
-
-    // End turn
-    const endTurnResult = game.endTurn(botId);
-    if (!endTurnResult.success) return;
-
-    // Log new turn start
-    if (logger) {
-      const counter = this.turnCounters.get(roomId);
-      counter.turn++;
-      counter.plays = 0;
-      const nextPlayer = game.getCurrentPlayer();
-      counter.playerName = nextPlayer.name;
-      counter.isBot = !!nextPlayer.isBot;
-      logger.logTurnStart(counter.turn, game);
-    }
-
-    // Broadcast final state to humans
-    this._broadcastToHumans(roomId, game);
-    this.transport.sendToGroup(roomId, 'turnChanged', {
-      currentPlayerId: game.getCurrentPlayer()?.publicId,
-    });
-
-    // Check if next player is also a bot
-    this._scheduleBotTurnIfNeeded(roomId);
   }
 
   _executePlay(roomId, game, playerId, card, source, buildingPileIndex) {
