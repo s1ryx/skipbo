@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import Lobby from './Lobby';
 import { LanguageProvider } from '../i18n';
 
@@ -15,6 +15,19 @@ const renderLobby = (props = {}) => {
     </LanguageProvider>
   );
 };
+
+// Lobby.js creates a BroadcastChannel on mount; provide a mock for jsdom
+beforeEach(() => {
+  global.BroadcastChannel = jest.fn().mockImplementation(() => ({
+    postMessage: jest.fn(),
+    close: jest.fn(),
+    onmessage: null,
+  }));
+});
+
+afterEach(() => {
+  delete global.BroadcastChannel;
+});
 
 describe('Lobby', () => {
   beforeEach(() => {
@@ -213,6 +226,27 @@ describe('Lobby', () => {
       renderLobby({ initialRoomId: 'ABCD12' });
       const input = screen.getByPlaceholderText('Enter room ID');
       expect(input.value).toBe('ABCD12');
+    });
+  });
+
+  describe('invite link handoff', () => {
+    it('shows join form with room ID on joinRoom message', () => {
+      renderLobby();
+      const channelInstance = global.BroadcastChannel.mock.results[0].value;
+      act(() => {
+        channelInstance.onmessage({ data: { type: 'joinRoom', roomId: 'XYZ999' } });
+      });
+      expect(screen.getByText('Join a Game')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter room ID').value).toBe('XYZ999');
+    });
+
+    it('sends joinRoom:ack in response', () => {
+      renderLobby();
+      const channelInstance = global.BroadcastChannel.mock.results[0].value;
+      act(() => {
+        channelInstance.onmessage({ data: { type: 'joinRoom', roomId: 'XYZ999' } });
+      });
+      expect(channelInstance.postMessage).toHaveBeenCalledWith({ type: 'joinRoom:ack' });
     });
   });
 });

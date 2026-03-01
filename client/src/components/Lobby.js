@@ -17,6 +17,20 @@ function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
   };
   const [showJoinForm, setShowJoinForm] = useState(false);
 
+  // Listen for invite link hand-offs from other tabs
+  useEffect(() => {
+    const channel = new BroadcastChannel('skipbo-lobby');
+    channel.onmessage = (e) => {
+      if (e.data.type === 'joinRoom') {
+        setRoomIdToJoin(e.data.roomId);
+        setShowJoinForm(true);
+        channel.postMessage({ type: 'joinRoom:ack' });
+        window.focus();
+      }
+    };
+    return () => channel.close();
+  }, []);
+
   // If initialRoomId is provided from URL, pre-fill and show join form
   useEffect(() => {
     if (initialRoomId) {
