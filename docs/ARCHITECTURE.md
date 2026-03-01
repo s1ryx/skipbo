@@ -226,7 +226,6 @@ All server-related state lives in the `useGameConnection` custom hook
 | `inLobby`      | boolean | Controls Lobby vs game rendering         |
 | `error`        | string  | Temporary error message (auto-clears)    |
 | `chatMessages` | array   | Chat history (persisted to sessionStorage) |
-| `stablePlayerId` | string | Persistent ID for chat attribution     |
 
 App-level state in `App.js`
 ([App.js:14](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/App.js#L14)):
@@ -261,8 +260,6 @@ server-related state themselves — they receive data and call callbacks.
   ([useGameConnection.js:238-291](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L238-L291))
 - Uses `connectionIdRef` and `roomIdRef` to avoid stale closures in callbacks
   ([useGameConnection.js:44-45](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L44-L45))
-- Generates and persists a stable player ID for chat attribution
-  ([useGameConnection.js:5-17](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L5-L17))
 - Chat message persistence to sessionStorage
   ([useGameConnection.js:48-52](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L48-L52))
 
@@ -302,8 +299,9 @@ server-related state themselves — they receive data and call callbacks.
 - Quick discard setting persisted to localStorage
   ([GameBoard.js:25-28](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/components/GameBoard.js#L25-L28))
 - Props: `{ gameState, playerState, playerId, roomId, onPlayCard,
-onDiscardCard, onLeaveGame, chatMessages, onSendChatMessage,
-onMarkMessagesRead, stablePlayerId }`
+onDiscardCard, onLeaveGame, onRequestRematch, onUpdateRematchSettings,
+rematchVotes, rematchStockpileSize, chatMessages, onSendChatMessage,
+onMarkMessagesRead }`
 
 **`PlayerHand`** ([PlayerHand.js](https://github.com/s1ryx/skipbo/blob/5290fba7a55afb2e295f4d897c6b8a39526fcf71/client/src/components/PlayerHand.js))
 
@@ -324,9 +322,9 @@ onMarkMessagesRead, stablePlayerId }`
 - Collapsible panel that sits inside `GameBoard`
 - Tracks unread message count with a badge
   ([Chat.js:55-57](https://github.com/s1ryx/skipbo/blob/5290fba7a55afb2e295f4d897c6b8a39526fcf71/client/src/components/Chat.js#L55-L57))
-- Uses `stablePlayerId` (not connection ID) to identify own messages,
-  so authorship survives reconnections
-  ([Chat.js:50-53](https://github.com/s1ryx/skipbo/blob/5290fba7a55afb2e295f4d897c6b8a39526fcf71/client/src/components/Chat.js#L50-L53))
+- Compares `msg.stablePlayerId` against the opaque `playerId` prop to
+  identify own messages, so authorship survives reconnections
+  ([Chat.js:54](https://github.com/s1ryx/skipbo/blob/00bbf87/client/src/components/Chat.js#L54))
 - Messages persist to sessionStorage per room
 
 ### Session Persistence
