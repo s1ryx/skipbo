@@ -111,10 +111,10 @@
 }
 
 .other-players {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 10px;
   margin-bottom: 10px;
-  flex-wrap: wrap;
 }
 
 .opponent-info {
@@ -122,9 +122,6 @@
   padding: 10px;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  flex: 1;
-  min-width: 200px;
-  overflow: hidden;
   transition:
     opacity var(--transition-normal),
     filter var(--transition-normal);
@@ -148,9 +145,9 @@
 
 .opponent-cards {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
   gap: 10px;
 }
 
@@ -196,7 +193,10 @@
 
 .discard-piles-opponent {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 5px;
+  margin-top: 3px;
 }
 
 .card-pile-small {
@@ -375,8 +375,8 @@
 
 .discard-piles-container {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  flex-wrap: nowrap;
 }
 
 .discard-pile {
@@ -890,11 +890,9 @@
 
   .discard-pile {
     min-width: unset;
-    flex: 1;
   }
 
   .opponent-info {
-    min-width: unset;
     padding: 8px;
   }
 
@@ -989,5 +987,11 @@
 @media (max-width: 300px) {
   .piles-container {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 170px) {
+  .piles-container {
+    grid-template-columns: 1fr;
   }
 }
