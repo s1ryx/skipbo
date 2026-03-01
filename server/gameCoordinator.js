@@ -395,19 +395,7 @@ class GameCoordinator {
     });
 
     if (game.phase === Phase.FINISHED) {
-      this.transport.sendToGroup(roomId, 'gameOver', {
-        winner: game.winner,
-        gameState: this._getDecoratedGameState(game),
-      });
-      if (logger) {
-        const counter = this.turnCounters.get(roomId);
-        logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
-        logger.endGame(game);
-        logger.close();
-        this.gameLoggers.delete(roomId);
-        this.turnCounters.delete(roomId);
-      }
-      this.scheduleCompletedGameCleanup(roomId);
+      this._handleGameOver(roomId, game);
     }
   }
 
@@ -912,7 +900,7 @@ class GameCoordinator {
         this._broadcastToHumans(roomId, game);
 
         if (game.phase === Phase.FINISHED) {
-          this._handleBotGameOver(roomId, game, logger);
+          this._handleGameOver(roomId, game);
           return;
         }
 
@@ -989,7 +977,8 @@ class GameCoordinator {
     this._scheduleBotTurnIfNeeded(roomId);
   }
 
-  _handleBotGameOver(roomId, game, logger) {
+  _handleGameOver(roomId, game) {
+    const logger = this.gameLoggers.get(roomId);
     if (logger) {
       const counter = this.turnCounters.get(roomId);
       logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
@@ -1003,9 +992,6 @@ class GameCoordinator {
       winner: game.winner,
       gameState: this._getDecoratedGameState(game),
     });
-
-    // Also send final gameStateUpdate to humans
-    this._broadcastToHumans(roomId, game);
 
     this.botManager.clearTimers(roomId);
     this.scheduleCompletedGameCleanup(roomId);
