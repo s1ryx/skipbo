@@ -1,5 +1,7 @@
 # Git-Flow Branching Workflow
 
+> Part of the [project documentation](../README.md#documentation).
+
 This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/) for managing development and releases. Understanding this workflow is essential for contributing effectively.
 
 ![Git-Flow Branching Model](images/git-flow-model.png)
