@@ -317,6 +317,30 @@ class SkipBoGame {
     return { success: true, nextPlayer: nextPlayer.id };
   }
 
+  addRematchVote(playerId) {
+    if (this.rematchVotes.has(playerId)) return false;
+    this.rematchVotes.add(playerId);
+    return true;
+  }
+
+  removeRematchVote(playerId) {
+    this.rematchVotes.delete(playerId);
+  }
+
+  clearRematchVotes() {
+    this.rematchVotes.clear();
+  }
+
+  canStartRematch(humanPlayerCount) {
+    return this.rematchVotes.size >= humanPlayerCount;
+  }
+
+  getRematchVoterPublicIds() {
+    return this.players
+      .filter((p) => this.rematchVotes.has(p.id))
+      .map((p) => p.publicId);
+  }
+
   resetForRematch(stockpileSize) {
     this.phase = Phase.LOBBY;
     this.winner = null;
@@ -364,7 +388,7 @@ class SkipBoGame {
         (this.players.length <= LARGE_GAME_THRESHOLD
           ? DEFAULT_STOCKPILE_LARGE
           : DEFAULT_STOCKPILE_SMALL),
-      rematchVotes: [...this.rematchVotes],
+      rematchVotes: this.getRematchVoterPublicIds(),
     };
   }
 
