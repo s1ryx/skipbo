@@ -946,7 +946,7 @@ describe('GameCoordinator', () => {
       expect(coordinator.playerRooms.has('player2')).toBe(false);
     });
 
-    it('cancels cleanup when game is aborted', () => {
+    it('keeps cleanup timer when one player leaves post-game', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -967,10 +967,40 @@ describe('GameCoordinator', () => {
 
       expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
 
-      // Leave game (abort)
+      // Post-game soft leave — timer stays for remaining player
       handlers.onMessage('player1', 'leaveGame', {});
 
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
+      expect(coordinator.games.has(roomId)).toBe(true);
+    });
+
+    it('cancels cleanup when last player leaves post-game', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+      const game = coordinator.games.get(roomId);
+
+      // Force winning condition
+      const player1 = game.players[0];
+      player1.stockpile = [1];
+      player1.hand = [1, 2, 3, 4, 5];
+
+      handlers.onMessage('player1', 'playCard', {
+        card: 1,
+        source: 'stockpile',
+        buildingPileIndex: 0,
+      });
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
+
+      // Both players leave post-game
+      handlers.onMessage('player1', 'leaveGame', {});
+      handlers.onMessage('player2', 'leaveGame', {});
+
       expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
+      expect(coordinator.games.has(roomId)).toBe(false);
     });
   });
 
