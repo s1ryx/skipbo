@@ -36,3 +36,22 @@ describe('getNextCardValue', () => {
     expect(getNextCardValue([1, 2, 'SKIP-BO', 'SKIP-BO'])).toBe(5);
   });
 });
+
+describe('canPlayCard', () => {
+  test('matching number can play', () => {
+    expect(canPlayCard(3, 3)).toBe(true);
+  });
+
+  test('non-matching number cannot play', () => {
+    expect(canPlayCard(4, 3)).toBe(false);
+  });
+
+  test('SKIP-BO can always play', () => {
+    expect(canPlayCard('SKIP-BO', 5)).toBe(true);
+  });
+
+  test('nothing can play on null (complete pile)', () => {
+    expect(canPlayCard(1, null)).toBe(false);
+    expect(canPlayCard('SKIP-BO', null)).toBe(false);
+  });
+});
