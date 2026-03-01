@@ -980,6 +980,33 @@ describe('GameCoordinator', () => {
         message: 'error.invalidSession',
       });
     });
+
+    it('preserves internalId across reconnection with new connectionId', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      const player2 = game.getPlayerByConnectionId('player2');
+      const originalInternalId = player2.internalId;
+      const originalPublicId = player2.publicId;
+      const sessionToken = player2.sessionToken;
+
+      // Disconnect and reconnect with a new connection ID
+      handlers.onDisconnect('player2');
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken,
+        playerName: 'Bob',
+      });
+
+      // internalId and publicId must remain stable
+      expect(player2.internalId).toBe(originalInternalId);
+      expect(player2.publicId).toBe(originalPublicId);
+
+      // connectionId must update to the new socket
+      expect(player2.connectionId).toBe('player2-new');
+    });
   });
 
   describe('completedGameCleanup', () => {
