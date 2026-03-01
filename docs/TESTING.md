@@ -1,5 +1,8 @@
 # Testing
 
+> Part of the [project documentation](../README.md#documentation).
+> See also: [Architecture](ARCHITECTURE.md) for how the codebase is structured.
+
 This document defines the testing expectations for the project: what must
 be tested, what tooling is used, and how tests are organized.
 
