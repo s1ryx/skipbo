@@ -1,5 +1,8 @@
 # Code Standards
 
+> Part of the [project documentation](../README.md#documentation).
+> See also: [Commit Guidelines](COMMIT_GUIDELINES.md) for commit message format.
+
 This document describes the formatting and linting rules enforced across
 the codebase. All rules are applied automatically via pre-commit hooks
 and verified in CI.
