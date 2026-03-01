@@ -536,6 +536,18 @@ describe('SkipBoGame', () => {
       const state = game.getGameState();
       expect(state.currentPlayerId).toBe(game.players[0].publicId);
     });
+
+    it('does not include bot metadata in player projections', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.players[0].isBot = true;
+      game.players[0].aiType = 'improved';
+      game.startGame();
+
+      const state = game.getGameState();
+      expect(state.players[0]).not.toHaveProperty('isBot');
+      expect(state.players[0]).not.toHaveProperty('aiType');
+    });
   });
 
   describe('getPlayerState', () => {
