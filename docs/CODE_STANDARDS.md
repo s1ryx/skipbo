@@ -63,7 +63,7 @@ Configuration: `lint-staged` in [`package.json`](../package.json)
 
 ### CI (GitHub Actions)
 
-The [lint workflow](../.github/workflows/lint.yml) runs on every push
+The [CI workflow](../.github/workflows/ci.yml) runs on every push
 and pull request. It checks:
 
 1. `prettier --check` — fails if any file is not formatted
