@@ -10,6 +10,7 @@ const {
   DEFAULT_STOCKPILE_SMALL,
   LARGE_GAME_THRESHOLD,
   MIN_PLAYERS,
+  Phase,
 } = require('./config');
 
 const VALID_SOURCES = new Set(['hand', 'stockpile', 'discard0', 'discard1', 'discard2', 'discard3']);
@@ -23,13 +24,18 @@ class SkipBoGame {
     this.deck = [];
     this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
     this.currentPlayerIndex = 0;
-    this.gameStarted = false;
-    this.gameOver = false;
+    this.phase = Phase.LOBBY;
     this.winner = null;
     this.rematchVotes = new Set();
   }
 
-  // Create and shuffle the deck
+  get gameStarted() {
+    return this.phase !== Phase.LOBBY;
+  }
+
+  get gameOver() {
+    return this.phase === Phase.FINISHED;
+  }
   createDeck() {
     const deck = [];
     for (let i = 1; i <= MAX_CARD_VALUE; i++) {
@@ -88,8 +94,7 @@ class SkipBoGame {
       return false;
     }
 
-    // Prevent starting an already-started game
-    if (this.gameStarted) {
+    if (this.phase !== Phase.LOBBY) {
       return false;
     }
 
@@ -119,7 +124,7 @@ class SkipBoGame {
       }
     });
 
-    this.gameStarted = true;
+    this.phase = Phase.PLAYING;
     this.currentPlayerIndex = 0;
     return true;
   }
@@ -247,7 +252,7 @@ class SkipBoGame {
 
     // Check if player won
     if (player.stockpile.length === 0) {
-      this.gameOver = true;
+      this.phase = Phase.FINISHED;
       this.winner = player;
     }
 
@@ -313,8 +318,7 @@ class SkipBoGame {
   }
 
   resetForRematch(stockpileSize) {
-    this.gameStarted = false;
-    this.gameOver = false;
+    this.phase = Phase.LOBBY;
     this.winner = null;
     this.deck = [];
     this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
@@ -351,6 +355,7 @@ class SkipBoGame {
       currentPlayerId: this.getCurrentPlayer()?.publicId,
       deckCount: this.deck.length,
       hostPlayerId: this.hostPublicId || null,
+      phase: this.phase,
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
