@@ -583,6 +583,18 @@ skip-bo/
 - Check card follows sequence rules
 - Ensure building pile isn't complete (hasn't reached 12)
 
+## Future Enhancements
+
+- [ ] AI opponents for single-player mode
+- [ ] Public/private lobby system with room browser
+- [ ] Mobile-friendly UI with draggable cards
+- [ ] Dark mode
+- [ ] Sound effects and music
+- [ ] Animations for card movements
+- [ ] Game statistics and leaderboards
+- [ ] Game replay feature
+- [ ] Streamlined Docker deployment (central config, built-in HTTPS)
+
 ## Disclaimer
 
 **This is a hobby/educational project.**
