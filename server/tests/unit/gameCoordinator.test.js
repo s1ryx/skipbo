@@ -117,7 +117,7 @@ describe('GameCoordinator', () => {
     it('starts with empty state', () => {
       const coordinator = new GameCoordinator();
       expect(coordinator.games.size).toBe(0);
-      expect(coordinator.playerRooms.size).toBe(0);
+      expect(coordinator.sessionManager.playerRooms.size).toBe(0);
       expect(coordinator.pendingDeletions.size).toBe(0);
     });
 
@@ -159,7 +159,7 @@ describe('GameCoordinator', () => {
       const roomId = createRoom(coordinator);
 
       expect(coordinator.games.size).toBe(1);
-      expect(coordinator.playerRooms.get('player1')).toBe(roomId);
+      expect(coordinator.sessionManager.playerRooms.get('player1')).toBe(roomId);
     });
 
     it('adds the player to the transport group', () => {
@@ -318,7 +318,7 @@ describe('GameCoordinator', () => {
 
       handlers.onMessage('player2', 'joinRoom', { roomId, playerName: 'Bob' });
 
-      expect(coordinator.playerRooms.get('player2')).toBe(roomId);
+      expect(coordinator.sessionManager.playerRooms.get('player2')).toBe(roomId);
       expect(transport.addToGroup).toHaveBeenCalledWith('player2', roomId);
     });
 
@@ -674,7 +674,7 @@ describe('GameCoordinator', () => {
       transport.sendToGroup.mockClear();
       handlers.onMessage('player2', 'leaveLobby', {});
 
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
@@ -743,8 +743,8 @@ describe('GameCoordinator', () => {
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player1', roomId);
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(coordinator.games.has(roomId)).toBe(false);
-      expect(coordinator.playerRooms.has('player1')).toBe(false);
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
     });
 
     it('does nothing if player has no room', () => {
@@ -767,7 +767,7 @@ describe('GameCoordinator', () => {
       transport.sendToGroup.mockClear();
       handlers.onDisconnect('player2');
 
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
@@ -815,7 +815,7 @@ describe('GameCoordinator', () => {
       coordinator.games.delete(roomId);
 
       handlers.onDisconnect('player1');
-      expect(coordinator.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
     });
 
     it('does nothing for unknown player', () => {
@@ -1007,8 +1007,8 @@ describe('GameCoordinator', () => {
       jest.advanceTimersByTime(300001);
 
       expect(coordinator.games.has(roomId)).toBe(false);
-      expect(coordinator.playerRooms.has('player1')).toBe(false);
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
     });
 
     it('keeps cleanup timer when one player leaves post-game', () => {

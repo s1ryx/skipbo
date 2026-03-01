@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const SkipBoGame = require('./gameLogic');
+const SessionManager = require('./SessionManager');
 const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
 const { AIPlayer } = require('./ai/AIPlayer');
 const { AIPlayer: BaselineAIPlayer } = require('./ai/baseline/AIPlayer');
@@ -41,7 +42,7 @@ class GameCoordinator {
   constructor(options = {}) {
     this.transport = null;
     this.games = new Map();
-    this.playerRooms = new Map();
+    this.sessionManager = new SessionManager();
     this.pendingDeletions = new Map();
     this.completedGameTimers = new Map();
 
@@ -133,13 +134,13 @@ class GameCoordinator {
     const game = new SkipBoGame(roomId, validMaxPlayers, validStockpileSize);
     game.addPlayer(connectionId, validName);
 
-    const sessionToken = crypto.randomUUID();
+    const sessionToken = this.sessionManager.generateToken();
     game.setSessionToken(connectionId, sessionToken);
     game.players[game.players.length - 1].isBot = !!isBot;
     game.setHost(game.players[0].publicId);
 
     this.games.set(roomId, game);
-    this.playerRooms.set(connectionId, roomId);
+    this.sessionManager.setRoom(connectionId, roomId);
 
     this.transport.addToGroup(connectionId, roomId);
 
@@ -181,11 +182,11 @@ class GameCoordinator {
       return;
     }
 
-    const sessionToken = crypto.randomUUID();
+    const sessionToken = this.sessionManager.generateToken();
     game.setSessionToken(connectionId, sessionToken);
     game.players[game.players.length - 1].isBot = !!isBot;
 
-    this.playerRooms.set(connectionId, roomId);
+    this.sessionManager.setRoom(connectionId, roomId);
     this.transport.addToGroup(connectionId, roomId);
 
     this.transport.sendToGroup(roomId, 'playerJoined', {
@@ -240,10 +241,10 @@ class GameCoordinator {
           return;
         }
 
-        const newToken = crypto.randomUUID();
+        const newToken = this.sessionManager.generateToken();
         game.setSessionToken(connectionId, newToken);
 
-        this.playerRooms.set(connectionId, roomId);
+        this.sessionManager.setRoom(connectionId, roomId);
         this.transport.addToGroup(connectionId, roomId);
 
         const publicId = game.getPublicId(connectionId);
@@ -273,13 +274,13 @@ class GameCoordinator {
     // Update player's connection ID and issue new session token
     const oldConnectionId = player.id;
     game.updatePlayerId(oldConnectionId, connectionId);
-    const newToken = crypto.randomUUID();
+    const newToken = this.sessionManager.generateToken();
     game.setSessionToken(connectionId, newToken);
 
     game.removeRematchVote(oldConnectionId);
 
-    this.playerRooms.delete(oldConnectionId);
-    this.playerRooms.set(connectionId, roomId);
+    this.sessionManager.removeRoom(oldConnectionId);
+    this.sessionManager.setRoom(connectionId, roomId);
 
     this.transport.addToGroup(connectionId, roomId);
 
@@ -300,7 +301,7 @@ class GameCoordinator {
   }
 
   handleStartGame(connectionId) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     const game = this.games.get(roomId);
 
     if (!game) {
@@ -350,7 +351,7 @@ class GameCoordinator {
   }
 
   handlePlayCard(connectionId, { card, source, buildingPileIndex }) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     const game = this.games.get(roomId);
 
     if (!game) {
@@ -415,7 +416,7 @@ class GameCoordinator {
   }
 
   handleDiscardCard(connectionId, { card, discardPileIndex }) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     const game = this.games.get(roomId);
 
     if (!game) {
@@ -493,7 +494,7 @@ class GameCoordinator {
     const sanitized = stripHtml(message.trim()).replace(/[\x00-\x1F]/g, '');
     if (sanitized.length === 0 || sanitized.length > MAX_CHAT_MESSAGE_LENGTH) return;
 
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.games.get(roomId);
@@ -514,7 +515,7 @@ class GameCoordinator {
   }
 
   handleAddBot(connectionId, { aiType }) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     const game = this.games.get(roomId);
 
     if (!game) {
@@ -547,7 +548,7 @@ class GameCoordinator {
     const botPlayer = game.players[game.players.length - 1];
     botPlayer.isBot = true;
     botPlayer.aiType = validAiType;
-    game.setSessionToken(botPlayer.id, crypto.randomUUID());
+    game.setSessionToken(botPlayer.id, this.sessionManager.generateToken());
 
     const AIClass = validAiType === 'baseline' ? BaselineAIPlayer : AIPlayer;
     this.botAIs.set(`${roomId}:${botPlayer.publicId}`, new AIClass());
@@ -562,7 +563,7 @@ class GameCoordinator {
   }
 
   handleRemoveBot(connectionId, { botPlayerId }) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     const game = this.games.get(roomId);
 
     if (!game) {
@@ -599,7 +600,7 @@ class GameCoordinator {
   }
 
   handleLeaveLobby(connectionId) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.games.get(roomId);
@@ -610,7 +611,7 @@ class GameCoordinator {
 
     game.removePlayer(connectionId);
     this.transport.removeFromGroup(connectionId, roomId);
-    this.playerRooms.delete(connectionId);
+    this.sessionManager.removeRoom(connectionId);
 
     // Check if any human players remain
     const humanPlayers = game.players.filter((p) => !p.isBot);
@@ -635,7 +636,7 @@ class GameCoordinator {
   handleLeaveGame(connectionId) {
     console.log(`Player ${connectionId} is leaving the game`);
 
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.games.get(roomId);
@@ -645,7 +646,7 @@ class GameCoordinator {
       // Post-game: soft leave (only the leaving player exits)
       game.removePlayer(connectionId);
       this.transport.removeFromGroup(connectionId, roomId);
-      this.playerRooms.delete(connectionId);
+      this.sessionManager.removeRoom(connectionId);
       this.transport.send(connectionId, 'gameAborted');
       game.clearRematchVotes();
 
@@ -655,7 +656,7 @@ class GameCoordinator {
         this._cleanupLogger(roomId);
         this._clearBotTimers(roomId);
         this._clearBotAIs(roomId);
-        game.players.forEach((p) => this.playerRooms.delete(p.id));
+        this.sessionManager.removeAllForPlayers(game.players);
         this.games.delete(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
@@ -670,7 +671,7 @@ class GameCoordinator {
 
       game.players.forEach((player) => {
         this.transport.removeFromGroup(player.id, roomId);
-        this.playerRooms.delete(player.id);
+        this.sessionManager.removeRoom(player.id);
       });
 
       this.cancelPendingDeletion(roomId);
@@ -685,7 +686,7 @@ class GameCoordinator {
   }
 
   handleRequestRematch(connectionId) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.games.get(roomId);
@@ -718,7 +719,7 @@ class GameCoordinator {
   }
 
   handleUpdateRematchSettings(connectionId, { stockpileSize }) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.games.get(roomId);
@@ -740,12 +741,12 @@ class GameCoordinator {
   handleDisconnect(connectionId) {
     console.log(`Player disconnected: ${connectionId}`);
 
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.games.get(roomId);
     if (!game) {
-      this.playerRooms.delete(connectionId);
+      this.sessionManager.removeRoom(connectionId);
       return;
     }
 
@@ -781,7 +782,7 @@ class GameCoordinator {
         this._cleanupLogger(roomId);
         this._clearBotTimers(roomId);
         this._clearBotAIs(roomId);
-        game.players.forEach((p) => this.playerRooms.delete(p.id));
+        this.sessionManager.removeAllForPlayers(game.players);
         this.games.delete(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
@@ -791,7 +792,7 @@ class GameCoordinator {
     } else {
       // Check if any human players remain connected
       const humansRemaining = game.players.some(
-        (p) => !p.isBot && p.id !== connectionId && this.playerRooms.has(p.id)
+        (p) => !p.isBot && p.id !== connectionId && this.sessionManager.hasRoom(p.id)
       );
       if (!humansRemaining) {
         // No humans left in-game — abort
@@ -800,7 +801,7 @@ class GameCoordinator {
         this._clearBotAIs(roomId);
         game.players.forEach((player) => {
           this.transport.removeFromGroup(player.id, roomId);
-          this.playerRooms.delete(player.id);
+          this.sessionManager.removeRoom(player.id);
         });
         this.games.delete(roomId);
         console.log(`Game in room ${roomId} aborted — no human players remain`);
@@ -811,7 +812,7 @@ class GameCoordinator {
       }
     }
 
-    this.playerRooms.delete(connectionId);
+    this.sessionManager.removeRoom(connectionId);
   }
 
   scheduleRoomDeletion(roomId) {
@@ -845,7 +846,7 @@ class GameCoordinator {
       const game = this.games.get(roomId);
       if (game) {
         game.players.forEach((player) => {
-          this.playerRooms.delete(player.id);
+          this.sessionManager.removeRoom(player.id);
         });
       }
       this._clearBotAIs(roomId);
