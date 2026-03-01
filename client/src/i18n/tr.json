@@ -107,6 +107,8 @@
   "error.onlyHostCanStart": "Sadece oda sahibi oyunu başlatabilir",
   "error.serverFull": "Sunucu dolu",
 
+  "connection.disconnected": "Bağlantı kesildi. Yeniden bağlanılıyor...",
+
   "language.en": "English",
   "language.de": "Deutsch",
   "language.tr": "Türkçe"

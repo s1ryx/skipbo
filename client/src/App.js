@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import ConnectionStatus from './components/ConnectionStatus';
 import ErrorBoundary from './components/ErrorBoundary';
 import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
@@ -44,6 +45,7 @@ function App() {
     roomId,
     inLobby,
     error,
+    isConnected,
     chatMessages,
     createRoom,
     joinRoom,
@@ -69,6 +71,7 @@ function App() {
         <h1>{t('app.title')}</h1>
       </header>
 
+      <ConnectionStatus isConnected={isConnected} />
       {error && <div className="error-message">{t(error)}</div>}
 
       {inLobby ? (

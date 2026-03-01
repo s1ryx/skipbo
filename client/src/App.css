@@ -43,6 +43,34 @@
   }
 }
 
+.connection-status.disconnected {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--color-warning, #f0ad4e);
+  color: #333;
+  text-align: center;
+  padding: 8px;
+  font-weight: bold;
+  z-index: 1100;
+}
+
+.error-boundary {
+  text-align: center;
+  padding: 40px;
+}
+
+.error-boundary h2 {
+  margin-bottom: 16px;
+}
+
+.error-boundary button {
+  margin: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
 .loading {
   display: flex;
   justify-content: center;

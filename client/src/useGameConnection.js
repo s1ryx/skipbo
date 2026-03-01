@@ -9,6 +9,7 @@ export default function useGameConnection() {
   const [roomId, setRoomId] = useState(null);
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [rematchVotes, setRematchVotes] = useState([]);
   const [rematchStockpileSize, setRematchStockpileSize] = useState(null);
   const [chatMessages, setChatMessages] = useState(() => {
@@ -58,6 +59,7 @@ export default function useGameConnection() {
       onConnect: (connectionId) => {
         connectionIdRef.current = connectionId;
         setPlayerId(connectionId);
+        setIsConnected(true);
 
         const savedSession = sessionStorage.getItem('skipBoSession');
         if (savedSession) {
@@ -69,7 +71,9 @@ export default function useGameConnection() {
           }
         }
       },
-      onDisconnect: () => {},
+      onDisconnect: () => {
+        setIsConnected(false);
+      },
       onMessage: (event, data) => {
         const handler = handlers[event];
         if (handler) handler(data);
@@ -150,6 +154,7 @@ export default function useGameConnection() {
     roomId,
     inLobby,
     error,
+    isConnected,
     chatMessages,
     createRoom,
     joinRoom,

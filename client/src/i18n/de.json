@@ -107,6 +107,8 @@
   "error.onlyHostCanStart": "Nur der Gastgeber kann das Spiel starten",
   "error.serverFull": "Server ist voll",
 
+  "connection.disconnected": "Verbindung verloren. Erneut verbinden...",
+
   "language.en": "English",
   "language.de": "Deutsch",
   "language.tr": "Türkçe"
