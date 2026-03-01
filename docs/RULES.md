@@ -1,5 +1,7 @@
 # Skip-Bo Game Rules
 
+> Part of the [project documentation](../README.md#documentation).
+
 ## Objective
 
 The goal of Skip-Bo is to be the first player to play all the cards in your stockpile. You do this by building sequential piles of cards in numerical order (from 1 to 12) in the center of the table. The game ends when one player has no cards left in their stockpile.
@@ -145,6 +147,3 @@ If two players empty their stockpiles at the same time, the one who played their
 3. Discards a card at the end of their turn
 4. Play passes to the next player
 
----
-
-For more details about the implementation, see the [README](../README.md).
