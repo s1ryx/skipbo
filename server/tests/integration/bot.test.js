@@ -165,3 +165,66 @@ describe('addBot / removeBot', () => {
     await c2.close();
   });
 });
+
+describe('bot turn driver', () => {
+  test('bot plays automatically after human ends turn', async () => {
+    const c = createClient(srv.url);
+    await c.connect();
+
+    await c.createRoom('Alice', 2, 5);
+
+    // Add a bot
+    const joinedPromise = c.waitFor('playerJoined');
+    c.emit('addBot', { aiType: 'improved' });
+    await joinedPromise;
+
+    // Start game — human (player 0) always goes first
+    const startedPromise = c.waitFor('gameStarted');
+    c.emit('startGame');
+    const started = await startedPromise;
+
+    // Human discards to end their turn
+    await c.discardCard(started.playerState.hand[0], 0);
+
+    // Bot should now play automatically — wait for its gameStateUpdate
+    const update = await c.waitFor('gameStateUpdate', 10000);
+    expect(update.gameState).toBeDefined();
+    expect(update.playerState).toBeDefined();
+
+    await c.close();
+  });
+
+  test('multiple bots play in sequence', async () => {
+    const c = createClient(srv.url);
+    await c.connect();
+
+    await c.createRoom('Alice', 3, 5);
+
+    // Add two bots
+    let joinedPromise = c.waitFor('playerJoined');
+    c.emit('addBot', { aiType: 'improved' });
+    await joinedPromise;
+
+    joinedPromise = c.waitFor('playerJoined');
+    c.emit('addBot', { aiType: 'baseline' });
+    const joined = await joinedPromise;
+
+    expect(joined.gameState.players).toHaveLength(3);
+    expect(joined.gameState.players[1].isBot).toBe(true);
+    expect(joined.gameState.players[2].isBot).toBe(true);
+
+    // Start game — human (player 0) goes first
+    const startedPromise = c.waitFor('gameStarted');
+    c.emit('startGame');
+    const started = await startedPromise;
+
+    // Human discards to end their turn, triggering bot turns
+    await c.discardCard(started.playerState.hand[0], 0);
+
+    // Wait for at least one bot update
+    const update = await c.waitFor('gameStateUpdate', 10000);
+    expect(update.gameState).toBeDefined();
+
+    await c.close();
+  });
+});
