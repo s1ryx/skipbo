@@ -276,7 +276,7 @@ class GameCoordinator {
     const newToken = crypto.randomUUID();
     player.sessionToken = newToken;
 
-    game.rematchVotes.delete(oldConnectionId);
+    game.removeRematchVote(oldConnectionId);
 
     this.playerRooms.delete(oldConnectionId);
     this.playerRooms.set(connectionId, roomId);
@@ -647,7 +647,7 @@ class GameCoordinator {
       this.transport.removeFromGroup(connectionId, roomId);
       this.playerRooms.delete(connectionId);
       this.transport.send(connectionId, 'gameAborted');
-      game.rematchVotes.clear();
+      game.clearRematchVotes();
 
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
@@ -691,10 +691,10 @@ class GameCoordinator {
     const game = this.games.get(roomId);
     if (!game || game.phase !== Phase.FINISHED) return;
 
-    game.rematchVotes.add(connectionId);
+    game.addRematchVote(connectionId);
 
     const humanPlayers = game.players.filter((p) => !p.isBot);
-    if (game.rematchVotes.size >= humanPlayers.length) {
+    if (game.canStartRematch(humanPlayers.length)) {
       this.cancelCompletedGameCleanup(roomId);
       game.resetForRematch();
       game.startGame();
@@ -711,9 +711,7 @@ class GameCoordinator {
       this._scheduleBotTurnIfNeeded(roomId);
     } else {
       this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
-        rematchVotes: game.players
-          .filter((p) => game.rematchVotes.has(p.id))
-          .map((p) => p.publicId),
+        rematchVotes: game.getRematchVoterPublicIds(),
         stockpileSize: game.stockpileSize,
       });
     }
@@ -730,7 +728,7 @@ class GameCoordinator {
 
     const maxAllowed = game.players.length <= 4 ? 30 : 20;
     game.stockpileSize = Math.min(Math.max(stockpileSize, 5), maxAllowed);
-    game.rematchVotes.clear();
+    game.clearRematchVotes();
 
     this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
       rematchVotes: [],
@@ -776,7 +774,7 @@ class GameCoordinator {
     } else if (game.phase === Phase.FINISHED) {
       // Post-game: soft remove, cancel rematch votes
       game.removePlayer(connectionId);
-      game.rematchVotes.clear();
+      game.clearRematchVotes();
 
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
