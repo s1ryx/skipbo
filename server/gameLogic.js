@@ -89,6 +89,13 @@ class SkipBoGame {
     return true;
   }
 
+  updatePlayerId(oldId, newId) {
+    const player = this.players.find((p) => p.id === oldId);
+    if (!player) return false;
+    player.id = newId;
+    return true;
+  }
+
   startGame() {
     if (this.players.length < MIN_PLAYERS) {
       return false;
