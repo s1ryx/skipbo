@@ -14,6 +14,7 @@ class SkipBoGame {
     this.gameStarted = false;
     this.gameOver = false;
     this.winner = null;
+    this.rematchVotes = new Set();
   }
 
   // Create and shuffle the deck
@@ -291,6 +292,26 @@ class SkipBoGame {
     return { success: true, nextPlayer: nextPlayer.id };
   }
 
+  resetForRematch(stockpileSize) {
+    this.gameStarted = false;
+    this.gameOver = false;
+    this.winner = null;
+    this.deck = [];
+    this.buildingPiles = [[], [], [], []];
+    this.currentPlayerIndex = 0;
+    this.rematchVotes = new Set();
+
+    if (stockpileSize) {
+      this.stockpileSize = stockpileSize;
+    }
+
+    this.players.forEach((player) => {
+      player.stockpile = [];
+      player.hand = [];
+      player.discardPiles = [[], [], [], []];
+    });
+  }
+
   getGameState() {
     return {
       roomId: this.roomId,
@@ -310,6 +331,8 @@ class SkipBoGame {
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
+      stockpileSize: this.stockpileSize || (this.players.length <= 4 ? 30 : 20),
+      rematchVotes: [...this.rematchVotes],
     };
   }
 

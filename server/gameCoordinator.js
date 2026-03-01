@@ -72,6 +72,10 @@ class GameCoordinator {
         return this.handleLeaveLobby(connectionId);
       case 'leaveGame':
         return this.handleLeaveGame(connectionId);
+      case 'requestRematch':
+        return this.handleRequestRematch(connectionId);
+      case 'updateRematchSettings':
+        return this.handleUpdateRematchSettings(connectionId, data);
       default:
         console.log(`Unknown event: ${event}`);
     }
@@ -244,6 +248,8 @@ class GameCoordinator {
     player.id = connectionId;
     const newToken = crypto.randomUUID();
     player.sessionToken = newToken;
+
+    game.rematchVotes.delete(oldConnectionId);
 
     this.playerRooms.delete(oldConnectionId);
     this.playerRooms.set(connectionId, roomId);
@@ -426,18 +432,92 @@ class GameCoordinator {
     const game = this.games.get(roomId);
     if (!game) return;
 
-    this.transport.sendToGroup(roomId, 'gameAborted');
+    if (game.gameOver) {
+      // Post-game: soft leave (only the leaving player exits)
+      game.removePlayer(connectionId);
+      this.transport.removeFromGroup(connectionId, roomId);
+      this.playerRooms.delete(connectionId);
+      this.transport.send(connectionId, 'gameAborted');
+      game.rematchVotes.clear();
 
-    game.players.forEach((player) => {
-      this.transport.removeFromGroup(player.id, roomId);
-      this.playerRooms.delete(player.id);
+      if (game.players.length === 0) {
+        this.cancelCompletedGameCleanup(roomId);
+        this.games.delete(roomId);
+      } else {
+        this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
+          gameState: game.getGameState(),
+        });
+      }
+
+      console.log(`Player ${connectionId} left post-game room ${roomId}`);
+    } else {
+      // Mid-game: abort entire game
+      this.transport.sendToGroup(roomId, 'gameAborted');
+
+      game.players.forEach((player) => {
+        this.transport.removeFromGroup(player.id, roomId);
+        this.playerRooms.delete(player.id);
+      });
+
+      this.cancelPendingDeletion(roomId);
+      this.cancelCompletedGameCleanup(roomId);
+      this.games.delete(roomId);
+
+      console.log(`Game in room ${roomId} has been aborted`);
+    }
+  }
+
+  handleRequestRematch(connectionId) {
+    const roomId = this.playerRooms.get(connectionId);
+    if (!roomId) return;
+
+    const game = this.games.get(roomId);
+    if (!game || !game.gameOver) return;
+
+    game.rematchVotes.add(connectionId);
+
+    if (game.rematchVotes.size >= game.players.length) {
+      this.cancelCompletedGameCleanup(roomId);
+      game.resetForRematch();
+      game.startGame();
+
+      game.players.forEach((player) => {
+        this.transport.send(player.id, 'gameStarted', {
+          gameState: game.getGameState(),
+          playerState: game.getPlayerState(player.id),
+        });
+      });
+
+      console.log(`Rematch started in room ${roomId}`);
+    } else {
+      this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
+        rematchVotes: game.players
+          .filter((p) => game.rematchVotes.has(p.id))
+          .map((p) => p.publicId),
+        stockpileSize: game.stockpileSize,
+      });
+    }
+  }
+
+  handleUpdateRematchSettings(connectionId, { stockpileSize }) {
+    const roomId = this.playerRooms.get(connectionId);
+    if (!roomId) return;
+
+    const game = this.games.get(roomId);
+    if (!game || !game.gameOver) return;
+
+    if (game.getPublicId(connectionId) !== game.hostPublicId) return;
+
+    const maxAllowed = game.players.length <= 4 ? 30 : 20;
+    game.stockpileSize = Math.min(Math.max(stockpileSize, 5), maxAllowed);
+    game.rematchVotes.clear();
+
+    this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
+      rematchVotes: [],
+      stockpileSize: game.stockpileSize,
     });
 
-    this.cancelPendingDeletion(roomId);
-    this.cancelCompletedGameCleanup(roomId);
-    this.games.delete(roomId);
-
-    console.log(`Game in room ${roomId} has been aborted`);
+    console.log(`Rematch settings updated in room ${roomId}: stockpile=${game.stockpileSize}`);
   }
 
   handleDisconnect(connectionId) {
@@ -465,6 +545,19 @@ class GameCoordinator {
         }
         this.transport.sendToGroup(roomId, 'playerLeft', {
           playerId: publicId,
+          gameState: game.getGameState(),
+        });
+      }
+    } else if (game.gameOver) {
+      // Post-game: soft remove, cancel rematch votes
+      game.removePlayer(connectionId);
+      game.rematchVotes.clear();
+
+      if (game.players.length === 0) {
+        this.cancelCompletedGameCleanup(roomId);
+        this.games.delete(roomId);
+      } else {
+        this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
           gameState: game.getGameState(),
         });
       }

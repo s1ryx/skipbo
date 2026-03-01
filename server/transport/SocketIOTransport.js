@@ -14,6 +14,8 @@ const CLIENT_EVENTS = [
   'sendChatMessage',
   'leaveLobby',
   'leaveGame',
+  'requestRematch',
+  'updateRematchSettings',
 ];
 
 class SocketIOTransport {

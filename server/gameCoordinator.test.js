@@ -47,6 +47,29 @@ function createStartedGame(coordinator) {
   return roomId;
 }
 
+/** Helper: create a completed game (game over state) */
+function createCompletedGame(coordinator) {
+  const roomId = createRoomWithTwoPlayers(coordinator);
+  const handlers = coordinator.getTransportHandlers();
+  handlers.onMessage('player1', 'startGame', {});
+  const game = coordinator.games.get(roomId);
+
+  // Force winning condition: 1 card in stockpile, playable hand
+  const player1 = game.players[0];
+  player1.stockpile = [1];
+  player1.hand = [1, 2, 3, 4, 5];
+
+  // Play card via coordinator to trigger game-over path
+  handlers.onMessage('player1', 'playCard', {
+    card: 1,
+    source: 'stockpile',
+    buildingPileIndex: 0,
+  });
+
+  expect(game.gameOver).toBe(true);
+  return roomId;
+}
+
 describe('GameCoordinator', () => {
   describe('initialization', () => {
     it('starts with empty state', () => {
@@ -946,7 +969,7 @@ describe('GameCoordinator', () => {
       expect(coordinator.playerRooms.has('player2')).toBe(false);
     });
 
-    it('cancels cleanup when game is aborted', () => {
+    it('keeps cleanup timer when one player leaves post-game', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -967,10 +990,40 @@ describe('GameCoordinator', () => {
 
       expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
 
-      // Leave game (abort)
+      // Post-game soft leave — timer stays for remaining player
       handlers.onMessage('player1', 'leaveGame', {});
 
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
+      expect(coordinator.games.has(roomId)).toBe(true);
+    });
+
+    it('cancels cleanup when last player leaves post-game', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'startGame', {});
+      const game = coordinator.games.get(roomId);
+
+      // Force winning condition
+      const player1 = game.players[0];
+      player1.stockpile = [1];
+      player1.hand = [1, 2, 3, 4, 5];
+
+      handlers.onMessage('player1', 'playCard', {
+        card: 1,
+        source: 'stockpile',
+        buildingPileIndex: 0,
+      });
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
+
+      // Both players leave post-game
+      handlers.onMessage('player1', 'leaveGame', {});
+      handlers.onMessage('player2', 'leaveGame', {});
+
       expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
+      expect(coordinator.games.has(roomId)).toBe(false);
     });
   });
 
@@ -995,6 +1048,302 @@ describe('GameCoordinator', () => {
       for (const [, timeoutId] of coordinator.pendingDeletions) {
         clearTimeout(timeoutId);
       }
+    });
+  });
+
+  describe('handleRequestRematch', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('broadcasts rematchVoteUpdate on single vote', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player1PublicId = game.getPublicId('player1');
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'requestRematch', {});
+
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'rematchVoteUpdate',
+        expect.objectContaining({
+          rematchVotes: [player1PublicId],
+        })
+      );
+    });
+
+    it('triggers rematch when all players vote', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'requestRematch', {});
+      handlers.onMessage('player2', 'requestRematch', {});
+
+      expect(game.gameOver).toBe(false);
+      expect(game.gameStarted).toBe(true);
+
+      const gameStartedCalls = transport.send.mock.calls.filter(
+        (c) => c[1] === 'gameStarted'
+      );
+      expect(gameStartedCalls.length).toBe(2);
+    });
+
+    it('cancels completed game cleanup timer on unanimous vote', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
+
+      handlers.onMessage('player1', 'requestRematch', {});
+      handlers.onMessage('player2', 'requestRematch', {});
+
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
+    });
+
+    it('ignores requestRematch when game is not over', () => {
+      const { coordinator, transport } = createCoordinator();
+      createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'requestRematch', {});
+
+      const rematchCalls = transport.sendToGroup.mock.calls.filter(
+        (c) => c[1] === 'rematchVoteUpdate'
+      );
+      expect(rematchCalls.length).toBe(0);
+    });
+
+    it('double vote from same player is idempotent', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onMessage('player1', 'requestRematch', {});
+      handlers.onMessage('player1', 'requestRematch', {});
+
+      expect(game.rematchVotes.size).toBe(1);
+      expect(game.gameOver).toBe(true);
+    });
+  });
+
+  describe('handleUpdateRematchSettings', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('allows host to update stockpile size', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 15 });
+
+      expect(game.stockpileSize).toBe(15);
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'rematchVoteUpdate',
+        expect.objectContaining({ stockpileSize: 15 })
+      );
+    });
+
+    it('rejects update from non-host player', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const originalSize = game.stockpileSize;
+
+      handlers.onMessage('player2', 'updateRematchSettings', { stockpileSize: 15 });
+
+      expect(game.stockpileSize).toBe(originalSize);
+    });
+
+    it('clamps stockpile size to minimum of 5', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 1 });
+
+      expect(game.stockpileSize).toBe(5);
+    });
+
+    it('clamps stockpile size to max 30 for <=4 players', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 50 });
+
+      expect(game.stockpileSize).toBe(30);
+    });
+
+    it('clears existing votes on settings change', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onMessage('player1', 'requestRematch', {});
+      expect(game.rematchVotes.size).toBe(1);
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 10 });
+
+      expect(game.rematchVotes.size).toBe(0);
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'rematchVoteUpdate',
+        expect.objectContaining({ rematchVotes: [] })
+      );
+    });
+  });
+
+  describe('post-game leave', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('soft leaves only the leaving player when game is over', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'leaveGame', {});
+
+      expect(transport.send).toHaveBeenCalledWith('player1', 'gameAborted');
+      expect(coordinator.games.has(roomId)).toBe(true);
+    });
+
+    it('clears rematch votes on post-game leave', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onMessage('player1', 'requestRematch', {});
+      expect(game.rematchVotes.size).toBe(1);
+
+      handlers.onMessage('player1', 'leaveGame', {});
+
+      expect(game.rematchVotes.size).toBe(0);
+    });
+
+    it('sends playerLeftPostGame to remaining players', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'leaveGame', {});
+
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'playerLeftPostGame',
+        expect.objectContaining({ gameState: expect.any(Object) })
+      );
+    });
+
+    it('fully cleans up when last player leaves post-game', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('player1', 'leaveGame', {});
+      handlers.onMessage('player2', 'leaveGame', {});
+
+      expect(coordinator.games.has(roomId)).toBe(false);
+      expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
+    });
+  });
+
+  describe('post-game disconnect', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('clears rematch votes on post-game disconnect', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onMessage('player1', 'requestRematch', {});
+      expect(game.rematchVotes.size).toBe(1);
+
+      handlers.onDisconnect('player1');
+
+      expect(game.rematchVotes.size).toBe(0);
+    });
+
+    it('cleans up game when all players disconnect post-game', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onDisconnect('player1');
+      handlers.onDisconnect('player2');
+
+      expect(coordinator.games.has(roomId)).toBe(false);
+    });
+
+    it('sends playerLeftPostGame to remaining players on disconnect', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      transport.sendToGroup.mockClear();
+      handlers.onDisconnect('player2');
+
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'playerLeftPostGame',
+        expect.objectContaining({ gameState: expect.any(Object) })
+      );
+    });
+  });
+
+  describe('reconnect clears stale vote', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('removes old connectionId from rematchVotes on reconnect', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      // Player2 votes then disconnects
+      handlers.onMessage('player2', 'requestRematch', {});
+      expect(game.rematchVotes.has('player2')).toBe(true);
+
+      // Get player2's session token
+      const player2 = game.players.find((p) => p.id === 'player2');
+      const sessionToken = player2.sessionToken;
+
+      handlers.onDisconnect('player2');
+
+      // Reconnect as new connection
+      handlers.onConnect('player2-new');
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken,
+        playerName: 'Bob',
+      });
+
+      // Old vote should be removed
+      expect(game.rematchVotes.has('player2')).toBe(false);
+      // New connectionId should NOT be auto-added
+      expect(game.rematchVotes.has('player2-new')).toBe(false);
     });
   });
 });

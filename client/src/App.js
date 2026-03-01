@@ -51,6 +51,10 @@ function App() {
     discardCard,
     leaveLobby,
     leaveGame,
+    requestRematch,
+    updateRematchSettings,
+    rematchVotes,
+    rematchStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
   } = useGameConnection();
@@ -82,6 +86,10 @@ function App() {
           onPlayCard={playCard}
           onDiscardCard={discardCard}
           onLeaveGame={leaveGame}
+          onRequestRematch={requestRematch}
+          onUpdateRematchSettings={updateRematchSettings}
+          rematchVotes={rematchVotes}
+          rematchStockpileSize={rematchStockpileSize}
           chatMessages={chatMessages}
           onSendChatMessage={sendChatMessage}
           onMarkMessagesRead={markMessagesAsRead}
