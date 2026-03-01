@@ -415,3 +415,59 @@ describe('StateEvaluator._opponentImpact', () => {
     expect(Math.abs(impact4p)).toBeLessThan(Math.abs(impact2p));
   });
 });
+
+// ── scoreChain with discard source bonus ──────────────────────────────
+
+describe('StateEvaluator.scoreChain', () => {
+  let evaluator;
+
+  beforeEach(() => {
+    evaluator = makeEvaluator();
+  });
+
+  test('discard source from messy pile gets repair bonus', () => {
+    // Chain plays from discard0 which is messy [5,9,6] (quality 2)
+    const chain = {
+      plays: [{ card: 6, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [8, 9, 10, 11, 12],
+      discardPiles: [[5, 9, 6], [], [], []], // messy pile with quality 2
+      buildingPiles: [[1, 2, 3, 4, 5], [], [], []], // pile 0 needs 6
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const score = evaluator.scoreChain(chain, playerState, gameState);
+    // Should include structural repair bonus (not just flat +3)
+    expect(score).toBeGreaterThan(0);
+  });
+
+  test('hand-only chain gets no discard source bonus', () => {
+    const chain = {
+      plays: [{ card: 3, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [3, 8, 9, 10, 12],
+      buildingPiles: [[1, 2], [], [], []], // needs 3
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    // _discardSourceBonus should be 0 for hand-only plays
+    const bonus = evaluator._discardSourceBonus(chain, playerState);
+    expect(bonus).toBe(0);
+  });
+});
