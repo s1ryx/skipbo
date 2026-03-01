@@ -544,4 +544,100 @@ describe('SkipBoGame', () => {
       expect(game.getPlayerState('unknown')).toBeNull();
     });
   });
+
+  describe('addRematchVote', () => {
+    it('adds a new vote and returns true', () => {
+      expect(game.addRematchVote('p1')).toBe(true);
+      expect(game.rematchVotes.size).toBe(1);
+    });
+
+    it('returns false for duplicate vote', () => {
+      game.addRematchVote('p1');
+      expect(game.addRematchVote('p1')).toBe(false);
+      expect(game.rematchVotes.size).toBe(1);
+    });
+
+    it('tracks multiple voters independently', () => {
+      game.addRematchVote('p1');
+      game.addRematchVote('p2');
+      expect(game.rematchVotes.size).toBe(2);
+    });
+  });
+
+  describe('removeRematchVote', () => {
+    it('removes an existing vote', () => {
+      game.addRematchVote('p1');
+      game.removeRematchVote('p1');
+      expect(game.rematchVotes.size).toBe(0);
+    });
+
+    it('is a no-op for non-existent vote', () => {
+      game.removeRematchVote('p1');
+      expect(game.rematchVotes.size).toBe(0);
+    });
+  });
+
+  describe('clearRematchVotes', () => {
+    it('clears all votes', () => {
+      game.addRematchVote('p1');
+      game.addRematchVote('p2');
+      game.clearRematchVotes();
+      expect(game.rematchVotes.size).toBe(0);
+    });
+  });
+
+  describe('canStartRematch', () => {
+    it('returns true when votes meet threshold', () => {
+      game.addRematchVote('p1');
+      game.addRematchVote('p2');
+      expect(game.canStartRematch(2)).toBe(true);
+    });
+
+    it('returns true when votes exceed threshold', () => {
+      game.addRematchVote('p1');
+      game.addRematchVote('p2');
+      expect(game.canStartRematch(1)).toBe(true);
+    });
+
+    it('returns false when votes are below threshold', () => {
+      game.addRematchVote('p1');
+      expect(game.canStartRematch(2)).toBe(false);
+    });
+  });
+
+  describe('getRematchVoterPublicIds', () => {
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+    });
+
+    it('returns public IDs of voters', () => {
+      game.addRematchVote('p1');
+      const ids = game.getRematchVoterPublicIds();
+      expect(ids).toEqual([game.players[0].publicId]);
+    });
+
+    it('returns empty array when no votes', () => {
+      expect(game.getRematchVoterPublicIds()).toEqual([]);
+    });
+
+    it('preserves player order', () => {
+      game.addRematchVote('p2');
+      game.addRematchVote('p1');
+      const ids = game.getRematchVoterPublicIds();
+      // Order follows players array, not vote order
+      expect(ids).toEqual([
+        game.players[0].publicId,
+        game.players[1].publicId,
+      ]);
+    });
+
+    it('ignores votes from removed players', () => {
+      game.addRematchVote('p1');
+      game.addRematchVote('p2');
+      game.removePlayer('p1');
+      const ids = game.getRematchVoterPublicIds();
+      expect(ids).toEqual([game.players[0].publicId]); // only p2 remains
+    });
+  });
 });
