@@ -225,7 +225,7 @@ All server-related state lives in the `useGameConnection` custom hook
 | `roomId`       | string  | Current room code                        |
 | `inLobby`      | boolean | Controls Lobby vs game rendering         |
 | `error`        | string  | Temporary error message (auto-clears)    |
-| `chatMessages` | array   | Chat history (persisted to localStorage) |
+| `chatMessages` | array   | Chat history (persisted to sessionStorage) |
 | `stablePlayerId` | string | Persistent ID for chat attribution     |
 
 App-level state in `App.js`
@@ -263,7 +263,7 @@ server-related state themselves — they receive data and call callbacks.
   ([useGameConnection.js:44-45](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L44-L45))
 - Generates and persists a stable player ID for chat attribution
   ([useGameConnection.js:5-17](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L5-L17))
-- Chat message persistence to localStorage
+- Chat message persistence to sessionStorage
   ([useGameConnection.js:48-52](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L48-L52))
 
 **`Lobby`** ([Lobby.js](https://github.com/s1ryx/skipbo/blob/d54aea5240e8a572c0892118406bdb2034913988/client/src/components/Lobby.js))
@@ -327,16 +327,16 @@ onMarkMessagesRead, stablePlayerId }`
 - Uses `stablePlayerId` (not connection ID) to identify own messages,
   so authorship survives reconnections
   ([Chat.js:50-53](https://github.com/s1ryx/skipbo/blob/5290fba7a55afb2e295f4d897c6b8a39526fcf71/client/src/components/Chat.js#L50-L53))
-- Messages persist to localStorage per room
+- Messages persist to sessionStorage per room
 
 ### Session Persistence
 
-The hook saves session data to localStorage on room creation, join,
+The hook saves session data to sessionStorage on room creation, join,
 and reconnection (inline in each message handler, e.g.
-[useGameConnection.js:66-71](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L66-L71)):
+[useGameConnection.js:53-58](https://github.com/s1ryx/skipbo/blob/07b5e4f/client/src/useGameConnection.js#L53-L58)):
 
 ```json
-skipBoSession: { "roomId": "ABC123", "playerId": "connection-id", "playerName": "Alice" }
+skipBoSession: { "roomId": "ABC123", "playerId": "connection-id", "playerName": "Alice", "sessionToken": "..." }
 ```
 
 On page reload, the `onConnect` handler checks for a saved session and
@@ -483,7 +483,7 @@ Player types message and submits
   → Hook sends 'sendChatMessage' via transport       (useGameConnection.js:284)
   → Server broadcasts 'chatMessage' to room          (gameCoordinator.js:310-316)
   → All clients append to chatMessages               (useGameConnection.js:194-196)
-  → Messages saved to localStorage per room          (useGameConnection.js:48-52)
+  → Messages saved to sessionStorage per room         (useGameConnection.js:48-52)
 ```
 
 ### 7. Reconnection
@@ -491,7 +491,7 @@ Player types message and submits
 ```
 Player reloads page
   → App mounts, useGameConnection creates transport  (useGameConnection.js:204-232)
-  → On connect, checks localStorage                  (useGameConnection.js:211-223)
+  → On connect, checks sessionStorage                 (useGameConnection.js:211-223)
   → If session found, sends 'reconnect'              (useGameConnection.js:217)
   → Server finds player by old ID                    (gameCoordinator.js:122)
   → Server swaps old connection ID for new           (gameCoordinator.js:157-161)
@@ -559,11 +559,19 @@ Player disconnects (tab close, network loss)
                             └──────┘
 ```
 
-## localStorage Keys
+## Browser Storage Keys
 
-| Key                    | Value                              | Used by                                                                                                                                                                  |
-| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `skipBoSession`        | `{ roomId, playerId, playerName }` | Reconnection on reload ([useGameConnection.js:211](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L211))   |
-| `skipBoChat_{roomId}`  | `[{ message, playerName, ... }]`   | Chat persistence ([useGameConnection.js:49](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L49))           |
-| `skipBoStablePlayerId` | `"player_abc123_1234567890"`       | Chat message attribution ([useGameConnection.js:10-17](https://github.com/s1ryx/skipbo/blob/104d152ff4a27aef9afdafe7f103e29ed9395b3b/client/src/useGameConnection.js#L10-L17)) |
-| `skipBoQuickDiscard`   | `"true"` or `"false"`              | Quick discard setting ([GameBoard.js:26](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/components/GameBoard.js#L26))           |
+**sessionStorage** (cleared when tab closes):
+
+| Key                   | Value                                              | Used by                                                                                                                                         |
+| --------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipBoSession`       | `{ roomId, playerId, playerName, sessionToken }`   | Reconnection on reload ([useGameConnection.js:12](https://github.com/s1ryx/skipbo/blob/07b5e4f/client/src/useGameConnection.js#L12))            |
+| `skipBoChat_{roomId}` | `[{ message, playerName, ... }]`                   | Chat persistence ([useGameConnection.js:16](https://github.com/s1ryx/skipbo/blob/07b5e4f/client/src/useGameConnection.js#L16))                  |
+
+**localStorage** (persists across sessions):
+
+| Key                  | Value                 | Used by                                                                                                                                         |
+| -------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipBoPlayerName`   | `"Alice"`             | Remember player name ([Lobby.js:8](https://github.com/s1ryx/skipbo/blob/40293c1/client/src/components/Lobby.js#L8))                             |
+| `skipBoLanguage`     | `"en"`, `"de"`, `"tr"` | Language preference ([LanguageContext.js:13](https://github.com/s1ryx/skipbo/blob/4c5a736/client/src/i18n/LanguageContext.js#L13))               |
+| `skipBoQuickDiscard` | `"true"` or `"false"` | Quick discard setting ([GameBoard.js:26](https://github.com/s1ryx/skipbo/blob/6759b999e35f1d2875968390247574b0c3f1a163/client/src/components/GameBoard.js#L26)) |
