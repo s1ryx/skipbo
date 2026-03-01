@@ -110,6 +110,20 @@ class SkipBoGame {
     this.hostPublicId = publicId;
   }
 
+  getMaxStockpileSize() {
+    return this.players.length <= LARGE_GAME_THRESHOLD
+      ? DEFAULT_STOCKPILE_LARGE
+      : DEFAULT_STOCKPILE_SMALL;
+  }
+
+  updateStockpileSize(size) {
+    const maxAllowed = this.getMaxStockpileSize();
+    this.stockpileSize = Math.min(
+      Math.max(size, MIN_STOCKPILE_SIZE),
+      maxAllowed
+    );
+  }
+
   startGame() {
     if (this.players.length < MIN_PLAYERS) {
       return false;
@@ -121,17 +135,8 @@ class SkipBoGame {
 
     this.deck = this.createDeck();
 
-    const defaultSize =
-      this.players.length <= LARGE_GAME_THRESHOLD
-        ? DEFAULT_STOCKPILE_LARGE
-        : DEFAULT_STOCKPILE_SMALL;
-    const stockpileSize = this.stockpileSize || defaultSize;
-
-    const maxAllowed =
-      this.players.length <= LARGE_GAME_THRESHOLD
-        ? DEFAULT_STOCKPILE_LARGE
-        : DEFAULT_STOCKPILE_SMALL;
-    const actualStockpileSize = Math.min(stockpileSize, maxAllowed);
+    const maxAllowed = this.getMaxStockpileSize();
+    const actualStockpileSize = Math.min(this.stockpileSize || maxAllowed, maxAllowed);
 
     // Deal stockpiles and hands to each player
     this.players.forEach((player) => {
@@ -404,11 +409,7 @@ class SkipBoGame {
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
-      stockpileSize:
-        this.stockpileSize ||
-        (this.players.length <= LARGE_GAME_THRESHOLD
-          ? DEFAULT_STOCKPILE_LARGE
-          : DEFAULT_STOCKPILE_SMALL),
+      stockpileSize: this.stockpileSize || this.getMaxStockpileSize(),
       rematchVotes: this.getRematchVoterPublicIds(),
     };
   }
