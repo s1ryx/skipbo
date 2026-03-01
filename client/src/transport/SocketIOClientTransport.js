@@ -14,6 +14,8 @@ const SERVER_EVENTS = [
   'playerDisconnected',
   'playerReconnected',
   'gameAborted',
+  'rematchVoteUpdate',
+  'playerLeftPostGame',
   'chatMessage',
   'error',
 ];
