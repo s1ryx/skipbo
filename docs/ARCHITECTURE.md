@@ -113,14 +113,16 @@ the transport through `handleMessage()` and calls `this.transport.send()`
 
 ### Storage
 
-Three in-memory maps hold all state
-([gameCoordinator.js:9-11](https://github.com/s1ryx/skipbo/blob/c1bb7749352cea4e9d335eb7c5e8f568e45b2373/server/gameCoordinator.js#L9-L11)):
+Four in-memory maps hold all state
+([gameCoordinator.js:29-32](https://github.com/s1ryx/skipbo/blob/8e88993/server/gameCoordinator.js#L29-L32)):
 
 - **`games`** (`Map<roomId, SkipBoGame>`) — one game instance per room
 - **`playerRooms`** (`Map<connectionId, roomId>`) — tracks which room each
   connected player belongs to
 - **`pendingDeletions`** (`Map<roomId, timeoutId>`) — grace period timers
   for empty lobbies
+- **`completedGameTimers`** (`Map<roomId, timeoutId>`) — cleanup timers
+  for completed games
 
 ### Game Logic
 
