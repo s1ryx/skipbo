@@ -488,13 +488,13 @@ Player types message and submits
 
 ```
 Player reloads page
-  → App mounts, useGameConnection creates transport  (useGameConnection.js:204-232)
-  → On connect, checks sessionStorage                 (useGameConnection.js:211-223)
-  → If session found, sends 'reconnect'              (useGameConnection.js:217)
-  → Server finds player by old ID                    (gameCoordinator.js:122)
-  → Server swaps old connection ID for new           (gameCoordinator.js:157-161)
-  → Server sends 'reconnected' with full state       (gameCoordinator.js:165-170)
-  → Hook restores game state                         (useGameConnection.js:101-118)
+  → App mounts, useGameConnection creates transport  (useGameConnection.js:224-249)
+  → On connect, checks sessionStorage                 (useGameConnection.js:235-246)
+  → If session found, sends 'reconnect' with sessionToken  (useGameConnection.js:241)
+  → Server finds player by sessionToken              (gameCoordinator.js:205)
+  → Server swaps old connection ID for new           (gameCoordinator.js:248)
+  → Server sends 'reconnected' with full state       (gameCoordinator.js:259-265)
+  → Hook restores game state                         (useGameConnection.js:98-120)
 ```
 
 ### 8. Leaving / Disconnect
