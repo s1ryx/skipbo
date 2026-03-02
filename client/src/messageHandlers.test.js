@@ -33,6 +33,7 @@ const sessionStorageMock = (() => {
     }),
   };
 })();
+// eslint-disable-next-line no-undef
 Object.defineProperty(globalThis, 'sessionStorage', { value: sessionStorageMock });
 
 beforeEach(() => {

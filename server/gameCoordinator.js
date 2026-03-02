@@ -30,11 +30,13 @@ function stripHtml(str) {
 }
 
 function sanitizeForLog(str) {
+  // eslint-disable-next-line no-control-regex
   return str.replace(/[\r\n]/g, '').replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
 }
 
 function validatePlayerName(name) {
   if (typeof name !== 'string') return null;
+  // eslint-disable-next-line no-control-regex
   const trimmed = stripHtml(name.trim()).replace(/[\x00-\x1F]/g, '');
   if (trimmed.length === 0 || trimmed.length > MAX_PLAYER_NAME_LENGTH) return null;
   return trimmed;
@@ -423,6 +425,7 @@ class GameCoordinator {
 
   handleSendChatMessage(connectionId, { message }) {
     if (typeof message !== 'string') return;
+    // eslint-disable-next-line no-control-regex
     const sanitized = stripHtml(message.trim()).replace(/[\x00-\x1F]/g, '');
     if (sanitized.length === 0 || sanitized.length > MAX_CHAT_MESSAGE_LENGTH) return;
 
