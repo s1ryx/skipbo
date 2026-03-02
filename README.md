@@ -485,18 +485,34 @@ skip-bo/
 │   ├── createServer.js        # HTTP + Socket.IO server factory
 │   ├── gameCoordinator.js     # Event handling and game lifecycle
 │   ├── gameLogic.js           # Skip-Bo game rules (SkipBoGame class)
+│   ├── config.js              # Centralized constants, Phase enum
+│   ├── errors.js              # GameError class and ErrorCodes
+│   ├── logger.js              # Structured JSON logger
+│   ├── SessionManager.js      # Connection-to-room mapping
+│   ├── BotManager.js          # Bot AI instance lifecycle
+│   ├── GameRepository.js      # Game storage and cleanup timers
+│   ├── ai/                    # AI modules (AIPlayer, CardCounter, ...)
 │   ├── transport/
 │   │   └── SocketIOTransport.js   # Server-side transport adapter
 │   └── tests/
-│       ├── unit/              # Unit tests (gameLogic, gameCoordinator)
-│       └── integration/       # Integration tests (lobby, session, chat, ...)
+│       ├── unit/              # Unit tests (7 suites)
+│       ├── integration/       # Integration tests (8 suites)
+│       └── ai/                # AI module tests (5 suites)
 │
 ├── client/
 │   └── src/
 │       ├── App.js             # Top-level routing
 │       ├── useGameConnection.js   # Hook: server state + actions
+│       ├── messageHandlers.js     # Server event handler functions
 │       ├── components/        # UI components (+ co-located tests)
 │       │   ├── GameBoard.js / .test.js / .css
+│       │   ├── OpponentArea.js
+│       │   ├── BuildingPiles.js
+│       │   ├── PlayerArea.js
+│       │   ├── GameOverOverlay.js
+│       │   ├── LeaveConfirmDialog.js
+│       │   ├── ConnectionStatus.js / .test.js
+│       │   ├── ErrorBoundary.js / .test.js
 │       │   ├── Lobby.js / .test.js / .css
 │       │   ├── WaitingRoom.js / .test.js / .css
 │       │   ├── Card.js / .test.js / .css
@@ -504,6 +520,8 @@ skip-bo/
 │       │   └── Chat.js / .test.js / .css
 │       ├── transport/
 │       │   └── SocketIOClientTransport.js / .test.js
+│       ├── utils/
+│       │   └── cardUtils.js / .test.js
 │       └── i18n/              # Internationalization (en, de, tr)
 │
 ├── docs/                      # Project documentation
@@ -526,7 +544,7 @@ skip-bo/
 
 ## Future Enhancements
 
-- [ ] AI opponents for single-player mode
+- [x] AI opponents for single-player mode
 - [ ] Public/private lobby system with room browser
 - [ ] Mobile-friendly UI with draggable cards
 - [ ] Dark mode
