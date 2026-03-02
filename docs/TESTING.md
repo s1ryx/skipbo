@@ -50,39 +50,51 @@ confidence that the application works correctly, not a coverage number.
 ```
 server/
 ├── tests/
-│   ├── unit/                      # Unit tests for core modules
-│   │   ├── gameLogic.test.js      # SkipBoGame class
-│   │   └── gameCoordinator.test.js # GameCoordinator handlers
-│   ├── integration/               # Multi-module interaction tests
-│   │   ├── lobby.test.js          # Room creation/joining flow
-│   │   ├── fullGame.test.js       # Complete game lifecycle
-│   │   ├── session.test.js        # Reconnection and session persistence
-│   │   ├── chat.test.js           # Chat messaging
-│   │   ├── gameAbort.test.js      # Game abort and cleanup
-│   │   ├── bot.test.js            # Bot integration
-│   │   ├── raceConditions.test.js # Concurrent event handling
-│   │   └── rateLimiting.test.js   # Rate limiter behavior
-│   └── ai/                        # AI module tests
+│   ├── unit/                        # Unit tests for core modules
+│   │   ├── gameLogic.test.js        # SkipBoGame class
+│   │   ├── gameCoordinator.test.js  # GameCoordinator handlers
+│   │   ├── sessionManager.test.js   # SessionManager
+│   │   ├── botManager.test.js       # BotManager
+│   │   ├── gameRepository.test.js   # GameRepository
+│   │   ├── logger.test.js           # Structured logger
+│   │   └── errors.test.js           # GameError and ErrorCodes
+│   ├── integration/                 # Multi-module interaction tests
+│   │   ├── lobby.test.js            # Room creation/joining flow
+│   │   ├── fullGame.test.js         # Complete game lifecycle
+│   │   ├── session.test.js          # Reconnection and session persistence
+│   │   ├── chat.test.js             # Chat messaging
+│   │   ├── gameAbort.test.js        # Game abort and cleanup
+│   │   ├── bot.test.js              # Bot integration
+│   │   ├── raceConditions.test.js   # Concurrent event handling
+│   │   └── rateLimiting.test.js     # Rate limiter behavior
+│   └── ai/                          # AI module tests
 │       ├── CardCounter.test.js
 │       ├── ChainDetector.test.js
 │       ├── StateEvaluator.test.js
 │       ├── AIPlayer.test.js
 │       └── GameLogger.test.js
 ├── transport/
-│   └── SocketIOTransport.test.js  # Transport adapter tests
+│   └── SocketIOTransport.test.js    # Transport adapter tests
 
 client/src/
-├── App.test.js                    # Top-level routing
-├── useGameConnection.test.js      # Hook state and event handling
+├── App.test.js                      # Top-level routing
+├── useGameConnection.test.js        # Hook state and event handling
+├── messageHandlers.test.js          # Server message handler functions
 ├── components/
 │   ├── Card.test.js
 │   ├── Chat.test.js
+│   ├── ConnectionStatus.test.js
+│   ├── ErrorBoundary.test.js
 │   ├── GameBoard.test.js
 │   ├── Lobby.test.js
 │   ├── PlayerHand.test.js
 │   └── WaitingRoom.test.js
-└── transport/
-    └── SocketIOClientTransport.test.js
+├── i18n/
+│   └── translations.test.js        # Translation completeness
+├── transport/
+│   └── SocketIOClientTransport.test.js
+└── utils/
+    └── cardUtils.test.js            # Card utility functions
 ```
 
 ### Placement rules
@@ -108,6 +120,9 @@ Every public method on `SkipBoGame` should have test coverage:
 - Win condition detection
 - Invalid move rejection (wrong turn, illegal card placement)
 - Edge cases (empty deck recycling, mid-turn hand refill)
+- Phase transitions (lobby → playing → finished)
+- Rematch vote methods (`addRematchVote`, `canStartRematch`, etc.)
+- Player mutators (`updateConnectionId`, `setSessionToken`, `setHost`)
 
 ### Coordinator (`gameCoordinator.js`)
 
@@ -139,7 +154,21 @@ Test rendering and user interaction, not implementation details:
 - Session persistence to sessionStorage
 - Reconnection flow
 
-### AI modules (when present)
+### Message handlers (`messageHandlers.js`)
+
+- Each handler function processes server data correctly
+- Session persistence (sessionStorage read/write)
+- State setter invocations with correct arguments
+
+### Server support modules
+
+- `SessionManager` — room mapping CRUD, connection transfer
+- `BotManager` — bot creation/removal, AI instance lifecycle, timer scheduling
+- `GameRepository` — game CRUD, cleanup timer scheduling
+- `errors.js` — `GameError` construction, `ErrorCodes` completeness
+- `logger.js` — log levels, JSON output format
+
+### AI modules
 
 - Each exported function or class method
 - Edge cases in chain detection and scoring
