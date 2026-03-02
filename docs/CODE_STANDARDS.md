@@ -46,8 +46,8 @@ Extends `eslint:recommended`, plus:
 | ---------------- | ------ | --------------------------------------------- |
 | `no-unused-vars` | `warn` | Flags unused variables; `_` prefix is allowed |
 
-`no-console` is intentionally omitted — the server uses `console.log`
-for logging.
+`no-console` is intentionally omitted — the server uses a structured
+logger (`server/logger.js`) that wraps `console` methods.
 
 ## Enforcement
 
