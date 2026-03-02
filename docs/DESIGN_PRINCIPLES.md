@@ -63,8 +63,9 @@ variable parsing.
 **Interface:** `createServer(config)` returns a running server with
 injected dependencies.
 
-**Current state:** `createServer.js` and `server.js` cover this. Logger
-is absent (bare `console.log`). Config is scattered constants.
+**Current state:** `createServer.js` and `server.js` cover this.
+Structured logger (`logger.js`) is injected via coordinator constructor.
+Configuration centralized in `config.js`.
 
 #### 2. Transport
 
@@ -85,7 +86,7 @@ removeFromGroup(connectionId, groupId)
 Inbound events are delivered via `onMessage(connectionId, event, data)`.
 
 **Current state:** `SocketIOTransport` is clean and well-abstracted.
-No changes needed beyond minor configurability (rate limit tuning).
+Rate-limit constants configurable via `config.js`.
 
 #### 3. Session
 
@@ -104,9 +105,11 @@ reconnect(newConnectionId, token) → reconnected player
 getRoom(connectionId) → roomId
 ```
 
-**Current state:** Spread across `GameCoordinator` methods
-(`handleJoinRoom`, `handleReconnect`) and direct `playerRooms` Map
-access. Session token generated inline. No dedicated module.
+**Current state:** `SessionManager` owns connection-to-room mapping
+with `getRoom()`, `setRoom()`, `removeRoom()`, and
+`transferConnection()`. Reconnection logic remains in the coordinator
+but uses `SessionManager` for lookups and `SkipBoGame.updateConnectionId()`
+for ID swap.
 
 #### 4. Room
 
@@ -125,8 +128,10 @@ leaveRoom(playerId) → { room, phase }
 getRoom(roomId) → room metadata
 ```
 
-**Current state:** Mixed into `GameCoordinator`. Room is not a first-
-class entity — it's a game instance plus side-state in Maps.
+**Current state:** `GameRepository` owns game storage, cleanup timers,
+and room lifecycle queries (`hasGame`, `getAllRoomIds`). Room is still
+not a first-class entity separate from the game instance, but storage
+is encapsulated behind a repository interface.
 
 #### 5. Game Engine
 
@@ -148,8 +153,12 @@ getPlayerState(playerId) → private view
 ```
 
 **Current state:** `SkipBoGame` in `gameLogic.js` covers this well.
-Issues: `rematchVotes` stored on game but managed externally; `isBot`
-and `aiType` leak into the engine; player objects mutated from outside.
+Rematch vote methods (`addRematchVote`, `canStartRematch`, etc.) are
+now encapsulated. Players have `internalId` (stable) and
+`connectionId` (transport-bound). Bot metadata (`isBot`, `aiType`)
+removed — decorated by the coordinator before broadcasting. Player
+mutation goes through dedicated methods (`updateConnectionId`,
+`setSessionToken`, `setHost`).
 
 #### 6. Orchestration
 
@@ -161,9 +170,12 @@ broadcasts the result. Thin glue — no business logic of its own.
 
 **Interface:** Event handler map consumed by the transport layer.
 
-**Current state:** `GameCoordinator` plays this role but also absorbs
-session, room, and bot concerns. Needs to shed responsibilities
-downward into the layers above.
+**Current state:** `GameCoordinator` plays this role. Session tracking,
+game storage, and bot AI management have been extracted to dedicated
+modules (`SessionManager`, `GameRepository`, `BotManager`). Bot turn
+sequencing and reconnection logic remain in the coordinator. Unified
+`_executePlay`/`_executeDiscard` methods serve both human and bot
+code paths.
 
 #### 7. AI
 
@@ -206,21 +218,25 @@ snapshots. Baseline AI is a separate copy for comparison. Clean.
 └──────────────────────────────────────────────────────┘
 ```
 
-**Current state:** Layers 1 and 5 are clean. Layers 2–4 are collapsed
-into `useGameConnection` (god hook, 337 lines) and `App.js`. `GameBoard`
-(449 lines) merges layers 4 and 5.
+**Current state:** Layers 1 and 5 are clean. Layer 2 is split between
+`useGameConnection` (175 lines) and `messageHandlers.js` (176 lines
+of pure handler functions). Layer 3 is handled by `App.js`. Layer 4
+has been decomposed: `GameBoard` (177 lines) composes `OpponentArea`,
+`BuildingPiles`, `PlayerArea`, `GameOverOverlay`, and
+`LeaveConfirmDialog`. `ErrorBoundary` and `ConnectionStatus` provide
+client resilience.
 
 ### Cross-Cutting Concerns
 
 These are not layers — they are services injected into any layer that
 needs them.
 
-| Concern            | Current state                                             | Target                                                                |
-| ------------------ | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Logging**        | `console.log` in coordinator only                         | Structured logger injected via config                                 |
-| **Configuration**  | Constants scattered across files                          | Single config module with defaults                                    |
-| **Error handling** | Inconsistent (silent drops, error events, return objects) | Typed error objects, centralized handler                              |
-| **Validation**     | Duplicated between coordinator and game engine            | Single source of truth in game engine; coordinator sanitizes I/O only |
+| Concern            | Current state                                                            | Target                                                          |
+| ------------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| **Logging**        | Structured logger (`logger.js`) injected into coordinator                | Extend to transport and other modules as needed                 |
+| **Configuration**  | Centralized in `config.js` (game rules, timers, rate limits, Phase enum) | Expose to client for form validation limits                     |
+| **Error handling** | `GameError` class with typed `ErrorCodes`; `ErrorBoundary` on client     | Standardize remaining bare string errors in game engine returns |
+| **Validation**     | Game rules in engine; I/O sanitization in coordinator                    | Complete — no further action needed                             |
 
 ---
 
@@ -232,33 +248,23 @@ problem they address actually exists.
 
 ### 1. State Machine — Game Phases
 
-**Problem:** The game has three phases (lobby, playing, game-over) but
-this is encoded as two booleans (`gameStarted`, `gameOver`). Every
-handler that behaves differently per phase contains:
+**Problem:** The game has three phases (lobby, playing, game-over).
+Encoding these as two booleans (`gameStarted`, `gameOver`) creates
+ambiguous branching and allows invalid states.
 
-```js
-if (!game.gameStarted) {
-  /* lobby */
-} else if (game.gameOver) {
-  /* post-game */
-} else {
-  /* mid-game */
-}
-```
-
-This three-way branch is duplicated in `handleDisconnect`,
-`handleLeaveGame`, and several other handlers.
-
-**Pattern:** Replace the boolean pair with an explicit phase enum:
+**Pattern:** An explicit phase enum:
 
 ```js
 const Phase = { LOBBY: 'lobby', PLAYING: 'playing', FINISHED: 'finished' };
 game.phase; // single field, exhaustive switch
 ```
 
-Handlers dispatch on `game.phase` with a switch statement. Adding a
-new phase (e.g. `PAUSED`) requires only a new case — no boolean
-gymnastics.
+Handlers dispatch on `game.phase`. Adding a new phase (e.g. `PAUSED`)
+requires only a new case — no boolean gymnastics.
+
+**Status:** Implemented. `Phase` lives in `config.js`. `SkipBoGame`
+owns `this.phase` with backward-compatible `gameStarted`/`gameOver`
+getters. All coordinator handlers branch on `game.phase`.
 
 **Where:** `SkipBoGame` owns the phase. Coordinator reads it.
 
@@ -272,11 +278,11 @@ bot scheduling, and game-over checks).
 client-server communication. The transport layer acts as the event bus.
 This is the correct pattern and should remain as-is.
 
-**Extension:** On the server, the orchestration layer could emit
-internal events (e.g. `turnEnded`, `gameOver`) that other modules
-subscribe to, rather than having the coordinator call each module
-directly. This decouples logging, bot scheduling, and analytics from
-the turn execution path.
+**Extension:** The orchestration layer could emit internal events
+(e.g. `turnEnded`, `gameOver`) that other modules subscribe to,
+rather than having the coordinator call each module directly. This
+would decouple logging, bot scheduling, and analytics from the turn
+execution path.
 
 **Where:** Transport layer (external events), orchestration layer
 (internal events).
@@ -295,8 +301,12 @@ broadcasts results back through the transport.
 The mediator must be thin. If it contains business logic, it has
 absorbed a lower layer's responsibility.
 
-**Where:** `GameCoordinator` is the mediator. It should shrink as
-session, room, and bot concerns are extracted into their own modules.
+**Status:** Session tracking (`SessionManager`), game storage
+(`GameRepository`), and bot AI management (`BotManager`) have been
+extracted. The coordinator delegates to these modules rather than
+owning their data structures directly.
+
+**Where:** `GameCoordinator` is the mediator.
 
 ### 4. Strategy — AI Variants
 
@@ -305,9 +315,8 @@ more may be added (MCTS, neural). The coordinator should not know which
 strategy a bot uses.
 
 **Pattern:** Already in use. `AIPlayer` and `BaselineAIPlayer` expose
-the same interface (`findPlayableCard`, `chooseDiscard`). The
-coordinator selects a strategy at bot creation time and calls it
-uniformly.
+the same interface (`findPlayableCard`, `chooseDiscard`). `BotManager`
+selects a strategy at bot creation time and calls it uniformly.
 
 **Extension:** Formalize the interface. Both implementations should
 extend a common base or satisfy a documented contract:
@@ -321,52 +330,51 @@ extend a common base or satisfy a documented contract:
 
 ### 5. Command — Game Actions
 
-**Problem:** Game actions (play card, discard, start game) are handled
-inline in coordinator methods. Each action involves validation,
-execution, logging, and response composition — logic that is repeated
-across human and bot code paths.
+**Problem:** Game actions (play card, discard, start game) were
+handled inline in coordinator methods with duplicated validate →
+execute → broadcast logic across human and bot code paths.
 
-**Pattern:** Represent each action as a command object:
+**Pattern:** Unified execution methods:
 
 ```js
-{
-  type: ('playCard', playerId, card, source, pileIndex);
-}
+_executePlay(roomId, game, playerId, card, source, pileIndex);
+_executeDiscard(roomId, game, playerId, card, discardPileIndex);
 ```
 
-A single `executeCommand(roomId, command)` method validates, applies to
-the game engine, logs, and returns the result. Both human handlers and
-bot drivers submit commands through the same path.
+Both human event handlers and the bot turn driver call these methods.
+Game-over checks, state broadcasting, and turn advancement happen in
+one place.
 
-**Benefit:** Unifies human and bot turn execution. Enables replay
-(useful for debugging and game logging). Makes it easy to add
-cross-cutting hooks (analytics, rate limiting per action).
+**Status:** Implemented via `_executePlay` and `_executeDiscard` in
+the coordinator. A full Command pattern (reified command objects with
+replay) remains a future option if game logging or replay features
+are added.
 
 **Where:** Orchestration layer.
 
 ### 6. Repository — Game Storage
 
-**Problem:** Game instances are stored in plain Maps (`this.games`,
-`this.playerRooms`). Storage is accessed directly from handler methods,
-creating tight coupling between business logic and in-memory storage.
+**Problem:** Game instances were stored in plain Maps accessed directly
+from handler methods, coupling business logic to in-memory storage.
 
 **Pattern:** Wrap storage behind a repository interface:
 
 ```js
-{
-  (getGame(roomId),
-    saveGame(game),
-    deleteGame(roomId),
-    getPlayerRoom(playerId),
-    setPlayerRoom(playerId, roomId));
-}
+getGame(roomId) → SkipBoGame | undefined
+saveGame(roomId, game) → void
+deleteGame(roomId) → void
+hasGame(roomId) → boolean
+getAllRoomIds() → string[]
 ```
 
-**Benefit:** Enables future persistence (Redis, database) without
-changing business logic. Makes testing easier (inject mock repository).
-Centralizes cache invalidation and cleanup.
+**Status:** Implemented. `GameRepository` owns game storage and
+cleanup timer scheduling (`scheduleDeletion`, `scheduleCompletedCleanup`).
+The coordinator accesses games exclusively through the repository.
 
-**Where:** New module consumed by orchestration and room layers.
+**Benefit:** Enables future persistence (Redis, database) without
+changing business logic. Centralizes cleanup timer management.
+
+**Where:** `server/GameRepository.js`, consumed by the coordinator.
 
 ### 7. Facade — Transport
 
@@ -383,24 +391,29 @@ facade (`send`, `sendToGroup`, `addToGroup`). No changes needed.
 
 **Problem:** Human turns and bot turns follow the same high-level
 structure (validate → execute moves → check win → advance turn →
-broadcast) but are implemented as separate code paths with duplicated
-logic.
+broadcast) but were implemented as separate code paths.
 
-**Pattern:** Define a template method that captures the shared structure:
+**Pattern:** Shared execution methods capture the common structure:
 
 ```
-executeTurn(roomId, playerId, moves[])
-  ├── for each move: validate → apply → log
+_executePlay(roomId, game, playerId, card, source, pileIndex)
+  ├── game.playCard() → result
   ├── if game over: broadcast, cleanup
-  └── advance turn → broadcast → schedule next (bot or wait for human)
+  └── broadcast state update
+
+_executeDiscard(roomId, game, playerId, card, pileIndex)
+  ├── game.discardCard() → result
+  ├── game.endTurn()
+  └── broadcast state + schedule next turn
 ```
 
-Both human event handlers and the bot driver call this method. The
+Both human event handlers and the bot driver call these methods. The
 only difference is how moves are produced (parsed from client event
 vs. generated by AI).
 
-**Where:** Orchestration layer, replacing the parallel code paths in
-`handlePlayCard`/`handleDiscardCard` and `_playBotTurn`/`_botDiscard`.
+**Status:** Implemented via `_executePlay` and `_executeDiscard`.
+
+**Where:** Orchestration layer.
 
 ### 9. Projection — State Views
 
@@ -413,10 +426,9 @@ sees their own hand).
 and `getPlayerState(playerId)` (private projection). This is the
 correct approach.
 
-**Extension:** Bot metadata (`isBot`, `aiType`) should be decorated
-onto the public projection by the orchestration layer, not stored in
-the game engine. The game engine projects pure game data; the
-coordinator enriches it with infrastructure metadata before sending.
+**Status:** Bot metadata (`isBot`, `aiType`) is decorated onto the
+public projection by the coordinator before broadcasting. The game
+engine projects pure game data only.
 
 **Where:** `SkipBoGame` (pure projections), orchestration layer
 (decoration).
