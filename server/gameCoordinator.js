@@ -100,6 +100,8 @@ class GameCoordinator {
         return this.handlePlayCard(connectionId, data);
       case 'discardCard':
         return this.handleDiscardCard(connectionId, data);
+      case 'passTurn':
+        return this.handlePassTurn(connectionId);
       case 'sendChatMessage':
         return this.handleSendChatMessage(connectionId, data);
       case 'leaveLobby':
@@ -421,6 +423,29 @@ class GameCoordinator {
     if (!result.success) {
       this.transport.send(connectionId, 'error', { message: result.error });
     }
+  }
+
+  handlePassTurn(connectionId) {
+    const roomId = this.sessionManager.getRoom(connectionId);
+    const game = this.gameRepository.getGame(roomId);
+
+    if (!game) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
+      return;
+    }
+
+    const player = game.getPlayerByConnectionId(connectionId);
+    if (!player) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NOT_YOUR_TURN });
+      return;
+    }
+
+    if (!game.canPass(player.internalId)) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.CANNOT_PASS });
+      return;
+    }
+
+    this._executePassTurn(roomId, game, player.internalId);
   }
 
   handleSendChatMessage(connectionId, { message }) {
