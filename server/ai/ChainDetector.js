@@ -47,6 +47,7 @@ function createSnapshot(playerState, gameState) {
     pileNeeds: gameState.buildingPiles.map((p) => getNextCardValue(p)),
     // Track pile card counts for completion detection
     pileLengths: gameState.buildingPiles.map((p) => p.length),
+    deckCount: gameState.deckCount ?? 0,
   };
 }
 
@@ -210,8 +211,10 @@ class ChainDetector {
         }
       }
 
-      // Stop exploring if hand emptied (would draw new cards — unknown)
-      if (snap.hand.length === 0) return;
+      // Stop exploring if hand emptied and deck has cards (would draw
+      // unknown cards). When deck is empty the hand stays empty, so we
+      // continue to find plays from stockpile and discards.
+      if (snap.hand.length === 0 && snap.deckCount > 0) return;
 
       const plays = enumeratePlays(snap);
       for (const play of plays) {
