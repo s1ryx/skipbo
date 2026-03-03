@@ -29,12 +29,13 @@ function start() {
               clearTimeout(timeoutId);
             }
             coordinator.completedGameTimers.clear();
-            // Clear bot turn timers
-            if (coordinator.botTurnTimers) {
-              for (const timers of coordinator.botTurnTimers.values()) {
+            // Clear bot turn timers (moved to BotManager during refactoring)
+            const botTimers = coordinator.botManager && coordinator.botManager.botTurnTimers;
+            if (botTimers) {
+              for (const timers of botTimers.values()) {
                 timers.forEach((id) => clearTimeout(id));
               }
-              coordinator.botTurnTimers.clear();
+              botTimers.clear();
             }
 
             server.close(() => res());
