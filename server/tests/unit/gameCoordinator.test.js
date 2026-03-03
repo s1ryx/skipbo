@@ -1426,6 +1426,60 @@ describe('GameCoordinator', () => {
     });
   });
 
+  describe('passTurn', () => {
+    it('advances turn when hand and deck are both empty', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      const handlers = coordinator.getTransportHandlers();
+
+      game.players[0].hand = [];
+      game.deck = [];
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'passTurn', {});
+
+      expect(game.getCurrentPlayer().connectionId).toBe('player2');
+
+      const turnChangedCalls = transport.sendToGroup.mock.calls.filter(
+        (c) => c[1] === 'turnChanged'
+      );
+      expect(turnChangedCalls).toHaveLength(1);
+    });
+
+    it('sends error when pass is not allowed', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      const handlers = coordinator.getTransportHandlers();
+
+      // Hand still has cards — cannot pass
+      game.deck = [];
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'passTurn', {});
+
+      const errorCalls = transport.send.mock.calls.filter(
+        (c) => c[0] === 'player1' && c[1] === 'error'
+      );
+      expect(errorCalls).toHaveLength(1);
+      expect(errorCalls[0][2].message).toBe('error.cannotPass');
+    });
+
+    it('sends error when room not found', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('unknown', 'passTurn', {});
+
+      const errorCalls = transport.send.mock.calls.filter(
+        (c) => c[0] === 'unknown' && c[1] === 'error'
+      );
+      expect(errorCalls).toHaveLength(1);
+      expect(errorCalls[0][2].message).toBe('error.roomNotFound');
+    });
+  });
+
   describe('bot pass turn', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
