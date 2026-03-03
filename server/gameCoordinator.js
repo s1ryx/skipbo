@@ -862,6 +862,8 @@ class GameCoordinator {
 
     if (discard) {
       this._executeDiscard(roomId, game, botId, discard.card, discard.discardPileIndex);
+    } else if (game.canPass(botId)) {
+      this._executePassTurn(roomId, game, botId);
     }
   }
 
@@ -931,6 +933,37 @@ class GameCoordinator {
         stateBefore,
         aiAnalysis
       );
+      logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
+    }
+
+    const endTurnResult = game.endTurn(playerId);
+    if (!endTurnResult.success) return endTurnResult;
+
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      counter.turn++;
+      counter.plays = 0;
+      const nextPlayer = game.getCurrentPlayer();
+      counter.playerName = nextPlayer.name;
+      counter.isBot = !!nextPlayer.isBot;
+      logger.logTurnStart(counter.turn, game);
+    }
+
+    this._broadcastToHumans(roomId, game);
+    this.transport.sendToGroup(roomId, 'turnChanged', {
+      currentPlayerId: game.getCurrentPlayer()?.publicId,
+    });
+
+    this._scheduleBotTurnIfNeeded(roomId);
+
+    return endTurnResult;
+  }
+
+  _executePassTurn(roomId, game, playerId) {
+    const logger = this.gameLoggers.get(roomId);
+
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
       logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
     }
 
