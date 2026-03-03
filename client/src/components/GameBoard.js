@@ -15,6 +15,7 @@ function GameBoard({
   roomId,
   onPlayCard,
   onDiscardCard,
+  onPassTurn,
   onLeaveGame,
   onRequestRematch,
   onUpdateRematchSettings,
@@ -108,7 +109,9 @@ function GameBoard({
         <div className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
           {isMyTurn
             ? discardMode
-              ? t('game.discardInstruction')
+              ? playerState?.hand.length === 0
+                ? t('game.noCardsToDiscard')
+                : t('game.discardInstruction')
               : t('game.yourTurn')
             : t('game.waitingTurn')}
         </div>
@@ -139,6 +142,7 @@ function GameBoard({
           onCardSelect={handleCardSelect}
           onDiscardPileClick={handleDiscardPileClick}
           onEndTurn={handleEndTurn}
+          onPassTurn={onPassTurn}
           onCancelDiscard={handleCancelDiscard}
           onClearSelection={() => {
             setSelectedCard(null);
