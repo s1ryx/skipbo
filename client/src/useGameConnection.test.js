@@ -83,7 +83,6 @@ describe('useGameConnection', () => {
       expect(result.current.error).toBeNull();
       expect(result.current.chatMessages).toEqual([]);
     });
-
   });
 
   describe('connection', () => {

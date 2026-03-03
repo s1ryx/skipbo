@@ -86,9 +86,11 @@ async function main() {
   }
 }
 
-main().then(() => {
-  process.exit(0);
-}).catch((err) => {
-  console.error('\x1b[31mError:\x1b[0m', err.message);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error('\x1b[31mError:\x1b[0m', err.message);
+    process.exit(1);
+  });

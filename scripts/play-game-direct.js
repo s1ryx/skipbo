@@ -25,9 +25,15 @@
 const path = require('path');
 const SkipBoGame = require(path.join(__dirname, '..', 'server', 'gameLogic'));
 const { AIPlayer } = require(path.join(__dirname, '..', 'server', 'ai', 'AIPlayer'));
-const { AIPlayer: BaselineAIPlayer } = require(path.join(__dirname, '..', 'server', 'ai', 'baseline', 'AIPlayer'));
-const { GameLogger, MoveAnalyzer } = require(path.join(__dirname, '..', 'server', 'ai', 'GameLogger'));
-const gameAI = require(path.join(__dirname, '..', 'server', 'tests', 'integration', 'helpers', 'gameAI'));
+const { AIPlayer: BaselineAIPlayer } = require(
+  path.join(__dirname, '..', 'server', 'ai', 'baseline', 'AIPlayer')
+);
+const { GameLogger, MoveAnalyzer } = require(
+  path.join(__dirname, '..', 'server', 'ai', 'GameLogger')
+);
+const gameAI = require(
+  path.join(__dirname, '..', 'server', 'tests', 'integration', 'helpers', 'gameAI')
+);
 
 const args = process.argv.slice(2);
 const verbose = args.includes('--verbose') || args.includes('-v');
@@ -55,10 +61,10 @@ function playGame(aiType, gameIndex) {
   const playerIds = [];
   const playerNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'].slice(0, playerCount);
   for (let i = 0; i < playerCount; i++) {
-    const id = `player-${i}`;
-    game.addPlayer(id, playerNames[i]);
-    game.players[game.players.length - 1].isBot = true;
-    playerIds.push(id);
+    game.addPlayer(`player-${i}`, playerNames[i]);
+    const player = game.players[game.players.length - 1];
+    player.isBot = true;
+    playerIds.push(player.internalId);
   }
 
   game.startGame();
@@ -90,7 +96,7 @@ function playGame(aiType, gameIndex) {
 
   while (!game.gameOver && turns < MAX_TURNS) {
     const currentPlayer = game.getCurrentPlayer();
-    const playerId = currentPlayer.id;
+    const playerId = currentPlayer.internalId;
     const playerIndex = playerIds.indexOf(playerId);
     const ai = ais[playerIndex];
 
@@ -123,21 +129,34 @@ function playGame(aiType, gameIndex) {
           const ps = game.getPlayerState(playerId);
           const gs = game.getGameState();
           aiAnalysis = analyzer.analyzePlay(ps, gs, {
-            card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex,
+            card: move.card,
+            source: move.source,
+            buildingPileIndex: move.buildingPileIndex,
           });
         }
       }
 
       const result = game.playCard(playerId, move.card, move.source, move.buildingPileIndex);
       if (!result.success) {
-        log(`  !! PLAY FAILED: ${result.error} (card=${move.card}, source=${move.source}, pile=${move.buildingPileIndex})`);
+        log(
+          `  !! PLAY FAILED: ${result.error} (card=${move.card}, source=${move.source}, pile=${move.buildingPileIndex})`
+        );
         break;
       }
 
       if (logger) {
-        logger.logPlay(turns + 1, currentPlayer.name, true, {
-          card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex,
-        }, stateBefore, aiAnalysis);
+        logger.logPlay(
+          turns + 1,
+          currentPlayer.name,
+          true,
+          {
+            card: move.card,
+            source: move.source,
+            buildingPileIndex: move.buildingPileIndex,
+          },
+          stateBefore,
+          aiAnalysis
+        );
       }
 
       cardsPlayed++;
@@ -184,18 +203,29 @@ function playGame(aiType, gameIndex) {
         stateBefore = logger._snapshot(game);
         if (analyzer) {
           aiAnalysis = analyzer.analyzeDiscard(discardPlayerState, discardGameState, {
-            card: discard.card, discardPileIndex: discard.discardPileIndex,
+            card: discard.card,
+            discardPileIndex: discard.discardPileIndex,
           });
         }
       }
 
       const discardResult = game.discardCard(playerId, discard.card, discard.discardPileIndex);
       if (!discardResult.success) {
-        log(`  !! DISCARD FAILED: ${discardResult.error} (card=${discard.card}, pile=${discard.discardPileIndex})`);
+        log(
+          `  !! DISCARD FAILED: ${discardResult.error} (card=${discard.card}, pile=${discard.discardPileIndex})`
+        );
       } else if (logger) {
-        logger.logDiscard(turns + 1, currentPlayer.name, true, {
-          card: discard.card, discardPileIndex: discard.discardPileIndex,
-        }, stateBefore, aiAnalysis);
+        logger.logDiscard(
+          turns + 1,
+          currentPlayer.name,
+          true,
+          {
+            card: discard.card,
+            discardPileIndex: discard.discardPileIndex,
+          },
+          stateBefore,
+          aiAnalysis
+        );
       }
     }
 
@@ -241,7 +271,9 @@ function runSuite(aiType, numGames) {
     }
 
     if (numGames > 1 && !verbose) {
-      process.stdout.write(`  Game ${i + 1}/${numGames}: ${result.winnerName || 'timeout'} in ${result.turns} turns\r`);
+      process.stdout.write(
+        `  Game ${i + 1}/${numGames}: ${result.winnerName || 'timeout'} in ${result.turns} turns\r`
+      );
     }
   }
 
@@ -270,8 +302,16 @@ function runSuite(aiType, numGames) {
 function printStats(label, stats) {
   console.log(`\n  ${label}:`);
   console.log(`    Games: ${stats.games} (${stats.timeouts} timeouts)`);
-  console.log(`    Wins: ${Object.entries(stats.wins).map(([k, v]) => `${k}: ${v}`).join(', ') || 'none'}`);
-  console.log(`    Turns: min=${stats.turns.min}, max=${stats.turns.max}, avg=${stats.turns.avg}, median=${stats.turns.median}`);
+  console.log(
+    `    Wins: ${
+      Object.entries(stats.wins)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ') || 'none'
+    }`
+  );
+  console.log(
+    `    Turns: min=${stats.turns.min}, max=${stats.turns.max}, avg=${stats.turns.avg}, median=${stats.turns.median}`
+  );
   console.log(`    Cards played (avg): ${stats.cards.avg}`);
 }
 
@@ -287,7 +327,9 @@ if (compareBaseline) {
 
   const aliceWins = stats.wins['Alice'] || 0;
   const bobWins = stats.wins['Bob'] || 0;
-  console.log(`\n  Result: Improved ${aliceWins} wins, Baseline ${bobWins} wins (${gameCount} games)`);
+  console.log(
+    `\n  Result: Improved ${aliceWins} wins, Baseline ${bobWins} wins (${gameCount} games)`
+  );
 } else if (compare) {
   console.log(`\nRunning comparison: new AI vs old AI...`);
   const newStats = runSuite('new', gameCount);

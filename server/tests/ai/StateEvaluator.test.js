@@ -109,8 +109,8 @@ describe('discardPlacementScore', () => {
   });
 
   test('Tier 4: adjacent gap descending = +2..+3', () => {
-    expect(discardPlacementScore(5, [7])).toBe(3);  // gap 2
-    expect(discardPlacementScore(5, [8])).toBe(2);  // gap 3
+    expect(discardPlacementScore(5, [7])).toBe(3); // gap 2
+    expect(discardPlacementScore(5, [8])).toBe(2); // gap 3
   });
 
   test('Tier 5: large gap descending (bricking) = negative', () => {

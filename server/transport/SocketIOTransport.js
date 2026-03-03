@@ -1,7 +1,5 @@
 const socketIO = require('socket.io');
-
-const RATE_LIMIT_WINDOW_MS = 10000;
-const RATE_LIMIT_MAX_EVENTS = 30;
+const { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_EVENTS } = require('../config');
 
 // Every event the server expects from clients
 const CLIENT_EVENTS = [

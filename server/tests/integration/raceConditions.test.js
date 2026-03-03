@@ -23,20 +23,19 @@ async function setupStartedGame(stockpileSize = 5) {
   const room = await c1.createRoom('Alice', 2, stockpileSize);
   const bobToken = await c2.joinRoom(room.roomId, 'Bob');
 
-  const [started1, started2] = await Promise.all([
-    c1.startGame(),
-    c2.waitFor('gameStarted'),
-  ]);
+  const [started1, started2] = await Promise.all([c1.startGame(), c2.waitFor('gameStarted')]);
 
   const aliceId = room.playerId;
   const bobId = started2.gameState.players.find((p) => p.name === 'Bob').id;
 
   return {
-    c1, c2,
+    c1,
+    c2,
     gameState: started1.gameState,
     aliceState: started1.playerState,
     bobState: started2.playerState,
-    aliceId, bobId,
+    aliceId,
+    bobId,
     roomId: room.roomId,
   };
 }
@@ -47,7 +46,10 @@ describe('Race conditions', () => {
 
     const currentId = gameState.currentPlayerId;
     const currentClient = currentId === aliceId ? c1 : c2;
-    const playerState = currentId === aliceId ? aliceState : (await c2.waitFor('gameStarted').catch(() => null), aliceState);
+    const playerState =
+      currentId === aliceId
+        ? aliceState
+        : (await c2.waitFor('gameStarted').catch(() => null), aliceState);
     const state = currentId === aliceId ? aliceState : aliceState;
 
     const move = gameAI.findPlayableCard(
@@ -66,8 +68,16 @@ describe('Race conditions', () => {
     const errorP = currentClient.waitForError(2000).catch(() => null);
     const updateP = currentClient.waitFor('gameStateUpdate', 3000);
 
-    currentClient.emit('playCard', { card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex });
-    currentClient.emit('playCard', { card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex });
+    currentClient.emit('playCard', {
+      card: move.card,
+      source: move.source,
+      buildingPileIndex: move.buildingPileIndex,
+    });
+    currentClient.emit('playCard', {
+      card: move.card,
+      source: move.source,
+      buildingPileIndex: move.buildingPileIndex,
+    });
 
     // First should succeed (gameStateUpdate), second may error
     const update = await updateP;
@@ -145,12 +155,19 @@ describe('Race conditions', () => {
       while (move && !gameOver) {
         const u1P = c1.waitFor('gameStateUpdate');
         const u2P = c2.waitFor('gameStateUpdate');
-        player.client.emit('playCard', { card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex });
+        player.client.emit('playCard', {
+          card: move.card,
+          source: move.source,
+          buildingPileIndex: move.buildingPileIndex,
+        });
         const [u1, u2] = await Promise.all([u1P, u2P]);
         players.get(aliceId).playerState = u1.playerState;
         players.get(bobId).playerState = u2.playerState;
         gs = u1.gameState;
-        if (gs.gameOver) { gameOver = true; break; }
+        if (gs.gameOver) {
+          gameOver = true;
+          break;
+        }
         move = gameAI.findPlayableCard(player.playerState, gs);
       }
 
@@ -159,7 +176,10 @@ describe('Race conditions', () => {
       const discard = gameAI.chooseDiscard(player.playerState, turns);
       const u1P = c1.waitFor('gameStateUpdate');
       const u2P = c2.waitFor('gameStateUpdate');
-      player.client.emit('discardCard', { card: discard.card, discardPileIndex: discard.discardPileIndex });
+      player.client.emit('discardCard', {
+        card: discard.card,
+        discardPileIndex: discard.discardPileIndex,
+      });
       const [u1, u2] = await Promise.all([u1P, u2P]);
       players.get(aliceId).playerState = u1.playerState;
       players.get(bobId).playerState = u2.playerState;

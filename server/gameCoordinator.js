@@ -1,30 +1,42 @@
 const crypto = require('crypto');
 const SkipBoGame = require('./gameLogic');
+const SessionManager = require('./SessionManager');
+const BotManager = require('./BotManager');
+const GameRepository = require('./GameRepository');
 const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
-const { AIPlayer } = require('./ai/AIPlayer');
-const { AIPlayer: BaselineAIPlayer } = require('./ai/baseline/AIPlayer');
+const { createLogger } = require('./logger');
+const {
+  LOBBY_GRACE_PERIOD_MS,
+  MAX_PENDING_ROOMS,
+  MAX_TOTAL_ROOMS,
+  COMPLETED_GAME_TTL_MS,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+  MIN_STOCKPILE_SIZE,
+  MAX_STOCKPILE_SIZE,
+  MAX_PLAYER_NAME_LENGTH,
+  MAX_CHAT_MESSAGE_LENGTH,
+  BOT_ID_PREFIX,
+  Phase,
+} = require('./config');
+const { ErrorCodes } = require('./errors');
 
-const LOBBY_GRACE_PERIOD_MS = 30000;
-const MAX_PENDING_ROOMS = 50;
-const MAX_TOTAL_ROOMS = 200;
-const COMPLETED_GAME_TTL_MS = 300000;
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 6;
-const MIN_STOCKPILE_SIZE = 1;
-const MAX_STOCKPILE_SIZE = 30;
-const MAX_PLAYER_NAME_LENGTH = 30;
-const MAX_CHAT_MESSAGE_LENGTH = 500;
+function isBotId(id) {
+  return typeof id === 'string' && id.startsWith(BOT_ID_PREFIX);
+}
 
 function stripHtml(str) {
   return str.replace(/<[^>]*>/g, '');
 }
 
 function sanitizeForLog(str) {
+  // eslint-disable-next-line no-control-regex
   return str.replace(/[\r\n]/g, '').replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
 }
 
 function validatePlayerName(name) {
   if (typeof name !== 'string') return null;
+  // eslint-disable-next-line no-control-regex
   const trimmed = stripHtml(name.trim()).replace(/[\x00-\x1F]/g, '');
   if (trimmed.length === 0 || trimmed.length > MAX_PLAYER_NAME_LENGTH) return null;
   return trimmed;
@@ -33,21 +45,29 @@ function validatePlayerName(name) {
 class GameCoordinator {
   constructor(options = {}) {
     this.transport = null;
-    this.games = new Map();
-    this.playerRooms = new Map();
-    this.pendingDeletions = new Map();
-    this.completedGameTimers = new Map();
+    this.logger = options.logger || createLogger();
+    this.gameRepository = new GameRepository();
+    this.sessionManager = new SessionManager();
+    this.botManager = new BotManager();
 
     // Game logging
     this.loggingEnabled = options.logging ?? false;
     this.logAnalysis = options.logAnalysis ?? false;
-    this.gameLoggers = new Map();   // roomId → GameLogger
-    this.turnCounters = new Map();  // roomId → { turn, plays, playerName, isBot }
+    this.gameLoggers = new Map(); // roomId → GameLogger
+    this.turnCounters = new Map(); // roomId → { turn, plays, playerName, isBot }
     this.moveAnalyzer = this.logAnalysis ? new MoveAnalyzer() : null;
+  }
 
-    // Bot management
-    this.botAIs = new Map();          // `${roomId}:${publicId}` → AIPlayer instance
-    this.botTurnTimers = new Map();   // roomId → [timeoutId...]
+  get games() {
+    return this.gameRepository.games;
+  }
+
+  get pendingDeletions() {
+    return this.gameRepository.pendingDeletions;
+  }
+
+  get completedGameTimers() {
+    return this.gameRepository.completedGameTimers;
   }
 
   setTransport(transport) {
@@ -63,7 +83,7 @@ class GameCoordinator {
   }
 
   handleConnect(connectionId) {
-    console.log(`Player connected: ${connectionId}`);
+    this.logger.debug('player connected', { connectionId });
   }
 
   handleMessage(connectionId, event, data) {
@@ -95,127 +115,133 @@ class GameCoordinator {
       case 'removeBot':
         return this.handleRemoveBot(connectionId, data);
       default:
-        console.log(`Unknown event: ${event}`);
+        this.logger.warn('unknown event', { event });
     }
   }
 
   handleCreateRoom(connectionId, { playerName, maxPlayers, stockpileSize, isBot }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
-      this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.INVALID_PLAYER_NAME });
       return;
     }
 
-    if (this.games.size >= MAX_TOTAL_ROOMS) {
-      this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
+    if (this.gameRepository.size >= MAX_TOTAL_ROOMS) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.SERVER_FULL });
       return;
     }
 
-    const validMaxPlayers = Number.isInteger(maxPlayers) && maxPlayers >= MIN_PLAYERS && maxPlayers <= MAX_PLAYERS
-      ? maxPlayers
-      : MIN_PLAYERS;
-    const validStockpileSize = Number.isInteger(stockpileSize) && stockpileSize >= MIN_STOCKPILE_SIZE && stockpileSize <= MAX_STOCKPILE_SIZE
-      ? stockpileSize
-      : undefined;
+    const validMaxPlayers =
+      Number.isInteger(maxPlayers) && maxPlayers >= MIN_PLAYERS && maxPlayers <= MAX_PLAYERS
+        ? maxPlayers
+        : MIN_PLAYERS;
+    const validStockpileSize =
+      Number.isInteger(stockpileSize) &&
+      stockpileSize >= MIN_STOCKPILE_SIZE &&
+      stockpileSize <= MAX_STOCKPILE_SIZE
+        ? stockpileSize
+        : undefined;
 
-    const roomId = generateRoomId(this.games);
+    const roomId = generateRoomId(this.gameRepository);
     if (!roomId) {
-      this.transport.send(connectionId, 'error', { message: 'error.serverFull' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.SERVER_FULL });
       return;
     }
     const game = new SkipBoGame(roomId, validMaxPlayers, validStockpileSize);
     game.addPlayer(connectionId, validName);
 
-    const sessionToken = crypto.randomUUID();
-    game.players[game.players.length - 1].sessionToken = sessionToken;
-    game.players[game.players.length - 1].isBot = !!isBot;
-    game.hostPublicId = game.players[0].publicId;
+    const player = game.getPlayerByConnectionId(connectionId);
+    const sessionToken = this.sessionManager.generateToken();
+    game.setSessionToken(player.internalId, sessionToken);
+    player.isBot = !!isBot;
+    game.setHost(player.publicId);
 
-    this.games.set(roomId, game);
-    this.playerRooms.set(connectionId, roomId);
+    this.gameRepository.saveGame(roomId, game);
+    this.sessionManager.setRoom(connectionId, roomId);
 
     this.transport.addToGroup(connectionId, roomId);
 
     this.transport.send(connectionId, 'roomCreated', {
       roomId,
-      playerId: game.getPublicId(connectionId),
+      playerId: player.publicId,
       sessionToken,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
-    console.log(`Room created: ${roomId} by ${sanitizeForLog(validName)}`);
+    this.logger.info('room created', { roomId, playerName: sanitizeForLog(validName) });
   }
 
   handleJoinRoom(connectionId, { roomId, playerName, isBot }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
-      this.transport.send(connectionId, 'error', { message: 'error.invalidPlayerName' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.INVALID_PLAYER_NAME });
       return;
     }
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
     this.cancelPendingDeletion(roomId);
 
-    if (game.gameStarted) {
-      this.transport.send(connectionId, 'error', { message: 'error.gameAlreadyStarted' });
+    if (game.phase !== Phase.LOBBY) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.GAME_ALREADY_STARTED });
       return;
     }
 
     const added = game.addPlayer(connectionId, validName);
 
     if (!added) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomFull' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_FULL });
       return;
     }
 
-    const sessionToken = crypto.randomUUID();
-    game.players[game.players.length - 1].sessionToken = sessionToken;
-    game.players[game.players.length - 1].isBot = !!isBot;
+    const player = game.getPlayerByConnectionId(connectionId);
+    const sessionToken = this.sessionManager.generateToken();
+    game.setSessionToken(player.internalId, sessionToken);
+    player.isBot = !!isBot;
 
-    this.playerRooms.set(connectionId, roomId);
+    this.sessionManager.setRoom(connectionId, roomId);
     this.transport.addToGroup(connectionId, roomId);
 
     this.transport.sendToGroup(roomId, 'playerJoined', {
-      playerId: game.getPublicId(connectionId),
+      playerId: player.publicId,
       playerName: validName,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
     this.transport.send(connectionId, 'sessionToken', {
-      playerId: game.getPublicId(connectionId),
+      playerId: player.publicId,
       sessionToken,
     });
 
-    console.log(`${sanitizeForLog(validName)} joined room: ${roomId}`);
+    this.logger.info('player joined room', { roomId, playerName: sanitizeForLog(validName) });
   }
 
   handleReconnect(connectionId, { roomId, sessionToken, playerName }) {
     const validName = validatePlayerName(playerName);
     if (!validName) {
       this.transport.send(connectionId, 'reconnectFailed', {
-        message: 'error.invalidPlayerName',
+        message: ErrorCodes.INVALID_PLAYER_NAME,
       });
       return;
     }
 
     if (!sessionToken || typeof sessionToken !== 'string') {
       this.transport.send(connectionId, 'reconnectFailed', {
-        message: 'error.invalidSession',
+        message: ErrorCodes.INVALID_SESSION,
       });
       return;
     }
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
       this.transport.send(connectionId, 'reconnectFailed', {
-        message: 'error.roomNoLongerExists',
+        message: ErrorCodes.ROOM_NO_LONGER_EXISTS,
       });
       return;
     }
@@ -226,53 +252,57 @@ class GameCoordinator {
 
     if (!player) {
       // Player was removed — rejoin if game hasn't started
-      if (!game.gameStarted) {
+      if (game.phase === Phase.LOBBY) {
         const added = game.addPlayer(connectionId, validName);
         if (!added) {
-          this.transport.send(connectionId, 'reconnectFailed', { message: 'error.roomFull' });
+          this.transport.send(connectionId, 'reconnectFailed', { message: ErrorCodes.ROOM_FULL });
           return;
         }
 
-        const newToken = crypto.randomUUID();
-        game.players[game.players.length - 1].sessionToken = newToken;
+        const newPlayer = game.getPlayerByConnectionId(connectionId);
+        const newToken = this.sessionManager.generateToken();
+        game.setSessionToken(newPlayer.internalId, newToken);
 
-        this.playerRooms.set(connectionId, roomId);
+        this.sessionManager.setRoom(connectionId, roomId);
         this.transport.addToGroup(connectionId, roomId);
-
-        const publicId = game.getPublicId(connectionId);
 
         this.transport.send(connectionId, 'reconnected', {
           roomId,
-          playerId: publicId,
+          playerId: newPlayer.publicId,
           sessionToken: newToken,
-          gameState: game.getGameState(),
-          playerState: game.getPlayerState(connectionId),
+          gameState: this._getDecoratedGameState(game),
+          playerState: game.getPlayerState(newPlayer.internalId),
         });
 
         this.transport.sendToGroupExcept(roomId, connectionId, 'playerJoined', {
-          playerId: publicId,
+          playerId: newPlayer.publicId,
           playerName: validName,
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
 
-        console.log(`${sanitizeForLog(validName)} rejoined lobby: ${roomId}`);
+        this.logger.info('player rejoined lobby', {
+          roomId,
+          playerName: sanitizeForLog(validName),
+        });
         return;
       }
 
-      this.transport.send(connectionId, 'reconnectFailed', { message: 'error.playerNotFound' });
+      this.transport.send(connectionId, 'reconnectFailed', {
+        message: ErrorCodes.PLAYER_NOT_FOUND,
+      });
       return;
     }
 
     // Update player's connection ID and issue new session token
-    const oldConnectionId = player.id;
-    player.id = connectionId;
-    const newToken = crypto.randomUUID();
-    player.sessionToken = newToken;
+    const oldConnectionId = player.connectionId;
+    game.updateConnectionId(player.internalId, connectionId);
+    const newToken = this.sessionManager.generateToken();
+    game.setSessionToken(player.internalId, newToken);
 
-    game.rematchVotes.delete(oldConnectionId);
+    game.removeRematchVote(player.internalId);
 
-    this.playerRooms.delete(oldConnectionId);
-    this.playerRooms.set(connectionId, roomId);
+    this.sessionManager.removeRoom(oldConnectionId);
+    this.sessionManager.setRoom(connectionId, roomId);
 
     this.transport.addToGroup(connectionId, roomId);
 
@@ -280,8 +310,8 @@ class GameCoordinator {
       roomId,
       playerId: player.publicId,
       sessionToken: newToken,
-      gameState: game.getGameState(),
-      playerState: game.getPlayerState(connectionId),
+      gameState: this._getDecoratedGameState(game),
+      playerState: game.getPlayerState(player.internalId),
     });
 
     this.transport.sendToGroupExcept(roomId, connectionId, 'playerReconnected', {
@@ -289,37 +319,39 @@ class GameCoordinator {
       playerName: player.name,
     });
 
-    console.log(`${sanitizeForLog(validName)} reconnected to room: ${roomId}`);
+    this.logger.info('player reconnected', { roomId, playerName: sanitizeForLog(validName) });
   }
 
   handleStartGame(connectionId) {
-    const roomId = this.playerRooms.get(connectionId);
-    const game = this.games.get(roomId);
+    const roomId = this.sessionManager.getRoom(connectionId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
-    const senderPublicId = game.getPublicId(connectionId);
-    if (senderPublicId !== game.hostPublicId) {
-      this.transport.send(connectionId, 'error', { message: 'error.onlyHostCanStart' });
+    const sender = game.getPlayerByConnectionId(connectionId);
+    if (!sender || sender.publicId !== game.hostPublicId) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ONLY_HOST_CAN_START });
       return;
     }
 
     const started = game.startGame();
 
     if (!started) {
-      this.transport.send(connectionId, 'error', { message: 'error.needMorePlayers' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NEED_MORE_PLAYERS });
       return;
     }
 
-    game.players.filter((p) => !p.isBot).forEach((player) => {
-      this.transport.send(player.id, 'gameStarted', {
-        gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id),
+    game.players
+      .filter((p) => !p.isBot)
+      .forEach((player) => {
+        this.transport.send(player.connectionId, 'gameStarted', {
+          gameState: this._getDecoratedGameState(game),
+          playerState: game.getPlayerState(player.internalId),
+        });
       });
-    });
 
     // Initialize game logging
     if (this.loggingEnabled) {
@@ -336,163 +368,74 @@ class GameCoordinator {
       logger.logTurnStart(1, game);
     }
 
-    console.log(`Game started in room: ${roomId}`);
+    this.logger.info('game started', { roomId });
 
     // Check if first player is a bot
     this._scheduleBotTurnIfNeeded(roomId);
   }
 
   handlePlayCard(connectionId, { card, source, buildingPileIndex }) {
-    const roomId = this.playerRooms.get(connectionId);
-    const game = this.games.get(roomId);
+    const roomId = this.sessionManager.getRoom(connectionId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
-    // Snapshot state before the play for logging
-    const logger = this.gameLoggers.get(roomId);
-    let stateBefore = null;
-    let aiAnalysis = null;
-    if (logger) {
-      stateBefore = logger._snapshot(game);
-      if (this.moveAnalyzer) {
-        const ps = game.getPlayerState(connectionId);
-        const gs = game.getGameState();
-        aiAnalysis = this.moveAnalyzer.analyzePlay(ps, gs, { card, source, buildingPileIndex });
-      }
+    const player = game.getPlayerByConnectionId(connectionId);
+    if (!player) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NOT_YOUR_TURN });
+      return;
     }
 
-    const result = game.playCard(connectionId, card, source, buildingPileIndex);
-
+    const result = this._executePlay(
+      roomId,
+      game,
+      player.internalId,
+      card,
+      source,
+      buildingPileIndex
+    );
     if (!result.success) {
       this.transport.send(connectionId, 'error', { message: result.error });
-      return;
-    }
-
-    // Log the play
-    if (logger) {
-      const counter = this.turnCounters.get(roomId);
-      const player = game.players.find((p) => p.id === connectionId);
-      logger.logPlay(
-        counter.turn, player.name, !!player.isBot,
-        { card, source, buildingPileIndex },
-        stateBefore, aiAnalysis
-      );
-      counter.plays++;
-    }
-
-    game.players.forEach((player) => {
-      this.transport.send(player.id, 'gameStateUpdate', {
-        gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id),
-      });
-    });
-
-    if (game.gameOver) {
-      this.transport.sendToGroup(roomId, 'gameOver', {
-        winner: game.winner,
-        gameState: game.getGameState(),
-      });
-      if (logger) {
-        const counter = this.turnCounters.get(roomId);
-        logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
-        logger.endGame(game);
-        logger.close();
-        this.gameLoggers.delete(roomId);
-        this.turnCounters.delete(roomId);
-      }
-      this.scheduleCompletedGameCleanup(roomId);
     }
   }
 
   handleDiscardCard(connectionId, { card, discardPileIndex }) {
-    const roomId = this.playerRooms.get(connectionId);
-    const game = this.games.get(roomId);
+    const roomId = this.sessionManager.getRoom(connectionId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
-    // Snapshot state before the discard for logging
-    const logger = this.gameLoggers.get(roomId);
-    let stateBefore = null;
-    let aiAnalysis = null;
-    if (logger) {
-      stateBefore = logger._snapshot(game);
-      if (this.moveAnalyzer) {
-        const ps = game.getPlayerState(connectionId);
-        const gs = game.getGameState();
-        aiAnalysis = this.moveAnalyzer.analyzeDiscard(ps, gs, { card, discardPileIndex });
-      }
+    const player = game.getPlayerByConnectionId(connectionId);
+    if (!player) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NOT_YOUR_TURN });
+      return;
     }
 
-    const result = game.discardCard(connectionId, card, discardPileIndex);
-
+    const result = this._executeDiscard(roomId, game, player.internalId, card, discardPileIndex);
     if (!result.success) {
       this.transport.send(connectionId, 'error', { message: result.error });
-      return;
     }
-
-    // Log the discard and turn end
-    if (logger) {
-      const counter = this.turnCounters.get(roomId);
-      const player = game.players.find((p) => p.id === connectionId);
-      logger.logDiscard(
-        counter.turn, player.name, !!player.isBot,
-        { card, discardPileIndex },
-        stateBefore, aiAnalysis
-      );
-      logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
-    }
-
-    const endTurnResult = game.endTurn(connectionId);
-
-    if (!endTurnResult.success) {
-      this.transport.send(connectionId, 'error', { message: endTurnResult.error });
-      return;
-    }
-
-    // Log the new turn start
-    if (logger) {
-      const counter = this.turnCounters.get(roomId);
-      counter.turn++;
-      counter.plays = 0;
-      const nextPlayer = game.getCurrentPlayer();
-      counter.playerName = nextPlayer.name;
-      counter.isBot = !!nextPlayer.isBot;
-      logger.logTurnStart(counter.turn, game);
-    }
-
-    game.players.forEach((player) => {
-      this.transport.send(player.id, 'gameStateUpdate', {
-        gameState: game.getGameState(),
-        playerState: game.getPlayerState(player.id),
-      });
-    });
-
-    this.transport.sendToGroup(roomId, 'turnChanged', {
-      currentPlayerId: game.getPublicId(endTurnResult.nextPlayer),
-    });
-
-    // Check if next player is a bot
-    this._scheduleBotTurnIfNeeded(roomId);
   }
 
   handleSendChatMessage(connectionId, { message }) {
     if (typeof message !== 'string') return;
+    // eslint-disable-next-line no-control-regex
     const sanitized = stripHtml(message.trim()).replace(/[\x00-\x1F]/g, '');
     if (sanitized.length === 0 || sanitized.length > MAX_CHAT_MESSAGE_LENGTH) return;
 
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game) return;
 
-    const player = game.players.find((p) => p.id === connectionId);
+    const player = game.getPlayerByConnectionId(connectionId);
     if (!player) return;
 
     this.transport.sendToGroup(roomId, 'chatMessage', {
@@ -503,303 +446,292 @@ class GameCoordinator {
       timestamp: Date.now(),
     });
 
-    console.log(`Chat message in room ${roomId} from ${sanitizeForLog(player.name)}: ${sanitizeForLog(sanitized)}`);
+    this.logger.debug('chat message', { roomId, playerName: sanitizeForLog(player.name) });
   }
 
   handleAddBot(connectionId, { aiType }) {
-    const roomId = this.playerRooms.get(connectionId);
-    const game = this.games.get(roomId);
+    const roomId = this.sessionManager.getRoom(connectionId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
-    if (game.gameStarted) {
-      this.transport.send(connectionId, 'error', { message: 'error.cannotAddBotDuringGame' });
+    if (game.phase !== Phase.LOBBY) {
+      this.transport.send(connectionId, 'error', {
+        message: ErrorCodes.CANNOT_ADD_BOT_DURING_GAME,
+      });
       return;
     }
 
-    const senderPublicId = game.getPublicId(connectionId);
-    if (senderPublicId !== game.hostPublicId) {
-      this.transport.send(connectionId, 'error', { message: 'error.onlyHostCanAddBot' });
+    const sender = game.getPlayerByConnectionId(connectionId);
+    if (!sender || sender.publicId !== game.hostPublicId) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ONLY_HOST_CAN_ADD_BOT });
       return;
     }
 
-    const validAiType = (aiType === 'improved' || aiType === 'baseline') ? aiType : 'improved';
-    const botConnectionId = 'bot-' + crypto.randomUUID();
-    const botNumber = game.players.filter((p) => p.isBot).length + 1;
-    const botName = `Bot ${botNumber}`;
-
-    const added = game.addPlayer(botConnectionId, botName);
-    if (!added) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomFull' });
+    const result = this.botManager.createBot(roomId, game, aiType);
+    if (!result) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_FULL });
       return;
     }
 
-    const botPlayer = game.players[game.players.length - 1];
-    botPlayer.isBot = true;
-    botPlayer.aiType = validAiType;
-    botPlayer.sessionToken = crypto.randomUUID();
-
-    const AIClass = validAiType === 'baseline' ? BaselineAIPlayer : AIPlayer;
-    this.botAIs.set(`${roomId}:${botPlayer.publicId}`, new AIClass());
+    game.setSessionToken(result.botId, this.sessionManager.generateToken());
 
     this.transport.sendToGroup(roomId, 'playerJoined', {
-      playerId: botPlayer.publicId,
-      playerName: botName,
-      gameState: game.getGameState(),
+      playerId: result.publicId,
+      playerName: result.botName,
+      gameState: this._getDecoratedGameState(game),
     });
 
-    console.log(`Bot "${botName}" (${validAiType}) added to room ${roomId}`);
+    this.logger.info('bot added', { roomId, botName: result.botName, aiType: result.aiType });
   }
 
   handleRemoveBot(connectionId, { botPlayerId }) {
-    const roomId = this.playerRooms.get(connectionId);
-    const game = this.games.get(roomId);
+    const roomId = this.sessionManager.getRoom(connectionId);
+    const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
-      this.transport.send(connectionId, 'error', { message: 'error.roomNotFound' });
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_NOT_FOUND });
       return;
     }
 
-    if (game.gameStarted) {
-      this.transport.send(connectionId, 'error', { message: 'error.cannotAddBotDuringGame' });
+    if (game.phase !== Phase.LOBBY) {
+      this.transport.send(connectionId, 'error', {
+        message: ErrorCodes.CANNOT_ADD_BOT_DURING_GAME,
+      });
       return;
     }
 
-    const senderPublicId = game.getPublicId(connectionId);
-    if (senderPublicId !== game.hostPublicId) {
-      this.transport.send(connectionId, 'error', { message: 'error.onlyHostCanRemoveBot' });
+    const sender = game.getPlayerByConnectionId(connectionId);
+    if (!sender || sender.publicId !== game.hostPublicId) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.ONLY_HOST_CAN_REMOVE_BOT });
       return;
     }
 
-    const botPlayer = game.players.find((p) => p.publicId === botPlayerId);
-    if (!botPlayer || !botPlayer.isBot) {
-      this.transport.send(connectionId, 'error', { message: 'error.notABot' });
+    if (!this.botManager.removeBot(roomId, game, botPlayerId)) {
+      this.transport.send(connectionId, 'error', { message: ErrorCodes.NOT_A_BOT });
       return;
     }
-
-    game.removePlayer(botPlayer.id);
-    this.botAIs.delete(`${roomId}:${botPlayerId}`);
 
     this.transport.sendToGroup(roomId, 'playerLeft', {
       playerId: botPlayerId,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
-    console.log(`Bot removed from room ${roomId}`);
+    this.logger.info('bot removed', { roomId });
   }
 
   handleLeaveLobby(connectionId) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
-    if (!game || game.gameStarted) return;
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.LOBBY) return;
 
-    const publicId = game.getPublicId(connectionId);
-    console.log(`Player ${connectionId} is leaving lobby ${roomId}`);
+    const player = game.getPlayerByConnectionId(connectionId);
+    if (!player) return;
+    this.logger.info('player leaving lobby', { roomId, connectionId });
 
-    game.removePlayer(connectionId);
+    game.removePlayer(player.internalId);
     this.transport.removeFromGroup(connectionId, roomId);
-    this.playerRooms.delete(connectionId);
+    this.sessionManager.removeRoom(connectionId);
 
     // Check if any human players remain
     const humanPlayers = game.players.filter((p) => !p.isBot);
     if (humanPlayers.length === 0) {
       // Remove all bots and schedule room deletion
-      for (const bot of game.players.filter((p) => p.isBot)) {
-        this.botAIs.delete(`${roomId}:${bot.publicId}`);
-      }
+      this.botManager.clearAIs(roomId);
       this.scheduleRoomDeletion(roomId);
     } else {
-      if (game.hostPublicId === publicId) {
+      if (game.hostPublicId === player.publicId) {
         // Transfer host to next human player (never a bot)
-        game.hostPublicId = humanPlayers[0].publicId;
+        game.setHost(humanPlayers[0].publicId);
       }
       this.transport.sendToGroup(roomId, 'playerLeft', {
-        playerId: publicId,
-        gameState: game.getGameState(),
+        playerId: player.publicId,
+        gameState: this._getDecoratedGameState(game),
       });
     }
   }
 
   handleLeaveGame(connectionId) {
-    console.log(`Player ${connectionId} is leaving the game`);
+    this.logger.info('player leaving game', { connectionId });
 
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game) return;
 
-    if (game.gameOver) {
+    const leavingPlayer = game.getPlayerByConnectionId(connectionId);
+
+    if (game.phase === Phase.FINISHED) {
       // Post-game: soft leave (only the leaving player exits)
-      game.removePlayer(connectionId);
+      if (leavingPlayer) game.removePlayer(leavingPlayer.internalId);
       this.transport.removeFromGroup(connectionId, roomId);
-      this.playerRooms.delete(connectionId);
+      this.sessionManager.removeRoom(connectionId);
       this.transport.send(connectionId, 'gameAborted');
-      game.rematchVotes.clear();
+      game.clearRematchVotes();
 
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
         this.cancelCompletedGameCleanup(roomId);
         this._cleanupLogger(roomId);
-        this._clearBotTimers(roomId);
-        this._clearBotAIs(roomId);
-        game.players.forEach((p) => this.playerRooms.delete(p.id));
-        this.games.delete(roomId);
+        this.botManager.cleanup(roomId);
+        this.sessionManager.removeAllForPlayers(game.players);
+        this.gameRepository.deleteGame(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
       }
 
-      console.log(`Player ${connectionId} left post-game room ${roomId}`);
+      this.logger.info('player left post-game room', { roomId, connectionId });
     } else {
       // Mid-game: abort entire game
       this.transport.sendToGroup(roomId, 'gameAborted');
 
-      game.players.forEach((player) => {
-        this.transport.removeFromGroup(player.id, roomId);
-        this.playerRooms.delete(player.id);
+      game.players.forEach((p) => {
+        this.transport.removeFromGroup(p.connectionId, roomId);
+        this.sessionManager.removeRoom(p.connectionId);
       });
 
       this.cancelPendingDeletion(roomId);
       this.cancelCompletedGameCleanup(roomId);
       this._cleanupLogger(roomId);
-      this._clearBotTimers(roomId);
-      this._clearBotAIs(roomId);
-      this.games.delete(roomId);
+      this.botManager.cleanup(roomId);
+      this.gameRepository.deleteGame(roomId);
 
-      console.log(`Game in room ${roomId} has been aborted`);
+      this.logger.info('game aborted', { roomId });
     }
   }
 
   handleRequestRematch(connectionId) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
-    if (!game || !game.gameOver) return;
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.FINISHED) return;
 
-    game.rematchVotes.add(connectionId);
+    const voter = game.getPlayerByConnectionId(connectionId);
+    if (!voter) return;
+
+    game.addRematchVote(voter.internalId);
 
     const humanPlayers = game.players.filter((p) => !p.isBot);
-    if (game.rematchVotes.size >= humanPlayers.length) {
+    if (game.canStartRematch(humanPlayers.length)) {
       this.cancelCompletedGameCleanup(roomId);
       game.resetForRematch();
       game.startGame();
 
-      game.players.filter((p) => !p.isBot).forEach((player) => {
-        this.transport.send(player.id, 'gameStarted', {
-          gameState: game.getGameState(),
-          playerState: game.getPlayerState(player.id),
+      game.players
+        .filter((p) => !p.isBot)
+        .forEach((player) => {
+          this.transport.send(player.connectionId, 'gameStarted', {
+            gameState: this._getDecoratedGameState(game),
+            playerState: game.getPlayerState(player.internalId),
+          });
         });
-      });
 
-      console.log(`Rematch started in room ${roomId}`);
+      this.logger.info('rematch started', { roomId });
 
       this._scheduleBotTurnIfNeeded(roomId);
     } else {
       this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
-        rematchVotes: game.players
-          .filter((p) => game.rematchVotes.has(p.id))
-          .map((p) => p.publicId),
+        rematchVotes: game.getRematchVoterPublicIds(),
         stockpileSize: game.stockpileSize,
       });
     }
   }
 
   handleUpdateRematchSettings(connectionId, { stockpileSize }) {
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
-    if (!game || !game.gameOver) return;
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.FINISHED) return;
 
-    if (game.getPublicId(connectionId) !== game.hostPublicId) return;
+    const sender = game.getPlayerByConnectionId(connectionId);
+    if (!sender || sender.publicId !== game.hostPublicId) return;
 
-    const maxAllowed = game.players.length <= 4 ? 30 : 20;
-    game.stockpileSize = Math.min(Math.max(stockpileSize, 5), maxAllowed);
-    game.rematchVotes.clear();
+    game.updateStockpileSize(stockpileSize);
+    game.clearRematchVotes();
 
     this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
       rematchVotes: [],
       stockpileSize: game.stockpileSize,
     });
 
-    console.log(`Rematch settings updated in room ${roomId}: stockpile=${game.stockpileSize}`);
+    this.logger.info('rematch settings updated', { roomId, stockpileSize: game.stockpileSize });
   }
 
   handleDisconnect(connectionId) {
-    console.log(`Player disconnected: ${connectionId}`);
+    this.logger.info('player disconnected', { connectionId });
 
-    const roomId = this.playerRooms.get(connectionId);
+    const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
-    const game = this.games.get(roomId);
+    const game = this.gameRepository.getGame(roomId);
     if (!game) {
-      this.playerRooms.delete(connectionId);
+      this.sessionManager.removeRoom(connectionId);
       return;
     }
 
-    const publicId = game.getPublicId(connectionId);
+    const disconnectedPlayer = game.getPlayerByConnectionId(connectionId);
+    const publicId = disconnectedPlayer?.publicId;
 
-    if (!game.gameStarted) {
-      game.removePlayer(connectionId);
+    if (game.phase === Phase.LOBBY) {
+      if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
       this.transport.removeFromGroup(connectionId, roomId);
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
         // No humans left — clean up bots and schedule deletion
-        for (const bot of game.players.filter((p) => p.isBot)) {
-          this.botAIs.delete(`${roomId}:${bot.publicId}`);
-        }
+        this.botManager.clearAIs(roomId);
         this.scheduleRoomDeletion(roomId);
       } else {
         if (game.hostPublicId === publicId) {
-          game.hostPublicId = humanPlayers[0].publicId;
+          game.setHost(humanPlayers[0].publicId);
         }
         this.transport.sendToGroup(roomId, 'playerLeft', {
           playerId: publicId,
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
       }
-    } else if (game.gameOver) {
+    } else if (game.phase === Phase.FINISHED) {
       // Post-game: soft remove, cancel rematch votes
-      game.removePlayer(connectionId);
-      game.rematchVotes.clear();
+      if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
+      game.clearRematchVotes();
 
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
         this.cancelCompletedGameCleanup(roomId);
         this._cleanupLogger(roomId);
-        this._clearBotTimers(roomId);
-        this._clearBotAIs(roomId);
-        game.players.forEach((p) => this.playerRooms.delete(p.id));
-        this.games.delete(roomId);
+        this.botManager.cleanup(roomId);
+        this.sessionManager.removeAllForPlayers(game.players);
+        this.gameRepository.deleteGame(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
-          gameState: game.getGameState(),
+          gameState: this._getDecoratedGameState(game),
         });
       }
     } else {
       // Check if any human players remain connected
       const humansRemaining = game.players.some(
-        (p) => !p.isBot && p.id !== connectionId && this.playerRooms.has(p.id)
+        (p) =>
+          !p.isBot && p.connectionId !== connectionId && this.sessionManager.hasRoom(p.connectionId)
       );
       if (!humansRemaining) {
         // No humans left in-game — abort
         this._cleanupLogger(roomId);
-        this._clearBotTimers(roomId);
-        this._clearBotAIs(roomId);
-        game.players.forEach((player) => {
-          this.transport.removeFromGroup(player.id, roomId);
-          this.playerRooms.delete(player.id);
+        this.botManager.cleanup(roomId);
+        game.players.forEach((p) => {
+          this.transport.removeFromGroup(p.connectionId, roomId);
+          this.sessionManager.removeRoom(p.connectionId);
         });
-        this.games.delete(roomId);
-        console.log(`Game in room ${roomId} aborted — no human players remain`);
+        this.gameRepository.deleteGame(roomId);
+        this.logger.info('game aborted — no human players remain', { roomId });
       } else {
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
@@ -807,57 +739,55 @@ class GameCoordinator {
       }
     }
 
-    this.playerRooms.delete(connectionId);
+    this.sessionManager.removeRoom(connectionId);
   }
 
   scheduleRoomDeletion(roomId) {
-    if (this.pendingDeletions.size >= MAX_PENDING_ROOMS) {
-      this.games.delete(roomId);
-      console.log(`Empty lobby ${roomId} deleted immediately (pending limit reached)`);
+    if (this.gameRepository.pendingDeletions.size >= MAX_PENDING_ROOMS) {
+      this.gameRepository.deleteGame(roomId);
+      this.logger.info('empty lobby deleted immediately', { roomId });
     } else {
-      const timeoutId = setTimeout(() => {
-        this.games.delete(roomId);
-        this.pendingDeletions.delete(roomId);
-        console.log(`Empty lobby ${roomId} deleted after grace period`);
-      }, LOBBY_GRACE_PERIOD_MS);
-      this.pendingDeletions.set(roomId, timeoutId);
-      console.log(
-        `Empty lobby ${roomId} scheduled for deletion in ${LOBBY_GRACE_PERIOD_MS / 1000}s`
+      this.gameRepository.scheduleDeletion(
+        roomId,
+        () => {
+          this.gameRepository.deleteGame(roomId);
+          this.logger.info('empty lobby deleted after grace period', { roomId });
+        },
+        LOBBY_GRACE_PERIOD_MS
       );
+      this.logger.info('empty lobby scheduled for deletion', {
+        roomId,
+        delaySec: LOBBY_GRACE_PERIOD_MS / 1000,
+      });
     }
   }
 
   cancelPendingDeletion(roomId) {
-    const timeoutId = this.pendingDeletions.get(roomId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      this.pendingDeletions.delete(roomId);
-      console.log(`Cancelled pending deletion for lobby ${roomId}`);
+    if (this.gameRepository.cancelDeletion(roomId)) {
+      this.logger.info('cancelled pending deletion', { roomId });
     }
   }
 
   scheduleCompletedGameCleanup(roomId) {
-    const timeoutId = setTimeout(() => {
-      const game = this.games.get(roomId);
-      if (game) {
-        game.players.forEach((player) => {
-          this.playerRooms.delete(player.id);
-        });
-      }
-      this._clearBotAIs(roomId);
-      this.games.delete(roomId);
-      this.completedGameTimers.delete(roomId);
-      console.log(`Completed game ${roomId} cleaned up after TTL`);
-    }, COMPLETED_GAME_TTL_MS);
-    this.completedGameTimers.set(roomId, timeoutId);
+    this.gameRepository.scheduleCompletedCleanup(
+      roomId,
+      () => {
+        const game = this.gameRepository.getGame(roomId);
+        if (game) {
+          game.players.forEach((p) => {
+            this.sessionManager.removeRoom(p.connectionId);
+          });
+        }
+        this.botManager.clearAIs(roomId);
+        this.gameRepository.deleteGame(roomId);
+        this.logger.info('completed game cleaned up after TTL', { roomId });
+      },
+      COMPLETED_GAME_TTL_MS
+    );
   }
 
   cancelCompletedGameCleanup(roomId) {
-    const timeoutId = this.completedGameTimers.get(roomId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      this.completedGameTimers.delete(roomId);
-    }
+    this.gameRepository.cancelCompletedCleanup(roomId);
   }
 
   _cleanupLogger(roomId) {
@@ -870,136 +800,143 @@ class GameCoordinator {
   }
 
   _scheduleBotTurnIfNeeded(roomId) {
-    const game = this.games.get(roomId);
-    if (!game || !game.gameStarted || game.gameOver) return;
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.PLAYING) return;
 
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || !currentPlayer.isBot) return;
 
-    const timerId = setTimeout(() => {
+    this.botManager.scheduleTimer(roomId, () => {
       this._playBotTurn(roomId);
-    }, 500);
-
-    if (!this.botTurnTimers.has(roomId)) {
-      this.botTurnTimers.set(roomId, []);
-    }
-    this.botTurnTimers.get(roomId).push(timerId);
+    });
   }
 
   _playBotTurn(roomId) {
-    const game = this.games.get(roomId);
-    if (!game || !game.gameStarted || game.gameOver) return;
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.PLAYING) return;
 
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || !currentPlayer.isBot) return;
 
-    const botId = currentPlayer.id;
-    const aiKey = `${roomId}:${currentPlayer.publicId}`;
-    const ai = this.botAIs.get(aiKey);
+    const botId = currentPlayer.internalId;
+    const ai = this.botManager.getAI(roomId, currentPlayer.publicId);
     if (!ai) return;
 
-    const logger = this.gameLoggers.get(roomId);
-
     const playNext = () => {
-      // Re-check guards — game state may have changed
-      if (!this.games.has(roomId) || game.gameOver) return;
-      if (game.getCurrentPlayer()?.id !== botId) return;
+      if (!this.gameRepository.hasGame(roomId) || game.phase === Phase.FINISHED) return;
+      if (game.getCurrentPlayer()?.internalId !== botId) return;
 
-      const gameState = game.getGameState();
+      const gameState = this._getDecoratedGameState(game);
       const playerState = game.getPlayerState(botId);
       const move = ai.findPlayableCard(playerState, gameState);
 
-      if (move && !game.gameOver) {
-        // Log before play
-        let stateBefore = null;
-        let aiAnalysis = null;
-        if (logger) {
-          stateBefore = logger._snapshot(game);
-          if (this.moveAnalyzer) {
-            aiAnalysis = this.moveAnalyzer.analyzePlay(playerState, gameState, {
-              card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex,
-            });
-          }
-        }
+      if (move && game.phase === Phase.PLAYING) {
+        const result = this._executePlay(
+          roomId,
+          game,
+          botId,
+          move.card,
+          move.source,
+          move.buildingPileIndex
+        );
+        if (!result.success) return this._botDiscard(roomId, game, botId, ai);
+        if (game.phase === Phase.FINISHED) return;
 
-        const result = game.playCard(botId, move.card, move.source, move.buildingPileIndex);
-        if (!result.success) return this._botDiscard(roomId, game, botId, ai, logger);
-
-        // Log the play
-        if (logger) {
-          const counter = this.turnCounters.get(roomId);
-          logger.logPlay(
-            counter.turn, currentPlayer.name, true,
-            { card: move.card, source: move.source, buildingPileIndex: move.buildingPileIndex },
-            stateBefore, aiAnalysis
-          );
-          counter.plays++;
-        }
-
-        // Broadcast to humans
-        this._broadcastToHumans(roomId, game);
-
-        if (game.gameOver) {
-          this._handleBotGameOver(roomId, game, logger);
-          return;
-        }
-
-        // Schedule next play with delay
-        const timerId = setTimeout(playNext, 500 + Math.random() * 300);
-        if (this.botTurnTimers.has(roomId)) {
-          this.botTurnTimers.get(roomId).push(timerId);
-        }
+        this.botManager.scheduleTimer(roomId, playNext, 500 + Math.random() * 300);
         return;
       }
 
-      // No more plays — discard
-      this._botDiscard(roomId, game, botId, ai, logger);
+      this._botDiscard(roomId, game, botId, ai);
     };
 
     playNext();
   }
 
-  _botDiscard(roomId, game, botId, ai, logger) {
+  _botDiscard(roomId, game, botId, ai) {
     const currentPlayer = game.getCurrentPlayer();
-    if (!currentPlayer || currentPlayer.id !== botId) return;
+    if (!currentPlayer || currentPlayer.internalId !== botId) return;
 
-    const discardGameState = game.getGameState();
-    const discardPlayerState = game.getPlayerState(botId);
-    const discard = ai.chooseDiscard(discardPlayerState, discardGameState);
+    const gameState = this._getDecoratedGameState(game);
+    const playerState = game.getPlayerState(botId);
+    const discard = ai.chooseDiscard(playerState, gameState);
 
     if (discard) {
-      // Log before discard
-      let stateBefore = null;
-      let aiAnalysis = null;
-      if (logger) {
-        stateBefore = logger._snapshot(game);
-        if (this.moveAnalyzer) {
-          aiAnalysis = this.moveAnalyzer.analyzeDiscard(discardPlayerState, discardGameState, {
-            card: discard.card, discardPileIndex: discard.discardPileIndex,
-          });
-        }
-      }
+      this._executeDiscard(roomId, game, botId, discard.card, discard.discardPileIndex);
+    }
+  }
 
-      const result = game.discardCard(botId, discard.card, discard.discardPileIndex);
-      if (!result.success) return;
-
-      // Log the discard
-      if (logger) {
-        const counter = this.turnCounters.get(roomId);
-        logger.logDiscard(
-          counter.turn, currentPlayer.name, true,
-          { card: discard.card, discardPileIndex: discard.discardPileIndex },
-          stateBefore, aiAnalysis
-        );
-        logger.logTurnEnd(counter.turn, currentPlayer.name, true, counter.plays);
+  _executePlay(roomId, game, playerId, card, source, buildingPileIndex) {
+    const logger = this.gameLoggers.get(roomId);
+    let stateBefore = null;
+    let aiAnalysis = null;
+    if (logger) {
+      stateBefore = logger._snapshot(game);
+      if (this.moveAnalyzer) {
+        const ps = game.getPlayerState(playerId);
+        const gs = this._getDecoratedGameState(game);
+        aiAnalysis = this.moveAnalyzer.analyzePlay(ps, gs, { card, source, buildingPileIndex });
       }
     }
 
-    // End turn
-    const endTurnResult = game.endTurn(botId);
-    if (!endTurnResult.success) return;
+    const result = game.playCard(playerId, card, source, buildingPileIndex);
+    if (!result.success) return result;
 
-    // Log new turn start
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      const player = game.players.find((p) => p.internalId === playerId);
+      logger.logPlay(
+        counter.turn,
+        player.name,
+        !!player.isBot,
+        { card, source, buildingPileIndex },
+        stateBefore,
+        aiAnalysis
+      );
+      counter.plays++;
+    }
+
+    this._broadcastToHumans(roomId, game);
+
+    if (game.phase === Phase.FINISHED) {
+      this._handleGameOver(roomId, game);
+    }
+
+    return result;
+  }
+
+  _executeDiscard(roomId, game, playerId, card, discardPileIndex) {
+    const logger = this.gameLoggers.get(roomId);
+    let stateBefore = null;
+    let aiAnalysis = null;
+    if (logger) {
+      stateBefore = logger._snapshot(game);
+      if (this.moveAnalyzer) {
+        const ps = game.getPlayerState(playerId);
+        const gs = this._getDecoratedGameState(game);
+        aiAnalysis = this.moveAnalyzer.analyzeDiscard(ps, gs, { card, discardPileIndex });
+      }
+    }
+
+    const result = game.discardCard(playerId, card, discardPileIndex);
+    if (!result.success) return result;
+
+    if (logger) {
+      const counter = this.turnCounters.get(roomId);
+      const player = game.players.find((p) => p.internalId === playerId);
+      logger.logDiscard(
+        counter.turn,
+        player.name,
+        !!player.isBot,
+        { card, discardPileIndex },
+        stateBefore,
+        aiAnalysis
+      );
+      logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
+    }
+
+    const endTurnResult = game.endTurn(playerId);
+    if (!endTurnResult.success) return endTurnResult;
+
     if (logger) {
       const counter = this.turnCounters.get(roomId);
       counter.turn++;
@@ -1010,17 +947,18 @@ class GameCoordinator {
       logger.logTurnStart(counter.turn, game);
     }
 
-    // Broadcast final state to humans
     this._broadcastToHumans(roomId, game);
     this.transport.sendToGroup(roomId, 'turnChanged', {
       currentPlayerId: game.getCurrentPlayer()?.publicId,
     });
 
-    // Check if next player is also a bot
     this._scheduleBotTurnIfNeeded(roomId);
+
+    return endTurnResult;
   }
 
-  _handleBotGameOver(roomId, game, logger) {
+  _handleGameOver(roomId, game) {
+    const logger = this.gameLoggers.get(roomId);
     if (logger) {
       const counter = this.turnCounters.get(roomId);
       logger.logTurnEnd(counter.turn, counter.playerName, counter.isBot, counter.plays);
@@ -1032,46 +970,40 @@ class GameCoordinator {
 
     this.transport.sendToGroup(roomId, 'gameOver', {
       winner: game.winner,
-      gameState: game.getGameState(),
+      gameState: this._getDecoratedGameState(game),
     });
 
-    // Also send final gameStateUpdate to humans
-    this._broadcastToHumans(roomId, game);
-
-    this._clearBotTimers(roomId);
+    this.botManager.clearTimers(roomId);
     this.scheduleCompletedGameCleanup(roomId);
+  }
+
+  _getDecoratedGameState(game) {
+    const state = game.getGameState();
+    state.players = state.players.map((p) => {
+      const player = game.players.find((gp) => gp.publicId === p.id);
+      return {
+        ...p,
+        isBot: player ? !!player.isBot : false,
+        aiType: player ? player.aiType || null : null,
+      };
+    });
+    return state;
   }
 
   _broadcastToHumans(roomId, game) {
     game.players.forEach((player) => {
       if (!player.isBot) {
-        this.transport.send(player.id, 'gameStateUpdate', {
-          gameState: game.getGameState(),
-          playerState: game.getPlayerState(player.id),
+        this.transport.send(player.connectionId, 'gameStateUpdate', {
+          gameState: this._getDecoratedGameState(game),
+          playerState: game.getPlayerState(player.internalId),
         });
       }
     });
   }
-
-  _clearBotTimers(roomId) {
-    const timers = this.botTurnTimers.get(roomId);
-    if (timers) {
-      timers.forEach((id) => clearTimeout(id));
-      this.botTurnTimers.delete(roomId);
-    }
-  }
-
-  _clearBotAIs(roomId) {
-    for (const key of this.botAIs.keys()) {
-      if (key.startsWith(roomId + ':')) {
-        this.botAIs.delete(key);
-      }
-    }
-  }
 }
 
 // Exclude confusing characters: 0, O, I, 1, 5, S, 8, B, 2, Z
-function generateRoomId(existingIds) {
+function generateRoomId(repository) {
   const chars = '3467ACDEFGHJKMNPQRTUVWXY';
   const MAX_ATTEMPTS = 10;
 
@@ -1081,7 +1013,7 @@ function generateRoomId(existingIds) {
     for (let i = 0; i < 6; i++) {
       roomId += chars.charAt(bytes[i] % chars.length);
     }
-    if (!existingIds || !existingIds.has(roomId)) {
+    if (!repository || !repository.hasGame(roomId)) {
       return roomId;
     }
   }

@@ -12,8 +12,18 @@ function makeState(overrides = {}) {
     buildingPiles: overrides.buildingPiles || [[], [], [], []],
     deckCount: overrides.deckCount ?? 92,
     players: overrides.players || [
-      { stockpileTop: overrides.stockpileTop ?? null, stockpileCount: 30, discardPiles: overrides.discardPiles || [[], [], [], []], handCount: (overrides.hand || []).length },
-      { stockpileTop: overrides.oppStockTop ?? null, stockpileCount: 30, discardPiles: overrides.oppDiscards || [[], [], [], []], handCount: 5 },
+      {
+        stockpileTop: overrides.stockpileTop ?? null,
+        stockpileCount: 30,
+        discardPiles: overrides.discardPiles || [[], [], [], []],
+        handCount: (overrides.hand || []).length,
+      },
+      {
+        stockpileTop: overrides.oppStockTop ?? null,
+        stockpileCount: 30,
+        discardPiles: overrides.oppDiscards || [[], [], [], []],
+        handCount: 5,
+      },
     ],
   };
   return { playerState, gameState };

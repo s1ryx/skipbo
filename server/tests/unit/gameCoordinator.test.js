@@ -76,7 +76,7 @@ function createCompletedGameWithBot(coordinator) {
   player1.hand = [1, 2, 3, 4, 5];
 
   // Clear bot turn timers so the bot doesn't interfere
-  coordinator._clearBotTimers(roomId);
+  coordinator.botManager.clearTimers(roomId);
 
   // Play card via coordinator to trigger game-over path
   handlers.onMessage('player1', 'playCard', {
@@ -117,7 +117,7 @@ describe('GameCoordinator', () => {
     it('starts with empty state', () => {
       const coordinator = new GameCoordinator();
       expect(coordinator.games.size).toBe(0);
-      expect(coordinator.playerRooms.size).toBe(0);
+      expect(coordinator.sessionManager.playerRooms.size).toBe(0);
       expect(coordinator.pendingDeletions.size).toBe(0);
     });
 
@@ -159,7 +159,7 @@ describe('GameCoordinator', () => {
       const roomId = createRoom(coordinator);
 
       expect(coordinator.games.size).toBe(1);
-      expect(coordinator.playerRooms.get('player1')).toBe(roomId);
+      expect(coordinator.sessionManager.playerRooms.get('player1')).toBe(roomId);
     });
 
     it('adds the player to the transport group', () => {
@@ -278,14 +278,14 @@ describe('GameCoordinator', () => {
       const { coordinator } = createCoordinator();
       const handlers = coordinator.getTransportHandlers();
 
-      // Invalid → undefined (uses game default)
+      // Invalid → null (uses game default)
       handlers.onMessage('p1', 'createRoom', { playerName: 'A', maxPlayers: 2, stockpileSize: -1 });
       let game = [...coordinator.games.values()][0];
-      expect(game.stockpileSize).toBeUndefined();
+      expect(game.stockpileSize).toBeNull();
 
       handlers.onMessage('p2', 'createRoom', { playerName: 'B', maxPlayers: 2, stockpileSize: 31 });
       game = [...coordinator.games.values()][1];
-      expect(game.stockpileSize).toBeUndefined();
+      expect(game.stockpileSize).toBeNull();
 
       // Valid
       handlers.onMessage('p3', 'createRoom', { playerName: 'C', maxPlayers: 2, stockpileSize: 10 });
@@ -318,7 +318,7 @@ describe('GameCoordinator', () => {
 
       handlers.onMessage('player2', 'joinRoom', { roomId, playerName: 'Bob' });
 
-      expect(coordinator.playerRooms.get('player2')).toBe(roomId);
+      expect(coordinator.sessionManager.playerRooms.get('player2')).toBe(roomId);
       expect(transport.addToGroup).toHaveBeenCalledWith('player2', roomId);
     });
 
@@ -484,7 +484,7 @@ describe('GameCoordinator', () => {
 
       // Inject a known card into player1's hand so the test is deterministic
       const game = [...coordinator.games.values()][0];
-      const player1 = game.players.find((p) => p.id === 'player1');
+      const player1 = game.getPlayerByConnectionId('player1');
       player1.hand[0] = 1;
 
       transport.send.mockClear();
@@ -533,7 +533,7 @@ describe('GameCoordinator', () => {
       const handlers = coordinator.getTransportHandlers();
 
       const game = [...coordinator.games.values()][0];
-      const player1 = game.players.find((p) => p.id === 'player1');
+      const player1 = game.getPlayerByConnectionId('player1');
       const card = player1.hand[0];
 
       transport.send.mockClear();
@@ -650,16 +650,23 @@ describe('GameCoordinator', () => {
     });
 
     it('sanitizes user data in log output', () => {
-      const { coordinator } = createCoordinator();
-      createRoomWithTwoPlayers(coordinator);
+      const { createLogger } = require('../../logger');
+      const coordinator = new GameCoordinator({ logger: createLogger({ level: 'debug' }) });
+      const transport = createMockTransport();
+      coordinator.setTransport(transport);
+
       const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('player1', 'createRoom', { playerName: 'Alice', maxPlayers: 2 });
+      const roomId = transport.send.mock.calls[0][2].roomId;
+      handlers.onMessage('player2', 'joinRoom', { roomId, playerName: 'Bob' });
 
       const logSpy = jest.spyOn(console, 'log').mockImplementation();
       handlers.onMessage('player1', 'sendChatMessage', {
         message: 'Hello',
       });
-      const chatLog = logSpy.mock.calls.find((c) => c[0].includes('Chat message'));
+      const chatLog = logSpy.mock.calls.find((c) => c[0].includes('chat message'));
       expect(chatLog[0]).not.toMatch(/[\r\n]/);
+      // eslint-disable-next-line no-control-regex
       expect(chatLog[0]).not.toMatch(/\x1B/);
       logSpy.mockRestore();
     });
@@ -674,7 +681,7 @@ describe('GameCoordinator', () => {
       transport.sendToGroup.mockClear();
       handlers.onMessage('player2', 'leaveLobby', {});
 
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
@@ -743,8 +750,8 @@ describe('GameCoordinator', () => {
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player1', roomId);
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(coordinator.games.has(roomId)).toBe(false);
-      expect(coordinator.playerRooms.has('player1')).toBe(false);
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
     });
 
     it('does nothing if player has no room', () => {
@@ -767,7 +774,7 @@ describe('GameCoordinator', () => {
       transport.sendToGroup.mockClear();
       handlers.onDisconnect('player2');
 
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
@@ -815,7 +822,7 @@ describe('GameCoordinator', () => {
       coordinator.games.delete(roomId);
 
       handlers.onDisconnect('player1');
-      expect(coordinator.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
     });
 
     it('does nothing for unknown player', () => {
@@ -974,6 +981,33 @@ describe('GameCoordinator', () => {
         message: 'error.invalidSession',
       });
     });
+
+    it('preserves internalId across reconnection with new connectionId', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      const player2 = game.getPlayerByConnectionId('player2');
+      const originalInternalId = player2.internalId;
+      const originalPublicId = player2.publicId;
+      const sessionToken = player2.sessionToken;
+
+      // Disconnect and reconnect with a new connection ID
+      handlers.onDisconnect('player2');
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken,
+        playerName: 'Bob',
+      });
+
+      // internalId and publicId must remain stable
+      expect(player2.internalId).toBe(originalInternalId);
+      expect(player2.publicId).toBe(originalPublicId);
+
+      // connectionId must update to the new socket
+      expect(player2.connectionId).toBe('player2-new');
+    });
   });
 
   describe('completedGameCleanup', () => {
@@ -1007,8 +1041,8 @@ describe('GameCoordinator', () => {
       jest.advanceTimersByTime(300001);
 
       expect(coordinator.games.has(roomId)).toBe(false);
-      expect(coordinator.playerRooms.has('player1')).toBe(false);
-      expect(coordinator.playerRooms.has('player2')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
+      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
     });
 
     it('keeps cleanup timer when one player leaves post-game', () => {
@@ -1077,7 +1111,10 @@ describe('GameCoordinator', () => {
 
       // Fill up pending deletions to the limit
       for (let i = 0; i < 50; i++) {
-        coordinator.pendingDeletions.set(`fake-room-${i}`, setTimeout(() => {}, 99999));
+        coordinator.pendingDeletions.set(
+          `fake-room-${i}`,
+          setTimeout(() => {}, 99999)
+        );
       }
 
       handlers.onMessage('player1', 'leaveLobby', {});
@@ -1102,7 +1139,8 @@ describe('GameCoordinator', () => {
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
       const game = coordinator.games.get(roomId);
-      const player1PublicId = game.getPublicId('player1');
+      const player1 = game.getPlayerByConnectionId('player1');
+      const player1PublicId = player1.publicId;
 
       transport.sendToGroup.mockClear();
       handlers.onMessage('player1', 'requestRematch', {});
@@ -1129,9 +1167,7 @@ describe('GameCoordinator', () => {
       expect(game.gameOver).toBe(false);
       expect(game.gameStarted).toBe(true);
 
-      const gameStartedCalls = transport.send.mock.calls.filter(
-        (c) => c[1] === 'gameStarted'
-      );
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
       expect(gameStartedCalls.length).toBe(2);
     });
 
@@ -1208,15 +1244,15 @@ describe('GameCoordinator', () => {
       expect(game.stockpileSize).toBe(originalSize);
     });
 
-    it('clamps stockpile size to minimum of 5', () => {
+    it('clamps stockpile size to minimum of MIN_STOCKPILE_SIZE', () => {
       const { coordinator } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
       const game = coordinator.games.get(roomId);
 
-      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 1 });
+      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 0 });
 
-      expect(game.stockpileSize).toBe(5);
+      expect(game.stockpileSize).toBe(1);
     });
 
     it('clamps stockpile size to max 30 for <=4 players', () => {
@@ -1365,11 +1401,12 @@ describe('GameCoordinator', () => {
       const game = coordinator.games.get(roomId);
 
       // Player2 votes then disconnects
+      const player2 = game.getPlayerByConnectionId('player2');
+      const player2InternalId = player2.internalId;
       handlers.onMessage('player2', 'requestRematch', {});
-      expect(game.rematchVotes.has('player2')).toBe(true);
+      expect(game.rematchVotes.has(player2InternalId)).toBe(true);
 
       // Get player2's session token
-      const player2 = game.players.find((p) => p.id === 'player2');
       const sessionToken = player2.sessionToken;
 
       handlers.onDisconnect('player2');
@@ -1382,8 +1419,8 @@ describe('GameCoordinator', () => {
         playerName: 'Bob',
       });
 
-      // Old vote should be removed
-      expect(game.rematchVotes.has('player2')).toBe(false);
+      // Old vote should be removed (votes keyed by internalId)
+      expect(game.rematchVotes.has(player2InternalId)).toBe(false);
       // New connectionId should NOT be auto-added
       expect(game.rematchVotes.has('player2-new')).toBe(false);
     });
@@ -1406,9 +1443,7 @@ describe('GameCoordinator', () => {
       expect(game.gameOver).toBe(false);
       expect(game.gameStarted).toBe(true);
 
-      const gameStartedCalls = transport.send.mock.calls.filter(
-        (c) => c[1] === 'gameStarted'
-      );
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
       // Only human gets gameStarted (bot filtered out)
       expect(gameStartedCalls.length).toBe(1);
       expect(gameStartedCalls[0][0]).toBe('player1');

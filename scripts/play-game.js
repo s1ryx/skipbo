@@ -17,7 +17,9 @@
 const path = require('path');
 const createServer = require(path.join(__dirname, '..', 'server', 'createServer'));
 const { io } = require(path.join(__dirname, '..', 'server', 'node_modules', 'socket.io-client'));
-const gameAI = require(path.join(__dirname, '..', 'server', 'tests', 'integration', 'helpers', 'gameAI'));
+const gameAI = require(
+  path.join(__dirname, '..', 'server', 'tests', 'integration', 'helpers', 'gameAI')
+);
 
 const args = process.argv.slice(2);
 const verbose = args.includes('--verbose') || args.includes('-v');
@@ -83,20 +85,32 @@ async function main() {
 
     // Player 1 creates room
     const roomCreatedP = waitFor(sockets[0], 'roomCreated');
-    sockets[0].emit('createRoom', { playerName: playerNames[0], maxPlayers: playerCount, stockpileSize });
+    sockets[0].emit('createRoom', {
+      playerName: playerNames[0],
+      maxPlayers: playerCount,
+      stockpileSize,
+    });
     const roomData = await roomCreatedP;
     const roomId = roomData.roomId;
     console.log(`Room ${roomId} created by ${playerNames[0]}`);
 
     // Other players join
     const playerIds = new Map();
-    playerIds.set(roomData.playerId, { socket: sockets[0], name: playerNames[0], playerState: null });
+    playerIds.set(roomData.playerId, {
+      socket: sockets[0],
+      name: playerNames[0],
+      playerState: null,
+    });
 
     for (let i = 1; i < playerCount; i++) {
       const tokenP = waitFor(sockets[i], 'sessionToken');
       sockets[i].emit('joinRoom', { roomId, playerName: playerNames[i] });
       const token = await tokenP;
-      playerIds.set(token.playerId, { socket: sockets[i], name: playerNames[i], playerState: null });
+      playerIds.set(token.playerId, {
+        socket: sockets[i],
+        name: playerNames[i],
+        playerState: null,
+      });
       log(`${playerNames[i]} joined room`);
     }
 
@@ -112,7 +126,9 @@ async function main() {
     }
 
     let gameState = startResults[0].gameState;
-    console.log(`Game started! ${gameState.players.length} players, ${gameState.deckCount} cards in deck`);
+    console.log(
+      `Game started! ${gameState.players.length} players, ${gameState.deckCount} cards in deck`
+    );
 
     // In cooperative mode, player 0 is the target
     const targetPlayerId = cooperative ? idBySocketIndex[0] : null;
@@ -139,7 +155,13 @@ async function main() {
       // Play cards
       let move;
       if (cooperative) {
-        move = gameAI.findPlayableCardCooperative(player.playerState, gameState, targetPlayerId, isTarget, log);
+        move = gameAI.findPlayableCardCooperative(
+          player.playerState,
+          gameState,
+          targetPlayerId,
+          isTarget,
+          log
+        );
       } else {
         move = gameAI.findPlayableCard(player.playerState, gameState, log);
       }
@@ -162,7 +184,13 @@ async function main() {
         if (gameState.gameOver) break;
 
         if (cooperative) {
-          move = gameAI.findPlayableCardCooperative(player.playerState, gameState, targetPlayerId, isTarget, log);
+          move = gameAI.findPlayableCardCooperative(
+            player.playerState,
+            gameState,
+            targetPlayerId,
+            isTarget,
+            log
+          );
         } else {
           move = gameAI.findPlayableCard(player.playerState, gameState, log);
         }
@@ -173,7 +201,13 @@ async function main() {
       // Discard
       let discard;
       if (cooperative) {
-        discard = gameAI.chooseDiscardCooperative(player.playerState, gameState, targetPlayerId, turns, log);
+        discard = gameAI.chooseDiscardCooperative(
+          player.playerState,
+          gameState,
+          targetPlayerId,
+          turns,
+          log
+        );
       } else {
         discard = gameAI.chooseDiscard(player.playerState, turns, log);
       }
@@ -192,7 +226,9 @@ async function main() {
       turns++;
 
       if (!verbose) {
-        process.stdout.write(`  Turn ${turns} (${player.name}${tag}): ${cardsPlayed} total cards played\r`);
+        process.stdout.write(
+          `  Turn ${turns} (${player.name}${tag}): ${cardsPlayed} total cards played\r`
+        );
       }
     }
 
@@ -222,7 +258,9 @@ async function main() {
   }
 }
 
-main().then(() => process.exit(0)).catch((err) => {
-  console.error('Error:', err.message);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error('Error:', err.message);
+    process.exit(1);
+  });
