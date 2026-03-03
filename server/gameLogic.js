@@ -352,6 +352,14 @@ class SkipBoGame {
     return { success: true, nextPlayer: nextPlayer.internalId };
   }
 
+  canPass(playerId) {
+    const player = this.players.find((p) => p.internalId === playerId);
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
+      return false;
+    }
+    return player.hand.length === 0 && this.deck.length === 0;
+  }
+
   addRematchVote(playerId) {
     if (this.rematchVotes.has(playerId)) return false;
     this.rematchVotes.add(playerId);
