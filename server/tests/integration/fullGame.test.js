@@ -41,9 +41,11 @@ async function setupGame(stockpileSize = 5) {
 /**
  * Emit a playCard and wait for both clients to receive gameStateUpdate.
  */
+const EVENT_TIMEOUT = 10000;
+
 async function emitPlayCard(client, c1, c2, players, { card, source, buildingPileIndex }) {
-  const u1P = c1.waitFor('gameStateUpdate');
-  const u2P = c2.waitFor('gameStateUpdate');
+  const u1P = c1.waitFor('gameStateUpdate', EVENT_TIMEOUT);
+  const u2P = c2.waitFor('gameStateUpdate', EVENT_TIMEOUT);
 
   client.emit('playCard', { card, source, buildingPileIndex });
 
@@ -60,8 +62,8 @@ async function emitPlayCard(client, c1, c2, players, { card, source, buildingPil
  * Emit a discardCard and wait for both clients to receive gameStateUpdate.
  */
 async function emitDiscard(client, c1, c2, players, { card, discardPileIndex }) {
-  const u1P = c1.waitFor('gameStateUpdate');
-  const u2P = c2.waitFor('gameStateUpdate');
+  const u1P = c1.waitFor('gameStateUpdate', EVENT_TIMEOUT);
+  const u2P = c2.waitFor('gameStateUpdate', EVENT_TIMEOUT);
 
   client.emit('discardCard', { card, discardPileIndex });
 
