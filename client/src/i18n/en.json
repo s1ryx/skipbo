@@ -72,6 +72,7 @@
   "game.addBot": "Add Bot",
   "game.removeBot": "Remove",
   "game.aiImproved": "Improved AI",
+  "game.aiAdvanced": "Advanced AI",
   "game.aiBaseline": "Baseline AI",
 
   "card.wild": "WILD",

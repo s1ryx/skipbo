@@ -72,6 +72,7 @@
   "game.addBot": "Bot hinzufügen",
   "game.removeBot": "Entfernen",
   "game.aiImproved": "Verbesserte KI",
+  "game.aiAdvanced": "Fortgeschrittene KI",
   "game.aiBaseline": "Basis-KI",
 
   "card.wild": "JOKER",

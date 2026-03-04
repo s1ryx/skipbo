@@ -92,6 +92,7 @@ function WaitingRoom({
             onChange={(e) => setAiType(e.target.value)}
           >
             <option value="improved">{t('game.aiImproved')}</option>
+            <option value="advanced">{t('game.aiAdvanced')}</option>
             <option value="baseline">{t('game.aiBaseline')}</option>
           </select>
           <button className="btn-add-bot" onClick={() => onAddBot(aiType)}>
