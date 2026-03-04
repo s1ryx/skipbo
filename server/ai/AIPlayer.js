@@ -5,6 +5,9 @@
  * Implements the same interface as gameAI.js (findPlayableCard, chooseDiscard)
  * so it can be used as a drop-in replacement in self-play scripts.
  *
+ * Difficulty is controlled by a features object (see presets.js). The
+ * constructor defaults to the improved preset when no features are given.
+ *
  * Decision flow per turn (see §3 of strategy doc):
  *   1. Update card counter with current state
  *   2. Find all possible chains (ChainDetector)
@@ -15,16 +18,18 @@
  */
 
 const { CardCounter } = require('./CardCounter');
-const { ChainDetector, getNextCardValue, canPlayCard } = require('./ChainDetector');
-const { StateEvaluator, discardPlacementScore, detectRunway } = require('./StateEvaluator');
+const { ChainDetector, getNextCardValue } = require('./ChainDetector');
+const { StateEvaluator, detectRunway } = require('./StateEvaluator');
+const { DIFFICULTY_PRESETS, DEFAULT_DIFFICULTY } = require('./presets');
 
 const noop = () => {};
 
 class AIPlayer {
   constructor(options = {}) {
+    this.features = options.features || DIFFICULTY_PRESETS[DEFAULT_DIFFICULTY];
     this.cardCounter = new CardCounter();
     this.chainDetector = new ChainDetector();
-    this.evaluator = new StateEvaluator(this.cardCounter, this.chainDetector);
+    this.evaluator = new StateEvaluator(this.cardCounter, this.chainDetector, this.features);
     this.log = options.log || noop;
   }
 
@@ -79,6 +84,18 @@ class AIPlayer {
     // "Do nothing" has value 0. Only play if best chain is positive.
 
     if (bestScore <= 0 || !bestChain) {
+      // Force play on empty hand: can't discard with no cards, must play something
+      if (bestChain && playerState.hand.length === 0) {
+        const firstPlay = bestChain.plays[0];
+        _log(
+          `  >> FORCED (empty hand) ${firstPlay.source} ${firstPlay.card} -> pile ${firstPlay.pileIndex}`
+        );
+        return {
+          card: firstPlay.card,
+          source: firstPlay.source,
+          buildingPileIndex: firstPlay.pileIndex,
+        };
+      }
       _log(`  -- Best chain score ${bestScore} ≤ 0, holding`);
       return null;
     }
@@ -115,8 +132,10 @@ class AIPlayer {
     // Update card counter
     this.cardCounter.update(playerState, gameState);
 
-    // Compute runway once for cross-pile sequence planning (§11)
-    const runway = detectRunway(playerState, gameState);
+    // Compute runway for cross-pile sequence planning (§11)
+    const runway = this.features.runwayDetection
+      ? detectRunway(playerState, gameState)
+      : { length: 0, cards: [] };
 
     // Score every (card, pile) combination
     let bestCard = null;
@@ -203,6 +222,7 @@ class AIPlayer {
   /**
    * SKIP-BO from stockpile: evaluate each pile by chain potential.
    * Per §4.1: simulate placing on each pile, then check what chain follows.
+   * With reachabilityScoring enabled, also considers next-stockpile reachability.
    */
   _findSkipBoStockpilePlay(playerState, gameState, pileNeeds, log) {
     let bestPile = -1;
@@ -255,23 +275,25 @@ class AIPlayer {
       score += pileNeeds[pi]; // tiebreaker: higher piles closer to completion
 
       // ── Reachability scoring (§4.1 next-stockpile reachability) ──
-      // After placing SKIP-BO + chain, compute the resulting pile needs.
-      // More distinct values needed = higher chance next stockpile card is playable.
-      const resultNeeds = [...pileNeeds];
-      let endVal = pileNeeds[pi]; // SKIP-BO plays as this value
-      if (endVal === 12) {
-        resultNeeds[pi] = 1;
-      } else {
-        resultNeeds[pi] = endVal + 1;
+      if (this.features.reachabilityScoring) {
+        // After placing SKIP-BO + chain, compute the resulting pile needs.
+        // More distinct values needed = higher chance next stockpile card is playable.
+        const resultNeeds = [...pileNeeds];
+        let endVal = pileNeeds[pi]; // SKIP-BO plays as this value
+        if (endVal === 12) {
+          resultNeeds[pi] = 1;
+        } else {
+          resultNeeds[pi] = endVal + 1;
+        }
+        // Apply chain advancement
+        let cv = resultNeeds[pi];
+        for (let c = 0; c < chainLen; c++) {
+          cv = cv === 12 ? 1 : cv + 1;
+        }
+        resultNeeds[pi] = cv;
+        const distinctNeeds = new Set(resultNeeds.filter((v) => v != null));
+        score += distinctNeeds.size * 3;
       }
-      // Apply chain advancement
-      let cv = resultNeeds[pi];
-      for (let c = 0; c < chainLen; c++) {
-        cv = cv === 12 ? 1 : cv + 1;
-      }
-      resultNeeds[pi] = cv;
-      const distinctNeeds = new Set(resultNeeds.filter((v) => v != null));
-      score += distinctNeeds.size * 3;
 
       // Opponent penalty
       for (const player of gameState.players) {

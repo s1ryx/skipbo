@@ -15,7 +15,7 @@
  *   --games N        Number of games to simulate (default: 1)
  *   --verbose, -v    Print AI decision-making for each turn
  *   --old-ai         Use old heuristic AI instead of new AIPlayer
- *   --baseline       Use pre-improvement AIPlayer (no strategic improvements)
+ *   --ai TYPE        AI difficulty: baseline, improved, advanced (default: improved)
  *   --compare        Run new AI vs old heuristic and compare results
  *   --compare-baseline  Run improved AI vs baseline AI and compare results
  *   --log            Write game log to logs/ directory (JSONL)
@@ -25,9 +25,7 @@
 const path = require('path');
 const SkipBoGame = require(path.join(__dirname, '..', 'server', 'gameLogic'));
 const { AIPlayer } = require(path.join(__dirname, '..', 'server', 'ai', 'AIPlayer'));
-const { AIPlayer: BaselineAIPlayer } = require(
-  path.join(__dirname, '..', 'server', 'ai', 'baseline', 'AIPlayer')
-);
+const { DIFFICULTY_PRESETS } = require(path.join(__dirname, '..', 'server', 'ai', 'presets'));
 const { GameLogger, MoveAnalyzer } = require(
   path.join(__dirname, '..', 'server', 'ai', 'GameLogger')
 );
@@ -38,7 +36,7 @@ const gameAI = require(
 const args = process.argv.slice(2);
 const verbose = args.includes('--verbose') || args.includes('-v');
 const useOldAI = args.includes('--old-ai');
-const useBaseline = args.includes('--baseline');
+const aiDifficulty = args.find((_, i, a) => a[i - 1] === '--ai') || 'improved';
 const compare = args.includes('--compare');
 const compareBaseline = args.includes('--compare-baseline');
 const enableLog = args.includes('--log');
@@ -82,12 +80,12 @@ function playGame(aiType, gameIndex) {
   }
 
   // Create AI instances (one per player for independent card counters)
-  // Support heterogeneous AI types: "new-vs-baseline" gives player 0 new AI, player 1 baseline
+  // Support heterogeneous AI types: "improved-vs-baseline" gives player 0 improved, player 1 baseline
   const aiTypes = aiType.split('-vs-');
   const ais = playerIds.map((_, i) => {
     const type = aiTypes[i] || aiTypes[0];
-    const AIClass = type === 'baseline' ? BaselineAIPlayer : AIPlayer;
-    return new AIClass({ log });
+    const features = DIFFICULTY_PRESETS[type] || DIFFICULTY_PRESETS.improved;
+    return new AIPlayer({ features, log });
   });
 
   let turns = 0;
@@ -321,7 +319,7 @@ console.log(`Players: ${playerCount}, Stockpile: ${stockpileSize}, Games: ${game
 
 if (compareBaseline) {
   console.log(`\nRunning head-to-head: improved AI (Alice) vs baseline AI (Bob)...`);
-  const stats = runSuite('new-vs-baseline', gameCount);
+  const stats = runSuite('improved-vs-baseline', gameCount);
 
   printStats('Head-to-head: Improved (Alice) vs Baseline (Bob)', stats);
 
@@ -342,8 +340,8 @@ if (compareBaseline) {
   console.log(`    Avg turns: new=${newStats.turns.avg} vs old=${oldStats.turns.avg}`);
   console.log(`    Timeouts:  new=${newStats.timeouts} vs old=${oldStats.timeouts}`);
 } else {
-  const aiType = useOldAI ? 'old' : useBaseline ? 'baseline' : 'new';
-  const label = useOldAI ? 'Old heuristic AI' : useBaseline ? 'Baseline AIPlayer' : 'New AIPlayer';
+  const aiType = useOldAI ? 'old' : aiDifficulty;
+  const label = useOldAI ? 'Old heuristic AI' : `AIPlayer (${aiDifficulty})`;
   console.log(`AI: ${label}\n`);
 
   if (gameCount === 1) {

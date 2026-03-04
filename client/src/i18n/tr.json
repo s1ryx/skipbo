@@ -72,6 +72,7 @@
   "game.addBot": "Bot Ekle",
   "game.removeBot": "Kaldır",
   "game.aiImproved": "Gelişmiş Bot",
+  "game.aiAdvanced": "Uzman Bot",
   "game.aiBaseline": "Temel Bot",
 
   "card.wild": "JOKER",

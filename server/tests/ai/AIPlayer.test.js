@@ -1,4 +1,5 @@
 const { AIPlayer } = require('../../ai/AIPlayer');
+const { DIFFICULTY_PRESETS } = require('../../ai/presets');
 
 function makeState(overrides = {}) {
   const playerState = {
@@ -210,6 +211,110 @@ describe('AIPlayer', () => {
       // Should play 1 first (starts a pile), then potentially chain
       expect(plays.length).toBeGreaterThanOrEqual(1);
       expect(plays[0].card).toBe(1);
+    });
+  });
+
+  describe('force play on empty hand', () => {
+    test('plays from discard when hand is empty and deck is exhausted', () => {
+      // Empty hand, empty deck — only discard pile has a playable card.
+      // Score may be negative but AI must play to avoid deadlock.
+      const { playerState, gameState } = makeState({
+        hand: [],
+        deckCount: 0,
+        discardPiles: [[1], [], [], []], // discard 0 top = 1
+        buildingPiles: [[], [], [], []], // all need 1
+        oppStockTop: 2, // opponent close to pile need → negative penalty
+      });
+      const play = ai.findPlayableCard(playerState, gameState);
+      expect(play).not.toBeNull();
+      expect(play.card).toBe(1);
+      expect(play.source).toBe('discard0');
+    });
+
+    test('plays from stockpile when hand is empty', () => {
+      const { playerState, gameState } = makeState({
+        hand: [],
+        deckCount: 0,
+        stockpileTop: 1,
+        stockpileCount: 5,
+        buildingPiles: [[], [], [], []], // all need 1
+      });
+      // Stockpile plays are checked first (always play if possible)
+      const play = ai.findPlayableCard(playerState, gameState);
+      expect(play).not.toBeNull();
+      expect(play.source).toBe('stockpile');
+      expect(play.card).toBe(1);
+    });
+
+    test('returns null when hand is empty and no plays exist', () => {
+      const { playerState, gameState } = makeState({
+        hand: [],
+        deckCount: 0,
+        discardPiles: [[5], [], [], []], // discard top 5, no pile needs 5
+        buildingPiles: [[1, 2, 3], [], [], []], // pile 0 needs 4, rest need 1
+      });
+      const play = ai.findPlayableCard(playerState, gameState);
+      expect(play).toBeNull();
+    });
+  });
+
+  describe('baseline preset', () => {
+    let baselineAi;
+
+    beforeEach(() => {
+      baselineAi = new AIPlayer({ features: DIFFICULTY_PRESETS.baseline });
+    });
+
+    test('SKIP-BO stockpile play works without reachability scoring', () => {
+      const { playerState, gameState } = makeState({
+        hand: [5, 6, 7, 8, 9],
+        stockpileTop: 'SKIP-BO',
+        buildingPiles: [[1, 2, 3], [], [], []], // pile 0 needs 4
+        oppStockTop: 10, // far away — no penalty
+      });
+      const play = baselineAi.findPlayableCard(playerState, gameState);
+      expect(play).not.toBeNull();
+      expect(play.source).toBe('stockpile');
+      expect(play.card).toBe('SKIP-BO');
+    });
+
+    test('SKIP-BO stockpile scores differ from improved due to reachability', () => {
+      // Two piles both accept SKIP-BO. With reachability, improved
+      // may prefer the pile that yields more distinct pile needs.
+      // Baseline only considers chain length + tiebreaker.
+      const improvedAi = new AIPlayer({ features: DIFFICULTY_PRESETS.improved });
+      const state = makeState({
+        hand: [5, 6, 7, 8, 9],
+        stockpileTop: 'SKIP-BO',
+        buildingPiles: [[], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [], []], // pile 0 needs 1, pile 1 needs 12
+        oppStockTop: 10,
+      });
+      // Both should return a valid play; we're testing they don't crash
+      const basePlay = baselineAi.findPlayableCard(state.playerState, state.gameState);
+      const improvedPlay = improvedAi.findPlayableCard(state.playerState, state.gameState);
+      expect(basePlay).not.toBeNull();
+      expect(improvedPlay).not.toBeNull();
+    });
+
+    test('chooseDiscard works without runway detection', () => {
+      const { playerState, gameState } = makeState({
+        hand: [5, 6, 7, 8, 9],
+      });
+      const discard = baselineAi.chooseDiscard(playerState, gameState);
+      expect(discard).not.toBeNull();
+      expect(playerState.hand).toContain(discard.card);
+    });
+  });
+
+  describe('constructor', () => {
+    test('defaults to improved preset', () => {
+      const defaultAi = new AIPlayer();
+      expect(defaultAi.features).toEqual(DIFFICULTY_PRESETS.improved);
+    });
+
+    test('accepts explicit features', () => {
+      const customAi = new AIPlayer({ features: DIFFICULTY_PRESETS.advanced });
+      expect(customAi.features).toEqual(DIFFICULTY_PRESETS.advanced);
     });
   });
 });

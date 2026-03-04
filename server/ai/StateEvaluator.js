@@ -8,9 +8,14 @@
  * The evaluation is outcome-based (not strategy-based): it measures HOW CLOSE
  * a position is to winning, not whether a specific strategy pattern is followed.
  * This lets optimal strategies emerge from the search rather than being coded.
+ *
+ * Behavior is controlled by feature flags (see presets.js). Different presets
+ * toggle scoring components on/off to create distinct difficulty levels from
+ * a single codebase.
  */
 
 const { getNextCardValue } = require('./ChainDetector');
+const { DIFFICULTY_PRESETS, DEFAULT_DIFFICULTY } = require('./presets');
 
 // ── Discard pile quality metrics ─────────────────────────────────────
 
@@ -63,26 +68,29 @@ function discardQuality(discardPiles) {
 /**
  * Score a specific discard placement: card C on pile P.
  *
- * Tier system (§4.7 of strategy doc):
+ * When features.qualityAwareScoring is enabled (improved/advanced):
  *   Tier 1: Contiguous descending (top = card+1)     → +10
  *   Tier 2: Same value (top = card)                   → +7
  *   Tier 3: Empty pile                                → +5
  *   Tier 4: Adjacent gap descending (top = card+2..3) → +2..+3
- *   Tier 5: Large gap descending "bricking" (top > card+3) → -1..-3
- *   Tier 6: Ascending (top < card)                    → -5-jump
+ *   Tier 5: Large gap descending "bricking" (top > card+3) → -1..-3 (quality-scaled)
+ *   Tier 6: Ascending (top < card)                    → -5-jump (quality-scaled)
  *
- * Optional pileQuality param (from pileChainQuality) scales bricking/ascending
- * penalties — bricking an already-bricked pile costs less.
+ * When features.qualityAwareScoring is disabled (baseline):
+ *   Empty pile → +1, bricking → +1 (no negative penalties for large gaps)
  *
  * @param {number|string} card
  * @param {Array} pile
  * @param {number} [pileQuality] - chain quality of pile (higher = cleaner)
+ * @param {Object} [features] - difficulty features (defaults to improved behavior)
  * @returns {number} score (higher = better)
  */
-function discardPlacementScore(card, pile, pileQuality) {
+function discardPlacementScore(card, pile, pileQuality, features) {
   if (typeof card !== 'number') return 0; // SKIP-BO should never be discarded
 
-  if (pile.length === 0) return 5; // Tier 3: empty pile — safe, preserves structure
+  const qualityAware = !features || features.qualityAwareScoring !== false;
+
+  if (pile.length === 0) return qualityAware ? 5 : 1;
 
   const top = pile[pile.length - 1];
   if (typeof top !== 'number') return 0;
@@ -98,6 +106,7 @@ function discardPlacementScore(card, pile, pileQuality) {
       return diff === 2 ? 3 : 2;
     }
     // Tier 5: large gap descending — bricking
+    if (!qualityAware) return 1;
     const basePenalty = Math.max(-3, -(diff - 3));
     if (pileQuality != null) {
       const qualityMultiplier = Math.min(pileQuality, 4) / 4;
@@ -108,6 +117,7 @@ function discardPlacementScore(card, pile, pileQuality) {
 
   // Tier 6: ascending — buries the current top
   const basePenalty = -5 - (card - top);
+  if (!qualityAware) return basePenalty;
   if (pileQuality != null) {
     const qualityMultiplier = Math.min(pileQuality, 4) / 4;
     return Math.round(basePenalty * (0.25 + 0.75 * qualityMultiplier));
@@ -277,17 +287,18 @@ class StateEvaluator {
   /**
    * @param {CardCounter} cardCounter
    * @param {ChainDetector} chainDetector
+   * @param {Object} [features] - difficulty features (defaults to improved preset)
    */
-  constructor(cardCounter, chainDetector) {
+  constructor(cardCounter, chainDetector, features) {
     this.cc = cardCounter;
     this.cd = chainDetector;
+    this.features = features || DIFFICULTY_PRESETS[DEFAULT_DIFFICULTY];
   }
 
   /**
-   * Score a candidate play action.
+   * Score a candidate play chain.
    *
-   * @param {Object} play - { card, source, pileIndex } from ChainDetector
-   * @param {Object} chain - the full chain this play starts (from ChainDetector)
+   * @param {Object} chain - chain metadata from ChainDetector
    * @param {Object} playerState
    * @param {Object} gameState
    * @returns {number} score (higher = better)
@@ -300,7 +311,11 @@ class StateEvaluator {
 
     // ── Chain length ──
     score += chain.totalPlays * 5;
-    score += this._discardSourceBonus(chain, playerState); // replaces flat discardsRevealed*3
+    if (this.features.qualityAwareScoring) {
+      score += this._discardSourceBonus(chain, playerState);
+    } else {
+      score += chain.discardsRevealed * 3;
+    }
     score += chain.pilesCompleted * 2;
 
     // ── Cycling value (hand empties → draw 5 fresh cards) ──
@@ -316,6 +331,11 @@ class StateEvaluator {
 
     // ── Pile advancement toward own stockpile ──
     score += this._ownStockpileAdvancement(chain, playerState, gameState);
+
+    // ── Stockpile-first ordering penalty (advanced only) ──
+    if (this.features.stockpileOrderingPenalty) {
+      score += this._stockpileOrderingPenalty(chain);
+    }
 
     return score;
   }
@@ -337,19 +357,23 @@ class StateEvaluator {
     if (card === 'SKIP-BO') return -1000;
 
     const pile = playerState.discardPiles[pileIndex];
-    const quality = pileChainQuality(pile);
-    const pileNeeds = gameState.buildingPiles.map((p) => getNextCardValue(p));
 
-    // ── Placement quality (with sacrifice pile scaling via pileQuality) ──
-    let placementScore = discardPlacementScore(card, pile, quality);
+    if (this.features.qualityAwareScoring) {
+      const quality = pileChainQuality(pile);
+      const pileNeeds = gameState.buildingPiles.map((p) => getNextCardValue(p));
 
-    // ── Frozen pile discount: bricking a frozen pile costs less ──
-    const frozen = isPileFrozen(pile, playerState.stockpileTop, pileNeeds);
-    if (frozen && placementScore < 0) {
-      placementScore = Math.round(placementScore * 0.4); // 60% discount
+      let placementScore = discardPlacementScore(card, pile, quality, this.features);
+
+      // Frozen pile discount: bricking a frozen pile costs less
+      const frozen = isPileFrozen(pile, playerState.stockpileTop, pileNeeds);
+      if (frozen && placementScore < 0) {
+        placementScore = Math.round(placementScore * 0.4); // 60% discount
+      }
+
+      score += placementScore;
+    } else {
+      score += discardPlacementScore(card, pile, undefined, this.features);
     }
-
-    score += placementScore;
 
     // ── Hold value (inverted — lower hold value = better to discard) ──
     score -= this._holdValue(card, playerState, gameState);
@@ -358,7 +382,7 @@ class StateEvaluator {
     score += this._blockingValue(card, gameState);
 
     // ── Runway preservation (cross-pile sequence planning) ──
-    if (runway && runway.length >= 3) {
+    if (this.features.runwayDetection && runway && runway.length >= 3) {
       if (runway.cards.has(card)) {
         score -= 8; // breaking a multi-turn sequence
       } else {
@@ -439,20 +463,47 @@ class StateEvaluator {
 
   /**
    * Penalty for advancing piles toward opponent's stockpile value.
-   *
-   * Only penalizes the FINAL state of each pile after the chain completes,
-   * not intermediate states. The opponent can't act between our plays within
-   * a single turn, so intermediate pile values are irrelevant — what matters
-   * is where we LEAVE the piles (§7.2 danger zone principle).
-   *
-   * Includes:
-   * - Final-state distance penalties with graduated scale
-   * - Danger zone: extra penalty when opponent needs just ONE card
-   * - Player count scaling: penalties scale down with more players (§7.2)
+   * Dispatches to simple (baseline) or advanced (improved/advanced) logic.
    */
   _opponentImpact(chain, playerState, gameState) {
-    let penalty = 0;
+    if (this.features.advancedOpponentPenalty) {
+      return this._opponentImpactAdvanced(chain, playerState, gameState);
+    }
+    return this._opponentImpactSimple(chain, playerState, gameState);
+  }
 
+  /**
+   * Baseline opponent impact: per-play penalties summed across opponents.
+   * No danger zone analysis, no player count scaling.
+   */
+  _opponentImpactSimple(chain, playerState, gameState) {
+    let penalty = 0;
+    for (const play of chain.plays) {
+      for (const player of gameState.players) {
+        if (
+          player.stockpileCount === playerState.stockpileCount &&
+          player.stockpileTop === playerState.stockpileTop
+        )
+          continue;
+        const distances = opponentDistances(gameState, player.stockpileTop);
+        const dist = distances[play.pileIndex];
+        if (dist == null) continue;
+        if (dist <= 0) penalty -= 20;
+        else if (dist === 1) penalty -= 4;
+        else if (dist === 2) penalty -= 1;
+      }
+    }
+    return penalty;
+  }
+
+  /**
+   * Advanced opponent impact: final-state analysis with danger zones.
+   *
+   * Only penalizes the FINAL state of each pile after the chain completes,
+   * not intermediate states. Uses worst single opponent penalty (not sum)
+   * with player count scaling.
+   */
+  _opponentImpactAdvanced(chain, playerState, gameState) {
     // Player count scaling (§7.2): blocking matters less with more opponents
     const playerCount = gameState.players.length;
     const scaleFactor =
@@ -470,8 +521,10 @@ class StateEvaluator {
       finalNeeds[play.pileIndex] = actualValue === 12 ? 1 : actualValue + 1;
     }
 
+    // Track worst single opponent's penalty (not sum across all opponents)
+    let worstPenalty = 0;
+
     for (const player of gameState.players) {
-      // Skip self (rough match by stockpile count — imperfect but sufficient)
       if (
         player.stockpileCount === playerState.stockpileCount &&
         player.stockpileTop === playerState.stockpileTop
@@ -491,6 +544,8 @@ class StateEvaluator {
         }
       }
 
+      let oppPenalty = 0;
+
       // ── Final-state penalty for each pile ──
       for (let pi = 0; pi < 4; pi++) {
         const finalNeed = finalNeeds[pi];
@@ -503,24 +558,28 @@ class StateEvaluator {
 
         if (distance === 0) {
           // Blunder: opponent plays stock directly on their turn
-          penalty -= 50 * scaleFactor;
+          oppPenalty -= 50;
         } else if (distance === 1) {
           // Danger zone: opponent needs ONE card to reach stock
           const bridgeVal = finalNeed;
           const hasBridge = oppDiscardTops.has(bridgeVal) || oppDiscardTops.has('SKIP-BO');
-          penalty -= (hasBridge ? 40 : 15) * scaleFactor;
+          oppPenalty -= hasBridge ? 40 : 15;
         } else if (distance === 2) {
           let bridgesVisible = 0;
           for (let v = finalNeed; v < oppStock; v++) {
             if (oppDiscardTops.has(v) || oppDiscardTops.has('SKIP-BO')) bridgesVisible++;
           }
-          penalty -= (bridgesVisible >= 2 ? 12 : 1) * scaleFactor;
+          oppPenalty -= bridgesVisible >= 2 ? 12 : 1;
         }
         // distance >= 3 or negative (past opponent stock): safe
       }
+
+      if (oppPenalty < worstPenalty) {
+        worstPenalty = oppPenalty;
+      }
     }
 
-    return Math.round(penalty);
+    return Math.round(worstPenalty * scaleFactor);
   }
 
   /**
@@ -556,6 +615,32 @@ class StateEvaluator {
     }
 
     return bonus;
+  }
+
+  /**
+   * Stockpile-first ordering penalty (§4.3 of strategy doc).
+   *
+   * Penalizes chains that play unrelated cards before the first stockpile play.
+   * -7 per unrelated play (outweighs +5 per-play bonus).
+   */
+  _stockpileOrderingPenalty(chain) {
+    if (chain.stockpilePlays === 0 || !chain.plays) return 0;
+
+    const firstStockIdx = chain.plays.findIndex((p) => p.source === 'stockpile');
+    if (firstStockIdx <= 0) return 0;
+
+    const stockPileIndex = chain.plays[firstStockIdx].pileIndex;
+    let penalty = 0;
+
+    for (let i = 0; i < firstStockIdx; i++) {
+      // Plays on the same building pile as the stockpile play are part of
+      // advancing toward the stockpile — they're not "unrelated"
+      if (chain.plays[i].pileIndex !== stockPileIndex) {
+        penalty -= 7;
+      }
+    }
+
+    return penalty;
   }
 
   /**
@@ -614,7 +699,7 @@ class StateEvaluator {
     // Fits a discard pile well (reduces cost of discarding)
     let bestFit = -Infinity;
     for (const pile of playerState.discardPiles) {
-      bestFit = Math.max(bestFit, discardPlacementScore(card, pile));
+      bestFit = Math.max(bestFit, discardPlacementScore(card, pile, undefined, this.features));
     }
     // Good fit reduces hold value (easier to discard without damage)
     value -= Math.max(0, bestFit) * 0.5;

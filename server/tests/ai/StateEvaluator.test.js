@@ -8,6 +8,7 @@ const {
 } = require('../../ai/StateEvaluator');
 const { CardCounter } = require('../../ai/CardCounter');
 const { ChainDetector } = require('../../ai/ChainDetector');
+const { DIFFICULTY_PRESETS } = require('../../ai/presets');
 
 // ── Test helpers ──────────────────────────────────────────────────────
 
@@ -39,10 +40,10 @@ function makeState(overrides = {}) {
   return { playerState, gameState };
 }
 
-function makeEvaluator() {
+function makeEvaluator(features) {
   const cc = new CardCounter();
   const cd = new ChainDetector();
-  return new StateEvaluator(cc, cd);
+  return new StateEvaluator(cc, cd, features);
 }
 
 // ── pileChainQuality ──────────────────────────────────────────────────
@@ -469,5 +470,355 @@ describe('StateEvaluator.scoreChain', () => {
     // _discardSourceBonus should be 0 for hand-only plays
     const bonus = evaluator._discardSourceBonus(chain, playerState);
     expect(bonus).toBe(0);
+  });
+});
+
+// ── Difficulty feature flags ─────────────────────────────────────────
+
+describe('discardPlacementScore with baseline features', () => {
+  const baseline = DIFFICULTY_PRESETS.baseline;
+
+  test('empty pile = +1 in baseline', () => {
+    expect(discardPlacementScore(5, [], undefined, baseline)).toBe(1);
+  });
+
+  test('bricking = +1 in baseline (no negative penalty)', () => {
+    expect(discardPlacementScore(2, [10], undefined, baseline)).toBe(1);
+    expect(discardPlacementScore(1, [12], undefined, baseline)).toBe(1);
+  });
+
+  test('contiguous descending unchanged in baseline', () => {
+    expect(discardPlacementScore(9, [10], undefined, baseline)).toBe(10);
+  });
+
+  test('same value unchanged in baseline', () => {
+    expect(discardPlacementScore(7, [7], undefined, baseline)).toBe(7);
+  });
+
+  test('adjacent gap unchanged in baseline', () => {
+    expect(discardPlacementScore(5, [7], undefined, baseline)).toBe(3);
+    expect(discardPlacementScore(5, [8], undefined, baseline)).toBe(2);
+  });
+
+  test('ascending unchanged in baseline', () => {
+    expect(discardPlacementScore(8, [5], undefined, baseline)).toBe(-8);
+  });
+
+  test('baseline ignores pileQuality parameter', () => {
+    // bricking with quality should still return +1 in baseline
+    expect(discardPlacementScore(2, [10], 3, baseline)).toBe(1);
+    expect(discardPlacementScore(2, [10], 0, baseline)).toBe(1);
+  });
+
+  test('empty pile = +5 in improved (default)', () => {
+    // No features param → improved behavior
+    expect(discardPlacementScore(5, [])).toBe(5);
+  });
+});
+
+describe('baseline StateEvaluator.scoreChain', () => {
+  test('uses flat discardsRevealed bonus instead of quality-aware bonus', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);
+
+    const chain = {
+      plays: [{ card: 6, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [8, 9, 10, 11, 12],
+      discardPiles: [[5, 9, 6], [], [], []],
+      buildingPiles: [[1, 2, 3, 4, 5], [], [], []],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const baselineScore = evaluator.scoreChain(chain, playerState, gameState);
+
+    // Improved evaluator uses quality-aware bonus
+    const improvedEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+    improvedEval.cc.update(playerState, gameState);
+    const improvedScore = improvedEval.scoreChain(chain, playerState, gameState);
+
+    // Scores should differ because of different discard bonus calculation
+    expect(baselineScore).not.toBe(improvedScore);
+  });
+});
+
+describe('baseline StateEvaluator.scoreDiscard', () => {
+  test('no frozen pile discount in baseline', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);
+
+    const { playerState, gameState } = makeState({
+      hand: [4, 8, 9, 10, 12],
+      stockpileTop: 7,
+      discardPiles: [[7, 7], [], [], []],
+      buildingPiles: [[1, 2], [], [], []],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    // In baseline, bricking returns +1, so no frozen discount needed
+    const score = evaluator.scoreDiscard(4, 0, playerState, gameState);
+    // Baseline placement of 4 on [7,7]: diff=3, adjacent gap → +2
+    // The score should reflect baseline placement scoring
+    expect(typeof score).toBe('number');
+  });
+
+  test('no runway preservation in baseline', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);
+
+    const { playerState, gameState } = makeState({
+      hand: [3, 4, 5, 8, 12],
+      buildingPiles: [[1, 2], [], [], []],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const runway = { length: 3, cards: new Set([3, 4, 5]) };
+
+    // Baseline ignores runway — discarding a runway card has no extra penalty
+    const withRunway = evaluator.scoreDiscard(3, 1, playerState, gameState, runway);
+    const withoutRunway = evaluator.scoreDiscard(3, 1, playerState, gameState);
+    expect(withRunway).toBe(withoutRunway);
+  });
+});
+
+describe('baseline StateEvaluator._opponentImpact', () => {
+  test('uses simple per-play penalties (no danger zone)', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);
+
+    // Playing 4 on pile [1,2,3] → pile needs 5, opponent stock = 5 → distance 0
+    const chain = {
+      plays: [{ card: 4, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [4],
+      oppStockTop: 5,
+      buildingPiles: [[1, 2, 3], [], [], []],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const impact = evaluator._opponentImpact(chain, playerState, gameState);
+    // Baseline: per-play check, distance=1 after playing → -4
+    // (pile needed 4, opponent stock=5, so initial distance was 1)
+    expect(impact).toBe(-4);
+  });
+
+  test('baseline sums penalties across all opponents', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);
+
+    const chain = {
+      plays: [{ card: 4, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    // 3 opponents all with stock=5, pile [1,2,3] needs 4, distance=1
+    const { playerState, gameState } = makeState({
+      hand: [4],
+      buildingPiles: [[1, 2, 3], [], [], []],
+      players: [
+        { stockpileTop: null, stockpileCount: 30, discardPiles: [[], [], [], []], handCount: 1 },
+        { stockpileTop: 5, stockpileCount: 28, discardPiles: [[], [], [], []], handCount: 5 },
+        { stockpileTop: 5, stockpileCount: 27, discardPiles: [[], [], [], []], handCount: 5 },
+        { stockpileTop: 5, stockpileCount: 26, discardPiles: [[], [], [], []], handCount: 5 },
+      ],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const impact = evaluator._opponentImpact(chain, playerState, gameState);
+    // Baseline sums: 3 opponents × -4 each = -12
+    expect(impact).toBe(-12);
+  });
+});
+
+describe('advanced opponent impact: worst-opponent penalty', () => {
+  test('uses worst single opponent, not sum', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.improved);
+
+    const chain = {
+      plays: [{ card: 4, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    // 3 opponents, all at distance 1 from pile after playing.
+    // Pile [1,2,3] needs 4 → after playing 4, needs 5. Opponent stock=6 → distance 1.
+    const { playerState, gameState } = makeState({
+      hand: [4],
+      buildingPiles: [[1, 2, 3], [], [], []],
+      players: [
+        { stockpileTop: null, stockpileCount: 30, discardPiles: [[], [], [], []], handCount: 1 },
+        { stockpileTop: 6, stockpileCount: 28, discardPiles: [[], [], [], []], handCount: 5 },
+        { stockpileTop: 6, stockpileCount: 27, discardPiles: [[], [], [], []], handCount: 5 },
+        { stockpileTop: 6, stockpileCount: 26, discardPiles: [[], [], [], []], handCount: 5 },
+      ],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const impact = evaluator._opponentImpact(chain, playerState, gameState);
+    // Advanced uses worst-opponent: -15 × 0.4 (4-player scale) = -6
+    // NOT -15 × 3 × 0.4 = -18 (summed)
+    expect(impact).toBe(-6);
+  });
+
+  test('different opponents with different distances picks worst', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.improved);
+
+    const chain = {
+      plays: [{ card: 4, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    // Pile [1,2,3] needs 4 → after playing, needs 5
+    // Opponent A: stock=5 → distance 0 (blunder! -50)
+    // Opponent B: stock=8 → distance 3 (safe, no penalty)
+    const { playerState, gameState } = makeState({
+      hand: [4],
+      buildingPiles: [[1, 2, 3], [], [], []],
+      players: [
+        { stockpileTop: null, stockpileCount: 30, discardPiles: [[], [], [], []], handCount: 1 },
+        { stockpileTop: 5, stockpileCount: 28, discardPiles: [[], [], [], []], handCount: 5 },
+        { stockpileTop: 8, stockpileCount: 27, discardPiles: [[], [], [], []], handCount: 5 },
+      ],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const impact = evaluator._opponentImpact(chain, playerState, gameState);
+    // Worst opponent (A) has -50, scaleFactor for 3 players = 0.6
+    // Result: -50 × 0.6 = -30
+    expect(impact).toBe(-30);
+  });
+});
+
+describe('stockpile ordering penalty (advanced only)', () => {
+  const makeChain = (plays) => ({
+    plays,
+    totalPlays: plays.length,
+    stockpilePlays: plays.filter((p) => p.source === 'stockpile').length,
+    discardsRevealed: 0,
+    pilesCompleted: 0,
+    skipBosUsed: 0,
+    handEmptied: false,
+  });
+
+  test('no penalty when stockpile plays first', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+    const chain = makeChain([
+      { card: 3, source: 'stockpile', pileIndex: 0 },
+      { card: 5, source: 'hand', pileIndex: 1 },
+    ]);
+    expect(evaluator._stockpileOrderingPenalty(chain)).toBe(0);
+  });
+
+  test('no penalty when no stockpile plays', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+    const chain = makeChain([
+      { card: 3, source: 'hand', pileIndex: 0 },
+      { card: 5, source: 'hand', pileIndex: 1 },
+    ]);
+    expect(evaluator._stockpileOrderingPenalty(chain)).toBe(0);
+  });
+
+  test('penalty for unrelated plays before stockpile play', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+    const chain = makeChain([
+      { card: 5, source: 'hand', pileIndex: 1 }, // unrelated pile
+      { card: 8, source: 'hand', pileIndex: 2 }, // unrelated pile
+      { card: 3, source: 'stockpile', pileIndex: 0 },
+    ]);
+    // 2 unrelated plays × -7 = -14
+    expect(evaluator._stockpileOrderingPenalty(chain)).toBe(-14);
+  });
+
+  test('no penalty for same-pile plays before stockpile play', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+    const chain = makeChain([
+      { card: 2, source: 'hand', pileIndex: 0 }, // same pile as stockpile play
+      { card: 3, source: 'stockpile', pileIndex: 0 },
+    ]);
+    // Same pile → advancing toward stockpile, not unrelated
+    expect(evaluator._stockpileOrderingPenalty(chain)).toBe(0);
+  });
+
+  test('mixed related and unrelated plays before stockpile', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+    const chain = makeChain([
+      { card: 2, source: 'hand', pileIndex: 0 }, // same pile — no penalty
+      { card: 7, source: 'hand', pileIndex: 2 }, // unrelated — penalty
+      { card: 3, source: 'stockpile', pileIndex: 0 },
+    ]);
+    // 1 unrelated × -7 = -7
+    expect(evaluator._stockpileOrderingPenalty(chain)).toBe(-7);
+  });
+
+  test('improved preset does not apply stockpile ordering penalty', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.improved);
+
+    const chain = makeChain([
+      { card: 5, source: 'hand', pileIndex: 1 },
+      { card: 3, source: 'stockpile', pileIndex: 0 },
+    ]);
+
+    const { playerState, gameState } = makeState({
+      hand: [5],
+      stockpileTop: 3,
+      buildingPiles: [[1, 2], [1, 2, 3, 4], [], []],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    // Improved scoreChain should not include the ordering penalty
+    const improvedScore = evaluator.scoreChain(chain, playerState, gameState);
+
+    const advancedEval = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+    advancedEval.cc.update(playerState, gameState);
+    const advancedScore = advancedEval.scoreChain(chain, playerState, gameState);
+
+    // Advanced should be lower due to -7 penalty for unrelated play on pile 1
+    expect(advancedScore).toBe(improvedScore - 7);
+  });
+});
+
+describe('constructor defaults', () => {
+  test('defaults to improved preset when no features provided', () => {
+    const evaluator = makeEvaluator();
+    // Verify it has improved features by checking quality-aware scoring
+    expect(evaluator.features.qualityAwareScoring).toBe(true);
+    expect(evaluator.features.advancedOpponentPenalty).toBe(true);
+    expect(evaluator.features.stockpileOrderingPenalty).toBe(false);
+  });
+
+  test('accepts explicit features override', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+    expect(evaluator.features.stockpileOrderingPenalty).toBe(true);
+  });
+
+  test('accepts baseline features', () => {
+    const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);
+    expect(evaluator.features.qualityAwareScoring).toBe(false);
+    expect(evaluator.features.advancedOpponentPenalty).toBe(false);
   });
 });
