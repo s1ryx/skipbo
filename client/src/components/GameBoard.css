@@ -191,6 +191,10 @@
   transition: transform var(--transition-fast);
 }
 
+.card-in-hand:not(:first-child) {
+  margin-left: -30px;
+}
+
 .pile-label {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
@@ -227,6 +231,10 @@
 
 .card-in-pile-small {
   position: relative;
+}
+
+.card-in-pile-small:not(:first-child) {
+  margin-top: -45px;
 }
 
 .empty-pile-small {
@@ -424,17 +432,21 @@
   position: relative;
 }
 
+.card-in-pile:not(:first-child) {
+  margin-top: -50px;
+}
+
 .card-in-pile.top-card {
   cursor: pointer;
   z-index: 10;
 }
 
 .card-in-pile.top-card:hover {
-  transform: translateY(-10px) !important;
+  transform: translateY(-10px);
 }
 
 .card-in-pile.top-card.selected {
-  transform: translateY(-15px) !important;
+  transform: translateY(-15px);
   filter: brightness(1.2);
 }
 
@@ -874,12 +886,8 @@
   }
 
   /* More aggressive card overlap in discard piles */
-  .card-in-pile {
-    margin-top: -42px !important;
-  }
-
-  .card-in-pile:first-child {
-    margin-top: 0 !important;
+  .card-in-pile:not(:first-child) {
+    margin-top: -42px;
   }
 
   .building-pile {
@@ -1056,12 +1064,8 @@
   }
 
   /* Even more aggressive overlap for smallest screens */
-  .card-in-pile {
-    margin-top: -38px !important;
-  }
-
-  .card-in-pile:first-child {
-    margin-top: 0 !important;
+  .card-in-pile:not(:first-child) {
+    margin-top: -38px;
   }
 }
 

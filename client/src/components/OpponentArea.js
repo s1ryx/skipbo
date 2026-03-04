@@ -34,7 +34,7 @@ function OpponentArea({ opponents, currentPlayerId }) {
                   <div
                     key={idx}
                     className="card-in-hand"
-                    style={{ marginLeft: idx > 0 ? '-30px' : '0', zIndex: idx }}
+                    style={{ zIndex: idx }}
                   >
                     <Card value="?" isVisible={false} size="small" />
                   </div>
@@ -53,7 +53,6 @@ function OpponentArea({ opponents, currentPlayerId }) {
                         <div
                           key={`opponent-${idx}-${cardIndex}-${card}-${pile.length}`}
                           className="card-in-pile-small"
-                          style={{ marginTop: cardIndex > 0 ? '-45px' : '0' }}
                         >
                           <Card value={card} isVisible={true} size="small" />
                         </div>

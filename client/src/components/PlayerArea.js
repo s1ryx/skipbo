@@ -59,7 +59,6 @@ function PlayerArea({
                       <div
                         key={`${index}-${cardIndex}-${card}-${pile.length}`}
                         className={`card-in-pile ${cardIndex === pile.length - 1 ? 'top-card' : ''} ${selectedCard === card && cardIndex === pile.length - 1 && selectedSource === `discard${index}` ? 'selected' : ''}`}
-                        style={{ marginTop: cardIndex > 0 ? '-50px' : '0' }}
                         onClick={(e) => {
                           if (discardMode) {
                             return;
