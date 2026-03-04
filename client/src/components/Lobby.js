@@ -17,19 +17,21 @@ function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
   };
   const [showJoinForm, setShowJoinForm] = useState(false);
 
-  // Listen for invite link hand-offs from other tabs
+  // Listen for invite link hand-offs from other tabs.
+  // Skip messages whose senderId matches initialRoomId's sender — that means
+  // the message came from our own tab (App.js in the same page).
   useEffect(() => {
     const channel = new BroadcastChannel('skipbo-lobby');
     channel.onmessage = (e) => {
-      if (e.data.type === 'joinRoom') {
+      if (e.data.type === 'joinRoom' && !initialRoomId) {
         setRoomIdToJoin(e.data.roomId);
         setShowJoinForm(true);
-        channel.postMessage({ type: 'joinRoom:ack' });
+        channel.postMessage({ type: 'joinRoom:ack', senderId: e.data.senderId });
         window.focus();
       }
     };
     return () => channel.close();
-  }, []);
+  }, [initialRoomId]);
 
   // If initialRoomId is provided from URL, pre-fill and show join form
   useEffect(() => {

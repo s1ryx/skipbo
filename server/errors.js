@@ -30,6 +30,7 @@ const ErrorCodes = Object.freeze({
   INVALID_DISCARD_PILE: 'error.invalidDiscardPile',
   CARD_NOT_IN_HAND: 'error.cardNotInHand',
   PLAYER_NOT_FOUND_DRAW: 'error.playerNotFoundDraw',
+  CANNOT_PASS: 'error.cannotPass',
 
   // Bot management
   ONLY_HOST_CAN_ADD_BOT: 'error.onlyHostCanAddBot',

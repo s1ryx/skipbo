@@ -22,15 +22,19 @@ function App() {
       const roomIdUpper = roomParam.toUpperCase();
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      // Try to hand off the room code to an existing tab
+      // Try to hand off the room code to an existing tab.
+      // Include a senderId so the Lobby listener in this same tab ignores
+      // its own message (BroadcastChannel excludes the sending *instance*,
+      // not the sending *tab*, so without this the tab would ack itself).
+      const senderId = Math.random().toString(36).slice(2);
       const channel = new BroadcastChannel('skipbo-lobby');
       channel.onmessage = (e) => {
-        if (e.data.type === 'joinRoom:ack') {
+        if (e.data.type === 'joinRoom:ack' && e.data.senderId === senderId) {
           channel.close();
           window.close();
         }
       };
-      channel.postMessage({ type: 'joinRoom', roomId: roomIdUpper });
+      channel.postMessage({ type: 'joinRoom', roomId: roomIdUpper, senderId });
       setTimeout(() => channel.close(), 1000);
 
       // Also proceed normally in case close fails or no other tab is listening
@@ -52,6 +56,7 @@ function App() {
     startGame,
     playCard,
     discardCard,
+    passTurn,
     leaveLobby,
     leaveGame,
     requestRematch,
@@ -94,6 +99,7 @@ function App() {
             roomId={roomId}
             onPlayCard={playCard}
             onDiscardCard={discardCard}
+            onPassTurn={passTurn}
             onLeaveGame={leaveGame}
             onRequestRematch={requestRematch}
             onUpdateRematchSettings={updateRematchSettings}
