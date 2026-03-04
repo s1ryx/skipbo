@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { AIPlayer } = require('./ai/AIPlayer');
-const { AIPlayer: BaselineAIPlayer } = require('./ai/baseline/AIPlayer');
+const { DIFFICULTY_PRESETS } = require('./ai/presets');
 const { BOT_ID_PREFIX } = require('./config');
 
 class BotManager {
@@ -10,7 +10,7 @@ class BotManager {
   }
 
   createBot(roomId, game, aiType) {
-    const validAiType = aiType === 'improved' || aiType === 'baseline' ? aiType : 'improved';
+    const validAiType = DIFFICULTY_PRESETS[aiType] ? aiType : 'improved';
     const botConnectionId = BOT_ID_PREFIX + crypto.randomUUID();
     const botNumber = game.players.filter((p) => p.isBot).length + 1;
     const botName = `Bot ${botNumber}`;
@@ -22,8 +22,8 @@ class BotManager {
     botPlayer.isBot = true;
     botPlayer.aiType = validAiType;
 
-    const AIClass = validAiType === 'baseline' ? BaselineAIPlayer : AIPlayer;
-    this.botAIs.set(`${roomId}:${botPlayer.publicId}`, new AIClass());
+    const features = DIFFICULTY_PRESETS[validAiType];
+    this.botAIs.set(`${roomId}:${botPlayer.publicId}`, new AIPlayer({ features }));
 
     return { botId: botConnectionId, botName, publicId: botPlayer.publicId, aiType: validAiType };
   }
