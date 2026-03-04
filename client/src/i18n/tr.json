@@ -59,6 +59,8 @@
   "game.clickToDiscard": "Iskartaya çıkarmak için tıkla ",
   "game.empty": "Boş",
   "game.endTurn": "Sıranı Bitir (Iskarta Kartı Seç)",
+  "game.passTurn": "Sıranı Pas Geç",
+  "game.noCardsToDiscard": "Iskarta edilecek kart yok — sıranı pas geç",
   "game.selected": "Seçili Kart:",
   "game.quickDiscard": "Hızlı Iskarta (seçili kartla Iskarta destene tıkla)",
   "game.gameOver": "Oyun Bitti!",
@@ -106,6 +108,7 @@
   "error.invalidSession": "Geçersiz oturum",
   "error.invalidSource": "Geçersiz kart kaynağı",
   "error.onlyHostCanStart": "Sadece oda sahibi oyunu başlatabilir",
+  "error.cannotPass": "Şu anda sıranı pas geçemezsin",
   "error.serverFull": "Sunucu dolu",
 
   "connection.disconnected": "Bağlantı kesildi. Yeniden bağlanılıyor...",

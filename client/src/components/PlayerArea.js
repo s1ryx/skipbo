@@ -13,6 +13,7 @@ function PlayerArea({
   onCardSelect,
   onDiscardPileClick,
   onEndTurn,
+  onPassTurn,
   onCancelDiscard,
   onClearSelection,
   onToggleQuickDiscard,
@@ -107,7 +108,12 @@ function PlayerArea({
             {t('game.endTurn')}
           </button>
         )}
-        {isMyTurn && discardMode && (
+        {isMyTurn && discardMode && playerState.hand.length === 0 && (
+          <button onClick={onPassTurn} className="btn-pass-turn">
+            {t('game.passTurn')}
+          </button>
+        )}
+        {isMyTurn && discardMode && playerState.hand.length > 0 && (
           <button onClick={onCancelDiscard} className="btn-cancel-discard">
             {t('game.cancel')}
           </button>

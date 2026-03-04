@@ -59,6 +59,8 @@
   "game.clickToDiscard": "Click to discard",
   "game.empty": "Empty",
   "game.endTurn": "End Turn (Discard a Card)",
+  "game.passTurn": "Pass Turn",
+  "game.noCardsToDiscard": "No cards to discard — pass your turn",
   "game.selected": "Selected:",
   "game.quickDiscard": "Quick Discard (click discard pile with selected card)",
   "game.gameOver": "Game Over!",
@@ -106,6 +108,7 @@
   "error.invalidSession": "Invalid session",
   "error.invalidSource": "Invalid card source",
   "error.onlyHostCanStart": "Only the host can start the game",
+  "error.cannotPass": "Cannot pass turn right now",
   "error.serverFull": "Server is full",
 
   "connection.disconnected": "Connection lost. Reconnecting...",

@@ -106,6 +106,10 @@ export default function useGameConnection() {
     transportRef.current?.send('discardCard', { card, discardPileIndex });
   }, []);
 
+  const passTurn = useCallback(() => {
+    transportRef.current?.send('passTurn');
+  }, []);
+
   const leaveLobby = useCallback(() => {
     transportRef.current?.send('leaveLobby');
     sessionStorage.removeItem('skipBoSession');
@@ -161,6 +165,7 @@ export default function useGameConnection() {
     startGame,
     playCard,
     discardCard,
+    passTurn,
     leaveLobby,
     leaveGame,
     requestRematch,

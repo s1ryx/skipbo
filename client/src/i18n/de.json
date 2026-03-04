@@ -59,6 +59,8 @@
   "game.clickToDiscard": "Klicken zum Ablegen",
   "game.empty": "Leer",
   "game.endTurn": "Zug beenden (Karte ablegen)",
+  "game.passTurn": "Zug passen",
+  "game.noCardsToDiscard": "Keine Karten zum Ablegen — Zug passen",
   "game.selected": "Ausgewählt:",
   "game.quickDiscard": "Schnell ablegen (Hilfsstapel mit gewählter Karte anklicken)",
   "game.gameOver": "Spiel vorbei!",
@@ -106,6 +108,7 @@
   "error.invalidSession": "Ungültige Sitzung",
   "error.invalidSource": "Ungültige Kartenquelle",
   "error.onlyHostCanStart": "Nur der Gastgeber kann das Spiel starten",
+  "error.cannotPass": "Zug kann gerade nicht gepasst werden",
   "error.serverFull": "Server ist voll",
 
   "connection.disconnected": "Verbindung verloren. Erneut verbinden...",

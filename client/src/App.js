@@ -52,6 +52,7 @@ function App() {
     startGame,
     playCard,
     discardCard,
+    passTurn,
     leaveLobby,
     leaveGame,
     requestRematch,
@@ -94,6 +95,7 @@ function App() {
             roomId={roomId}
             onPlayCard={playCard}
             onDiscardCard={discardCard}
+            onPassTurn={passTurn}
             onLeaveGame={leaveGame}
             onRequestRematch={requestRematch}
             onUpdateRematchSettings={updateRematchSettings}

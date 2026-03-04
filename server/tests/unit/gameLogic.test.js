@@ -512,6 +512,53 @@ describe('SkipBoGame', () => {
     });
   });
 
+  describe('canPass', () => {
+    let p1, p2;
+
+    beforeEach(() => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      p1 = game.players[0].internalId;
+      p2 = game.players[1].internalId;
+      game.startGame();
+    });
+
+    it('returns true when hand and deck are both empty', () => {
+      game.players[0].hand = [];
+      game.deck = [];
+      expect(game.canPass(p1)).toBe(true);
+    });
+
+    it('returns false when hand has cards', () => {
+      game.players[0].hand = [3, 7];
+      game.deck = [];
+      expect(game.canPass(p1)).toBe(false);
+    });
+
+    it('returns false when deck has cards', () => {
+      game.players[0].hand = [];
+      game.deck = [1, 2, 3];
+      expect(game.canPass(p1)).toBe(false);
+    });
+
+    it('returns false when both hand and deck have cards', () => {
+      game.players[0].hand = [5];
+      game.deck = [1];
+      expect(game.canPass(p1)).toBe(false);
+    });
+
+    it('returns false when it is not the player turn', () => {
+      game.players[1].hand = [];
+      game.deck = [];
+      expect(game.canPass(p2)).toBe(false);
+    });
+
+    it('returns false for unknown player', () => {
+      game.deck = [];
+      expect(game.canPass('unknown')).toBe(false);
+    });
+  });
+
   describe('getGameState', () => {
     it('returns the expected shape', () => {
       game.addPlayer('p1', 'Alice');

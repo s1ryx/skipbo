@@ -1426,6 +1426,101 @@ describe('GameCoordinator', () => {
     });
   });
 
+  describe('passTurn', () => {
+    it('advances turn when hand and deck are both empty', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      const handlers = coordinator.getTransportHandlers();
+
+      game.players[0].hand = [];
+      game.deck = [];
+
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'passTurn', {});
+
+      expect(game.getCurrentPlayer().connectionId).toBe('player2');
+
+      const turnChangedCalls = transport.sendToGroup.mock.calls.filter(
+        (c) => c[1] === 'turnChanged'
+      );
+      expect(turnChangedCalls).toHaveLength(1);
+    });
+
+    it('sends error when pass is not allowed', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      const handlers = coordinator.getTransportHandlers();
+
+      // Hand still has cards — cannot pass
+      game.deck = [];
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'passTurn', {});
+
+      const errorCalls = transport.send.mock.calls.filter(
+        (c) => c[0] === 'player1' && c[1] === 'error'
+      );
+      expect(errorCalls).toHaveLength(1);
+      expect(errorCalls[0][2].message).toBe('error.cannotPass');
+    });
+
+    it('sends error when room not found', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('unknown', 'passTurn', {});
+
+      const errorCalls = transport.send.mock.calls.filter(
+        (c) => c[0] === 'unknown' && c[1] === 'error'
+      );
+      expect(errorCalls).toHaveLength(1);
+      expect(errorCalls[0][2].message).toBe('error.roomNotFound');
+    });
+  });
+
+  describe('bot pass turn', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('bot passes turn when hand and deck are both empty', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('player1', 'startGame', {});
+      const game = coordinator.games.get(roomId);
+
+      // Clear initial bot timers
+      coordinator.botManager.clearTimers(roomId);
+
+      // Make it the bot's turn by ending p1's turn via discard
+      const p1 = game.players[0];
+      p1.hand = [3, 5, 7, 9, 11];
+      handlers.onMessage('player1', 'discardCard', { card: 3, discardPileIndex: 0 });
+
+      // Now it should be the bot's turn
+      const bot = game.players.find((p) => p.isBot);
+      expect(game.getCurrentPlayer().internalId).toBe(bot.internalId);
+
+      // Empty the bot's hand and the deck
+      bot.hand = [];
+      game.deck = [];
+
+      // Advance timers to trigger bot turn
+      transport.sendToGroup.mockClear();
+      jest.advanceTimersByTime(2000);
+
+      // The bot should have passed — turn should now be back to player1
+      expect(game.getCurrentPlayer().internalId).toBe(p1.internalId);
+
+      const turnChangedCalls = transport.sendToGroup.mock.calls.filter(
+        (c) => c[1] === 'turnChanged'
+      );
+      expect(turnChangedCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   describe('bot + rematch interaction', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
