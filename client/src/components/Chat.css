@@ -93,11 +93,11 @@
   font-weight: 700;
   padding: 0 6px;
   border: 2px solid white;
-  animation: pulse 2s infinite;
+  animation: chat-pulse 2s infinite;
   box-shadow: 0 2px 8px rgba(229, 62, 62, 0.5);
 }
 
-@keyframes pulse {
+@keyframes chat-pulse {
   0%,
   100% {
     transform: scale(1);
