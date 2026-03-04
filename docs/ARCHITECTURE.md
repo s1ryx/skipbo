@@ -59,13 +59,13 @@ game coordinator or React components.
 [`SocketIOTransport`](https://github.com/s1ryx/skipbo/blob/e757e5c4/server/transport/SocketIOTransport.js)
 implements:
 
-| Method                                               | Socket.IO equivalent                 | Line                                                                                                          |
-| ---------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `send(connectionId, event, data)`                    | `io.to(socketId).emit(event, data)`  | [66-68](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L66-L68)          |
-| `sendToGroup(groupId, event, data)`                  | `io.to(roomId).emit(event, data)`    | [71-73](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L71-L73)          |
-| `sendToGroupExcept(groupId, excludeId, event, data)` | `io.to(roomId).except(id).emit(...)` | [76-78](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L76-L78)          |
-| `addToGroup(connectionId, groupId)`                  | `socket.join(roomId)`                | [81-86](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L81-L86)          |
-| `removeFromGroup(connectionId, groupId)`             | `socket.leave(roomId)`               | [89-94](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L89-L94)          |
+| Method                                               | Socket.IO equivalent                 | Line                                                                                                 |
+| ---------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `send(connectionId, event, data)`                    | `io.to(socketId).emit(event, data)`  | [66-68](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L66-L68) |
+| `sendToGroup(groupId, event, data)`                  | `io.to(roomId).emit(event, data)`    | [71-73](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L71-L73) |
+| `sendToGroupExcept(groupId, excludeId, event, data)` | `io.to(roomId).except(id).emit(...)` | [76-78](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L76-L78) |
+| `addToGroup(connectionId, groupId)`                  | `socket.join(roomId)`                | [81-86](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L81-L86) |
+| `removeFromGroup(connectionId, groupId)`             | `socket.leave(roomId)`               | [89-94](https://github.com/s1ryx/skipbo/blob/9accfc10/server/transport/SocketIOTransport.js#L89-L94) |
 
 The adapter accepts three handler callbacks on construction
 ([SocketIOTransport.js:28-33](https://github.com/s1ryx/skipbo/blob/a50b4ca3/server/transport/SocketIOTransport.js#L28-L33)):
@@ -82,11 +82,11 @@ Rate limiting is applied per connection.
 [`SocketIOClientTransport`](https://github.com/s1ryx/skipbo/blob/68c9542b/client/src/transport/SocketIOClientTransport.js)
 implements:
 
-| Method              | Socket.IO equivalent       | Line                                                                                                                     |
-| ------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `connect()`         | `io(url)`                  | [36-53](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L36-L53)           |
-| `send(event, data)` | `socket.emit(event, data)` | [56-60](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L56-L60)           |
-| `disconnect()`      | `socket.close()`           | [63-68](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L63-L68)           |
+| Method              | Socket.IO equivalent       | Line                                                                                                           |
+| ------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `connect()`         | `io(url)`                  | [36-53](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L36-L53) |
+| `send(event, data)` | `socket.emit(event, data)` | [56-60](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L56-L60) |
+| `disconnect()`      | `socket.close()`           | [63-68](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L63-L68) |
 
 All 16 known server events are forwarded through `onMessage(event, data)`
 ([SERVER_EVENTS:4-21](https://github.com/s1ryx/skipbo/blob/68c9542b/client/src/transport/SocketIOClientTransport.js#L4-L21)).
@@ -122,16 +122,16 @@ transport.attach(server);
 
 ### Module Overview
 
-| Module                                                                                                               | Lines | Responsibility                              |
-| -------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------- |
-| [`gameCoordinator.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/gameCoordinator.js)                     | ~1020 | Event handling, orchestration, broadcasting |
-| [`gameLogic.js`](https://github.com/s1ryx/skipbo/blob/75c49393/server/gameLogic.js)                                 | ~437  | Game rules engine (SkipBoGame class)        |
-| [`config.js`](https://github.com/s1ryx/skipbo/blob/e757e5c4/server/config.js)                                       | ~67   | Constants, Phase enum, BOT_ID_PREFIX        |
-| [`errors.js`](https://github.com/s1ryx/skipbo/blob/833f1737/server/errors.js)                                       | ~42   | GameError class and ErrorCodes              |
-| [`logger.js`](https://github.com/s1ryx/skipbo/blob/c1a03c5/server/logger.js)                                        | ~30   | Structured JSON logger factory              |
-| [`SessionManager.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/SessionManager.js)                       | ~44   | Connection-to-room mapping                  |
-| [`BotManager.js`](https://github.com/s1ryx/skipbo/blob/5074075/server/BotManager.js)                                | ~75   | Bot AI instances, timer scheduling          |
-| [`GameRepository.js`](https://github.com/s1ryx/skipbo/blob/6873a30c/server/GameRepository.js)                       | ~70   | Game storage, cleanup timers                |
+| Module                                                                                          | Lines | Responsibility                              |
+| ----------------------------------------------------------------------------------------------- | ----- | ------------------------------------------- |
+| [`gameCoordinator.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/gameCoordinator.js) | ~1020 | Event handling, orchestration, broadcasting |
+| [`gameLogic.js`](https://github.com/s1ryx/skipbo/blob/75c49393/server/gameLogic.js)             | ~437  | Game rules engine (SkipBoGame class)        |
+| [`config.js`](https://github.com/s1ryx/skipbo/blob/e757e5c4/server/config.js)                   | ~67   | Constants, Phase enum, BOT_ID_PREFIX        |
+| [`errors.js`](https://github.com/s1ryx/skipbo/blob/833f1737/server/errors.js)                   | ~42   | GameError class and ErrorCodes              |
+| [`logger.js`](https://github.com/s1ryx/skipbo/blob/c1a03c5/server/logger.js)                    | ~30   | Structured JSON logger factory              |
+| [`SessionManager.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/SessionManager.js)   | ~44   | Connection-to-room mapping                  |
+| [`BotManager.js`](https://github.com/s1ryx/skipbo/blob/5074075/server/BotManager.js)            | ~75   | Bot AI instances, timer scheduling          |
+| [`GameRepository.js`](https://github.com/s1ryx/skipbo/blob/6873a30c/server/GameRepository.js)   | ~70   | Game storage, cleanup timers                |
 
 ### Game Coordinator
 
@@ -172,7 +172,7 @@ is a plain class that encapsulates all game rules:
 - **Deck** — 144 cards from [`createDeck()`](https://github.com/s1ryx/skipbo/blob/e757e5c4/server/gameLogic.js#L49-L60):
   12 copies each of 1–12, plus 18 SKIP-BO wilds
 - **Player model** — [`{ internalId, connectionId, publicId, name,
-  stockpile[], hand[], discardPiles[4][] }`](https://github.com/s1ryx/skipbo/blob/d6a72f73/server/gameLogic.js#L70-L87)
+stockpile[], hand[], discardPiles[4][] }`](https://github.com/s1ryx/skipbo/blob/d6a72f73/server/gameLogic.js#L70-L87)
 - **Phase** — [`this.phase`](https://github.com/s1ryx/skipbo/blob/2e7e0d9e/server/gameLogic.js#L37) tracks `LOBBY` → `PLAYING` → `FINISHED`
   (backward-compatible `gameStarted`/`gameOver` getters provided)
 - **Building piles** — 4 shared piles that count 1→12, [cleared when
