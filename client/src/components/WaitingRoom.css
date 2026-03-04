@@ -160,7 +160,7 @@
 }
 
 .bot-badge {
-  color: #4a9eff;
+  color: var(--color-bot);
   font-weight: 600;
   font-size: 0.85em;
 }
@@ -202,7 +202,7 @@
 
 .btn-add-bot {
   padding: 8px 16px;
-  background: #4a9eff;
+  background: var(--color-bot);
   color: white;
   border: none;
   border-radius: var(--radius-base, 4px);

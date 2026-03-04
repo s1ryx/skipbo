@@ -43,6 +43,9 @@
   --color-btn-neutral: #e2e8f0;
   --color-btn-neutral-hover: #cbd5e0;
 
+  /* Bot indicator */
+  --color-bot: #4a9eff;
+
   /* Card suit colors */
   --color-card-blue: #4a90e2;
   --color-card-blue-light: #5ba3f5;
