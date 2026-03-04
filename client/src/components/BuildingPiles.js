@@ -18,13 +18,15 @@ function BuildingPiles({ piles, isClickable, onPileClick }) {
           >
             <div className="pile-info">
               {t('game.pile', { index: index + 1 })}
-              {pile.length > 0 && (
-                <span className="next-card">
-                  {getNextCardForPile(pile)
-                    ? t('game.nextCard', { value: getNextCardForPile(pile) })
-                    : t('game.pileComplete')}
-                </span>
-              )}
+              {pile.length > 0 &&
+                (() => {
+                  const nextCard = getNextCardForPile(pile);
+                  return (
+                    <span className="next-card">
+                      {nextCard ? t('game.nextCard', { value: nextCard }) : t('game.pileComplete')}
+                    </span>
+                  );
+                })()}
             </div>
             {pile.length > 0 ? (
               <div className="pile-stack">
