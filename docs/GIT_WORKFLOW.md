@@ -1,5 +1,7 @@
 # Git-Flow Branching Workflow
 
+> Part of the [project documentation](../README.md#documentation).
+
 This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/) for managing development and releases. Understanding this workflow is essential for contributing effectively.
 
 ![Git-Flow Branching Model](images/git-flow-model.png)
@@ -153,7 +155,7 @@ git branch -d hotfix-1.2.1
 git push origin --delete hotfix-1.2.1
 ```
 
-**Special consideration**: If a release branch exists when creating a hotfix, merge the hotfix to the release branch instead of `develop`. The changes will propagate to `develop` when bug fixes from the release branch are continuously merged back.
+**Special consideration**: If a release branch exists when creating a hotfix, merge the hotfix to the release branch instead of `develop`. The changes will propagate to `develop` when the release branch is merged back.
 
 ## Release Management
 
@@ -162,7 +164,7 @@ Release branches coordinate the transition from development to production. They 
 **Release branches** (`release-*`):
 
 - **Branch from**: `develop` (when ready for release)
-- **Merge back to**: `master` (at completion) AND `develop` (continuously during preparation)
+- **Merge back to**: Both `master` AND `develop` (at completion)
 - **Naming**: `release-X.Y` (e.g., `release-1.2`, `release-2.0`)
 - **Purpose**: Prepare production releases (bug fixes, final polishing, then version bumping)
 - **Allowed changes**: Only minor bug fixes and release metadata (no new features)
@@ -201,36 +203,18 @@ git checkout -b release-1.2 develop
 git push -u origin release-1.2
 ```
 
-**Step 2: Release preparation with continuous merging**
+**Step 2: Release preparation (bug fixes only)**
 
-During this phase, `develop` continues to receive new features for the next release, while the release branch focuses on stabilization through bug fixes only.
-
-**Critical**: Bug fixes made on the release branch should be **continuously merged back to develop** as they are made. This ensures `develop` always has the latest fixes. Since the version hasn't been bumped yet, these merges are clean and don't pollute develop with release version numbers.
+During this phase, `develop` continues to receive new features for the next release, while the release branch focuses on stabilization through bug fixes only. No new features are allowed on the release branch — they go to `develop` for the next release.
 
 ```bash
-# On release-1.2 branch: fix a bug found during testing (commit directly)
+# On release-1.2 branch: fix bugs found during testing
 git commit -m "fix: correct score display rounding"
-git push origin release-1.2
-
-# Immediately merge this fix back to develop
-git checkout develop
-git merge --no-ff release-1.2
-git push origin develop
-
-# Back on release branch: fix another bug
-git checkout release-1.2
 git commit -m "fix: adjust card animation timing"
 git push origin release-1.2
-
-# Immediately merge to develop again
-git checkout develop
-git merge --no-ff release-1.2
-git push origin develop
 ```
 
-**Pattern**: After each bug fix on the release branch, merge the entire branch to `develop` immediately using `--no-ff`. Git is smart enough to recognize which commits already exist and will only add the new bug fix. This keeps `develop` in sync with all stability improvements.
-
-**No new features allowed on release branch** - they go to `develop` for the next release.
+Bug fixes stay on the release branch until the final merge to `develop` in Step 5. They will reach `develop` together with the version bump in a single merge commit.
 
 **Step 3: Version bump as final commit**
 
@@ -242,8 +226,6 @@ When all bug fixes are complete and you're ready to release:
 git commit -m "chore: bump version to 1.2.0"
 git push origin release-1.2
 ```
-
-**Why bump version last**: By making the version bump the final commit on the release branch, all prior bug fixes have already been merged to `develop` without the release version number. This keeps `develop` at its own development version while ensuring it has all stability fixes.
 
 **Step 4: Merge to master and create tag**
 
@@ -293,25 +275,14 @@ nano release-notes.txt
 git tag -s v1.2.0 -F release-notes.txt
 ```
 
-**Step 5: Skip final merge to develop**
+**Step 5: Merge release branch back to develop**
 
-Because you've been continuously merging bug fixes to `develop` throughout the release process, **develop already has all the important changes**. The only new commit on the release branch is the version bump, which develop doesn't need (it should maintain its own development version).
-
-**Therefore, skip the final merge to develop.** The develop branch already has all bug fixes from continuous merging.
+The release branch must be merged back into `develop` so that future releases also contain the bug fixes. This single merge brings all fixes and the version bump into `develop` and keeps `master` a direct ancestor of `develop`, ensuring clean merges for subsequent releases.
 
 ```bash
-# No final merge needed - develop already has all bug fixes
-# The version bump stays isolated to master
-```
-
-**Optional**: If you specifically want the release version bump in develop's history (rare), you can merge:
-
-```bash
-# Optional: merge if you want version bump in develop
+# Merge release to develop with --no-ff
 git checkout develop
 git merge --no-ff release-1.2
-# Then manually revert the version back to development version
-git commit -m "chore: revert to development version"
 git push origin develop
 ```
 
@@ -328,27 +299,24 @@ git push origin --delete release-1.2
 ```
 Time →
 
-develop:  ---F1---F2---M1---M2------------------F3---
-                   \  /    /
-release-1.2:        \-B1--B2---V (version bump)
-                                \
-master:   ---------------------------M3--v1.2.0 (tag)
+develop:  ---F1---F2-------------------------------M2---F3---
+                   \                               /
+release-1.2:        \---B1---B2---V (version bump)
+                                   \
+master:   --------------------------M1---v1.2.0 (tag)
 
 F1, F2, F3 = Features (continue on develop during release)
-B1, B2 = Bug fixes (committed on release, continuously merged to develop)
-M1, M2 = Continuous merges bringing B1, B2 to develop
-V = Version bump (last commit, only on release branch)
-M3 = Merge to master (creates production release with all fixes + version)
-
-Note: No final merge to develop since it already has B1, B2 via M1, M2
+B1, B2 = Bug fixes on release branch
+V = Version bump (last commit on release branch)
+M1 = Merge to master (creates production release)
+M2 = Merge to develop (brings all fixes + version bump, keeps ancestry clean)
 ```
 
 **Key Points**:
 
-- **Version bump LAST**: This is the crucial difference - bump version as the final commit
-- **Continuous merging**: Bug fixes continuously merge to `develop` (without version bump)
-- **Clean separation**: Develop gets all fixes but keeps its own development version
-- **No final merge needed**: Skip the traditional final merge to develop - it already has everything important
+- **Version bump LAST**: Bump version as the final commit on the release branch
+- **Single merge to develop**: All bug fixes reach `develop` in one merge at the end, keeping history clean
+- **Always merge back**: The release branch must be merged to both `master` and `develop` — this keeps master as a direct ancestor of develop, ensuring clean merges for future releases
 - Features continue being added to `develop` while release is being prepared
 - Always use **--no-ff** when merging branches to preserve history and enable easy rollback
 - Simple bug fixes (single commits) go directly on release branch, no dedicated fix branch needed
@@ -377,8 +345,8 @@ Note: No final merge to develop since it already has B1, B2 via M1, M2
 - **Easy rollback**: Features can be reverted as a unit using merge commits
 - **Hotfix capability**: Critical fixes can bypass normal development cycle
 - **Release preparation**: Releases can be polished while development continues
-- **Continuous stability**: Bug fixes immediately available on develop through continuous merging
-- **Version isolation**: Release versions stay on master, develop keeps development versions
+- **Clean ancestry**: Merging release to both master and develop keeps master as ancestor of develop
+- **Minimal merge noise**: One merge commit per release on develop, not one per bug fix
 - **Code review**: Pushing branches enables collaboration and early bug detection
 - **Clean history**: Single-commit bug fixes don't clutter history with unnecessary merge commits
 

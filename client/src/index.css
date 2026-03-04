@@ -1,3 +1,104 @@
+:root {
+  /* Brand */
+  --color-primary: #667eea;
+  --color-primary-dark: #764ba2;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #5a6fd6 0%, #6a4296 100%);
+
+  /* Status */
+  --color-danger: #e53e3e;
+  --color-danger-hover: #c53030;
+  --color-danger-disconnect: #ff6b6b;
+  --color-success: #4caf50;
+  --color-success-hover: #45a049;
+  --color-warning: #ff9800;
+
+  /* Surfaces */
+  --color-surface: white;
+  --color-surface-alt: #f5f5f5;
+  --color-surface-primary-tint: #f5f5ff;
+  --color-surface-primary-hover: #f0f0ff;
+
+  /* Text hierarchy */
+  --color-text-primary: #333;
+  --color-text-secondary: #555;
+  --color-text-muted: #999;
+
+  /* Borders */
+  --color-border: #e0e0e0;
+  --color-border-placeholder: #ccc;
+
+  /* Overlays */
+  --color-overlay-soft: rgba(0, 0, 0, 0.3);
+  --color-overlay-medium: rgba(0, 0, 0, 0.6);
+  --color-overlay-heavy: rgba(0, 0, 0, 0.8);
+
+  /* Dropdown (language selector) */
+  --color-dropdown-bg: #2d3748;
+  --color-dropdown-text: #e2e8f0;
+
+  /* Neutral buttons */
+  --color-btn-neutral: #e2e8f0;
+  --color-btn-neutral-hover: #cbd5e0;
+
+  /* Card suit colors */
+  --color-card-blue: #4a90e2;
+  --color-card-blue-light: #5ba3f5;
+  --color-card-blue-border: #2563eb;
+  --color-card-green: #48bb78;
+  --color-card-green-light: #5cd68a;
+  --color-card-green-border: #16a34a;
+  --color-card-red: #e53e3e;
+  --color-card-red-light: #f56565;
+  --color-card-red-border: #dc2626;
+  --color-card-wild: #ffd700;
+  --color-card-wild-light: #ffed4e;
+  --color-card-wild-border: #ff9800;
+  --color-card-back: #e74c3c;
+  --color-card-back-dark: #c0392b;
+  --color-card-back-border: #a93226;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-sm-heavy: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --shadow-lg-heavy: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+  /* Shadows: primary glow */
+  --shadow-primary-sm: 0 2px 8px rgba(102, 126, 234, 0.3);
+  --shadow-primary-md: 0 4px 12px rgba(102, 126, 234, 0.4);
+  --shadow-primary-lg: 0 6px 16px rgba(102, 126, 234, 0.6);
+  --shadow-primary-glow: 0 8px 16px rgba(102, 126, 234, 0.3);
+
+  /* Shadows: danger glow */
+  --shadow-danger-sm: 0 2px 8px rgba(229, 62, 62, 0.3);
+  --shadow-danger-md: 0 4px 12px rgba(229, 62, 62, 0.4);
+  --shadow-danger-lg: 0 6px 16px rgba(229, 62, 62, 0.6);
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-base: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 20px;
+  --radius-circle: 50%;
+
+  /* Transitions */
+  --transition-fast: 0.2s;
+  --transition-normal: 0.3s;
+
+  /* Card dimensions (overridden per breakpoint in Card.css) */
+  --card-width: 80px;
+  --card-height: 110px;
+  --card-width-sm: 50px;
+  --card-height-sm: 70px;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -10,7 +111,7 @@ body {
     'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   min-height: 100vh;
 }
 

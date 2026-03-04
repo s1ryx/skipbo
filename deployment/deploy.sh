@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Skip-Bo Game Deployment Script
-# This script helps you deploy the Skip-Bo game using Docker
+# Deploys the game with automatic HTTPS via Caddy + LetsEncrypt
 
 set -e
 
 echo "╔════════════════════════════════════════════════════╗"
-echo "║      Skip-Bo Card Game - Docker Deployment        ║"
+echo "║       Skip-Bo Card Game - Docker Deployment        ║"
 echo "╚════════════════════════════════════════════════════╝"
 echo ""
 
@@ -17,65 +17,93 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+# Determine compose command
+COMPOSE_CMD=""
+if docker compose version &> /dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+else
     echo "❌ Docker Compose is not installed. Please install Docker Compose first:"
     echo "   https://docs.docker.com/compose/install/"
     exit 1
 fi
 
 echo "✅ Docker is installed"
-echo "✅ Docker Compose is installed"
-echo ""
-
-# Detect IP address
-echo "🔍 Detecting your IP address..."
-if command -v hostname &> /dev/null; then
-    IP_ADDRESS=$(hostname -I 2>/dev/null | awk '{print $1}')
-elif command -v ip &> /dev/null; then
-    IP_ADDRESS=$(ip addr show | grep "inet " | grep -v "127.0.0.1" | awk '{print $2}' | cut -d/ -f1 | head -n1)
-else
-    IP_ADDRESS="localhost"
-fi
-
-echo "📍 Your IP address: $IP_ADDRESS"
+echo "✅ Docker Compose is installed ($COMPOSE_CMD)"
 echo ""
 
 # Navigate to docker directory
-cd "$(dirname "$0")/docker"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/docker"
+
+# Check for .env file
+if [ ! -f ".env" ]; then
+    if [ -f ".env.example" ]; then
+        echo "📝 No .env file found. Let's create one."
+        echo ""
+
+        read -p "Enter your domain name (e.g. skipbo.example.com): " DOMAIN
+        read -p "Enter email for LetsEncrypt notifications (optional, press Enter to skip): " ACME_EMAIL
+
+        {
+            echo "DOMAIN=$DOMAIN"
+            [ -n "$ACME_EMAIL" ] && echo "ACME_EMAIL=$ACME_EMAIL"
+        } > .env
+        echo ""
+        echo "✅ Created .env with domain: $DOMAIN"
+    else
+        echo "❌ No .env file or .env.example found."
+        exit 1
+    fi
+fi
+
+# Source .env to display domain
+source .env
+echo "🌐 Domain: $DOMAIN"
+echo ""
+
+# Embed git commit hash in the client build (shown in footer)
+export REACT_APP_COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 # Build and start services
 echo "🏗️  Building Docker images (this may take a few minutes)..."
-docker-compose build
+$COMPOSE_CMD build
 
 echo ""
 echo "🚀 Starting services..."
-docker-compose up -d
+$COMPOSE_CMD down --remove-orphans 2>/dev/null || true
+$COMPOSE_CMD up -d
 
 echo ""
 echo "⏳ Waiting for services to be healthy..."
-sleep 5
+sleep 10
 
 # Check if services are running
-if docker-compose ps | grep -q "Up"; then
-    echo ""
+echo ""
+echo "📊 Service status:"
+$COMPOSE_CMD ps
+echo ""
+
+if $COMPOSE_CMD ps | grep -q "Up\|running"; then
     echo "╔════════════════════════════════════════════════════╗"
-    echo "║             ✅ Deployment Successful!              ║"
+    echo "║              ✅ Deployment Successful!             ║"
     echo "╚════════════════════════════════════════════════════╝"
     echo ""
     echo "🎮 Access the game at:"
-    echo "   Local:   http://localhost"
-    echo "   Network: http://$IP_ADDRESS"
+    echo "   https://$DOMAIN"
     echo ""
-    echo "📊 View logs:           docker-compose logs -f"
-    echo "🔄 Restart services:    docker-compose restart"
-    echo "🛑 Stop services:       docker-compose down"
-    echo "📋 Check status:        docker-compose ps"
+    echo "   Caddy will automatically obtain a LetsEncrypt"
+    echo "   certificate on first request. This may take a"
+    echo "   few seconds on the very first visit."
     echo ""
-    echo "🎉 Happy gaming!"
+    echo "📊 Useful commands:"
+    echo "   View logs:       $COMPOSE_CMD logs -f"
+    echo "   Restart:         $COMPOSE_CMD restart"
+    echo "   Stop:            $COMPOSE_CMD down"
+    echo "   Status:          $COMPOSE_CMD ps"
+    echo ""
 else
-    echo ""
-    echo "❌ Something went wrong. Check logs with:"
-    echo "   docker-compose logs"
-    exit 1
+    echo "⚠️  Services may still be starting. Check logs with:"
+    echo "   $COMPOSE_CMD logs -f"
 fi

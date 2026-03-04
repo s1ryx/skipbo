@@ -1,0 +1,66 @@
+// Game rules
+const HAND_SIZE = 5;
+const MAX_CARD_VALUE = 12;
+const BUILDING_PILES = 4;
+const DISCARD_PILES = 4;
+const CARDS_PER_VALUE = 12;
+const SKIPBO_WILDS = 18;
+const DEFAULT_STOCKPILE_LARGE = 30; // 2-4 players
+const DEFAULT_STOCKPILE_SMALL = 20; // 5+ players
+const LARGE_GAME_THRESHOLD = 4; // players above this get smaller stockpiles
+
+// Room rules
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 6;
+const MIN_STOCKPILE_SIZE = 1;
+const MAX_STOCKPILE_SIZE = 30;
+
+// Timers
+const LOBBY_GRACE_PERIOD_MS = 30000;
+const COMPLETED_GAME_TTL_MS = 300000;
+
+// Limits
+const MAX_PENDING_ROOMS = 50;
+const MAX_TOTAL_ROOMS = 200;
+const MAX_PLAYER_NAME_LENGTH = 30;
+const MAX_CHAT_MESSAGE_LENGTH = 500;
+
+// Rate limiting
+const RATE_LIMIT_WINDOW_MS = 10000;
+const RATE_LIMIT_MAX_EVENTS = 30;
+
+// Game phases
+const Phase = Object.freeze({
+  LOBBY: 'lobby',
+  PLAYING: 'playing',
+  FINISHED: 'finished',
+});
+
+// Bot ID convention
+const BOT_ID_PREFIX = 'bot-';
+
+module.exports = {
+  HAND_SIZE,
+  MAX_CARD_VALUE,
+  BUILDING_PILES,
+  DISCARD_PILES,
+  CARDS_PER_VALUE,
+  SKIPBO_WILDS,
+  DEFAULT_STOCKPILE_LARGE,
+  DEFAULT_STOCKPILE_SMALL,
+  LARGE_GAME_THRESHOLD,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+  MIN_STOCKPILE_SIZE,
+  MAX_STOCKPILE_SIZE,
+  LOBBY_GRACE_PERIOD_MS,
+  COMPLETED_GAME_TTL_MS,
+  MAX_PENDING_ROOMS,
+  MAX_TOTAL_ROOMS,
+  MAX_PLAYER_NAME_LENGTH,
+  MAX_CHAT_MESSAGE_LENGTH,
+  RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX_EVENTS,
+  Phase,
+  BOT_ID_PREFIX,
+};

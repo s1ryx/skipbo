@@ -1,28 +1,59 @@
+const crypto = require('crypto');
+const {
+  HAND_SIZE,
+  MAX_CARD_VALUE,
+  BUILDING_PILES,
+  DISCARD_PILES,
+  CARDS_PER_VALUE,
+  SKIPBO_WILDS,
+  DEFAULT_STOCKPILE_LARGE,
+  DEFAULT_STOCKPILE_SMALL,
+  LARGE_GAME_THRESHOLD,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+  MIN_STOCKPILE_SIZE,
+  Phase,
+} = require('./config');
+const { ErrorCodes } = require('./errors');
+
+const VALID_SOURCES = new Set([
+  'hand',
+  'stockpile',
+  'discard0',
+  'discard1',
+  'discard2',
+  'discard3',
+]);
+
 class SkipBoGame {
   constructor(roomId, playerCount, stockpileSize) {
     this.roomId = roomId;
-    this.playerCount = playerCount;
-    this.stockpileSize = stockpileSize; // Custom stockpile size
+    this.playerCount = Math.min(Math.max(playerCount || MIN_PLAYERS, MIN_PLAYERS), MAX_PLAYERS);
+    this.stockpileSize = stockpileSize || null;
     this.players = [];
     this.deck = [];
-    this.buildingPiles = [[], [], [], []]; // 4 building piles
+    this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
     this.currentPlayerIndex = 0;
-    this.gameStarted = false;
-    this.gameOver = false;
+    this.phase = Phase.LOBBY;
     this.winner = null;
+    this.rematchVotes = new Set();
   }
 
-  // Create and shuffle the deck
+  get gameStarted() {
+    return this.phase !== Phase.LOBBY;
+  }
+
+  get gameOver() {
+    return this.phase === Phase.FINISHED;
+  }
   createDeck() {
     const deck = [];
-    // 12 cards of each number (1-12), plus 18 Skip-Bo cards
-    for (let i = 1; i <= 12; i++) {
-      for (let j = 0; j < 12; j++) {
+    for (let i = 1; i <= MAX_CARD_VALUE; i++) {
+      for (let j = 0; j < CARDS_PER_VALUE; j++) {
         deck.push(i);
       }
     }
-    // Add 18 Skip-Bo (wild) cards
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < SKIPBO_WILDS; i++) {
       deck.push('SKIP-BO');
     }
     return this.shuffleDeck(deck);
@@ -30,31 +61,42 @@ class SkipBoGame {
 
   shuffleDeck(deck) {
     for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = crypto.randomInt(i + 1);
       [deck[i], deck[j]] = [deck[j], deck[i]];
     }
     return deck;
   }
 
-  addPlayer(playerId, playerName) {
+  addPlayer(connectionId, playerName) {
     if (this.players.length >= this.playerCount) {
       return false;
     }
 
     const player = {
-      id: playerId,
+      internalId: crypto.randomUUID(),
+      connectionId,
+      publicId: crypto.randomUUID().slice(0, 8),
       name: playerName,
       stockpile: [],
       hand: [],
-      discardPiles: [[], [], [], []], // 4 discard piles per player
+      discardPiles: Array.from({ length: DISCARD_PILES }, () => []),
     };
 
     this.players.push(player);
     return true;
   }
 
+  getPlayerByConnectionId(connectionId) {
+    return this.players.find((p) => p.connectionId === connectionId) || null;
+  }
+
+  getPublicId(playerId) {
+    const player = this.players.find((p) => p.internalId === playerId);
+    return player ? player.publicId : null;
+  }
+
   removePlayer(playerId) {
-    const index = this.players.findIndex((p) => p.id === playerId);
+    const index = this.players.findIndex((p) => p.internalId === playerId);
     if (index === -1) {
       return false;
     }
@@ -62,24 +104,48 @@ class SkipBoGame {
     return true;
   }
 
+  updateConnectionId(internalId, newConnectionId) {
+    const player = this.players.find((p) => p.internalId === internalId);
+    if (!player) return false;
+    player.connectionId = newConnectionId;
+    return true;
+  }
+
+  setSessionToken(playerId, token) {
+    const player = this.players.find((p) => p.internalId === playerId);
+    if (!player) return false;
+    player.sessionToken = token;
+    return true;
+  }
+
+  setHost(publicId) {
+    this.hostPublicId = publicId;
+  }
+
+  getMaxStockpileSize() {
+    return this.players.length <= LARGE_GAME_THRESHOLD
+      ? DEFAULT_STOCKPILE_LARGE
+      : DEFAULT_STOCKPILE_SMALL;
+  }
+
+  updateStockpileSize(size) {
+    const maxAllowed = this.getMaxStockpileSize();
+    this.stockpileSize = Math.min(Math.max(size, MIN_STOCKPILE_SIZE), maxAllowed);
+  }
+
   startGame() {
-    if (this.players.length < 2) {
+    if (this.players.length < MIN_PLAYERS) {
       return false;
     }
 
-    // Prevent starting an already-started game
-    if (this.gameStarted) {
+    if (this.phase !== Phase.LOBBY) {
       return false;
     }
 
     this.deck = this.createDeck();
 
-    // Use custom stockpile size if provided, otherwise use default based on player count
-    const stockpileSize = this.stockpileSize || (this.players.length <= 4 ? 30 : 20);
-
-    // Validate stockpile size against game rules
-    const maxAllowed = this.players.length <= 4 ? 30 : 20;
-    const actualStockpileSize = Math.min(stockpileSize, maxAllowed);
+    const maxAllowed = this.getMaxStockpileSize();
+    const actualStockpileSize = Math.min(this.stockpileSize || maxAllowed, maxAllowed);
 
     // Deal stockpiles and hands to each player
     this.players.forEach((player) => {
@@ -88,13 +154,12 @@ class SkipBoGame {
         player.stockpile.push(this.deck.pop());
       }
 
-      // Deal hand (5 cards)
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < HAND_SIZE; i++) {
         player.hand.push(this.deck.pop());
       }
     });
 
-    this.gameStarted = true;
+    this.phase = Phase.PLAYING;
     this.currentPlayerIndex = 0;
     return true;
   }
@@ -112,7 +177,7 @@ class SkipBoGame {
     const lastValue =
       lastCard === 'SKIP-BO' ? this.getActualValue(pileCards, pileCards.length - 1) : lastCard;
 
-    if (lastValue === 12) {
+    if (lastValue === MAX_CARD_VALUE) {
       return null; // Pile is complete
     }
 
@@ -133,6 +198,14 @@ class SkipBoGame {
   }
 
   canPlayCard(card, buildingPileIndex) {
+    if (
+      !Number.isInteger(buildingPileIndex) ||
+      buildingPileIndex < 0 ||
+      buildingPileIndex >= BUILDING_PILES
+    ) {
+      return false;
+    }
+
     const pile = this.buildingPiles[buildingPileIndex];
     const nextValue = this.getNextCardValue(pile);
 
@@ -148,15 +221,19 @@ class SkipBoGame {
   }
 
   playCard(playerId, card, source, buildingPileIndex, _discardIndex = null) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
-    if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'error.notYourTurn' };
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
+      return { success: false, error: ErrorCodes.NOT_YOUR_TURN };
+    }
+
+    if (!VALID_SOURCES.has(source)) {
+      return { success: false, error: ErrorCodes.INVALID_SOURCE };
     }
 
     // Validate the move
     if (!this.canPlayCard(card, buildingPileIndex)) {
-      return { success: false, error: 'error.invalidMove' };
+      return { success: false, error: ErrorCodes.INVALID_MOVE };
     }
 
     // Remove card from source
@@ -182,7 +259,7 @@ class SkipBoGame {
     }
 
     if (!cardRemoved) {
-      return { success: false, error: 'error.cardNotFound' };
+      return { success: false, error: ErrorCodes.CARD_NOT_FOUND };
     }
 
     // Add card to building pile
@@ -194,7 +271,7 @@ class SkipBoGame {
       this.buildingPiles[buildingPileIndex].length - 1
     );
 
-    if (pileValue === 12) {
+    if (pileValue === MAX_CARD_VALUE) {
       // Shuffle completed pile back into deck
       const completedPile = this.buildingPiles[buildingPileIndex];
       this.deck = this.deck.concat(completedPile);
@@ -204,14 +281,13 @@ class SkipBoGame {
       this.buildingPiles[buildingPileIndex] = [];
     }
 
-    // If hand is empty after playing, automatically draw 5 more cards
     if (player.hand.length === 0 && this.deck.length > 0) {
       this.drawCards(playerId);
     }
 
     // Check if player won
     if (player.stockpile.length === 0) {
-      this.gameOver = true;
+      this.phase = Phase.FINISHED;
       this.winner = player;
     }
 
@@ -219,19 +295,23 @@ class SkipBoGame {
   }
 
   discardCard(playerId, card, discardPileIndex) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
-    if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'error.notYourTurn' };
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
+      return { success: false, error: ErrorCodes.NOT_YOUR_TURN };
     }
 
-    if (discardPileIndex < 0 || discardPileIndex > 3) {
-      return { success: false, error: 'error.invalidDiscardPile' };
+    if (
+      !Number.isInteger(discardPileIndex) ||
+      discardPileIndex < 0 ||
+      discardPileIndex >= DISCARD_PILES
+    ) {
+      return { success: false, error: ErrorCodes.INVALID_DISCARD_PILE };
     }
 
     const cardIndex = player.hand.indexOf(card);
     if (cardIndex === -1) {
-      return { success: false, error: 'error.cardNotInHand' };
+      return { success: false, error: ErrorCodes.CARD_NOT_IN_HAND };
     }
 
     // Remove from hand and add to discard pile
@@ -242,14 +322,13 @@ class SkipBoGame {
   }
 
   drawCards(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
     if (!player) {
-      return { success: false, error: 'error.playerNotFoundDraw' };
+      return { success: false, error: ErrorCodes.PLAYER_NOT_FOUND_DRAW };
     }
 
-    // Draw cards until hand has 5 cards
-    while (player.hand.length < 5 && this.deck.length > 0) {
+    while (player.hand.length < HAND_SIZE && this.deck.length > 0) {
       player.hand.push(this.deck.pop());
     }
 
@@ -257,10 +336,10 @@ class SkipBoGame {
   }
 
   endTurn(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
 
-    if (!player || this.getCurrentPlayer().id !== playerId) {
-      return { success: false, error: 'error.notYourTurn' };
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
+      return { success: false, error: ErrorCodes.NOT_YOUR_TURN };
     }
 
     // Move to next player
@@ -268,39 +347,93 @@ class SkipBoGame {
 
     // Draw cards at the START of the new player's turn
     const nextPlayer = this.getCurrentPlayer();
-    this.drawCards(nextPlayer.id);
+    this.drawCards(nextPlayer.internalId);
 
-    return { success: true, nextPlayer: nextPlayer.id };
+    return { success: true, nextPlayer: nextPlayer.internalId };
+  }
+
+  canPass(playerId) {
+    const player = this.players.find((p) => p.internalId === playerId);
+    if (!player || this.getCurrentPlayer().internalId !== playerId) {
+      return false;
+    }
+    return player.hand.length === 0 && this.deck.length === 0;
+  }
+
+  addRematchVote(playerId) {
+    if (this.rematchVotes.has(playerId)) return false;
+    this.rematchVotes.add(playerId);
+    return true;
+  }
+
+  removeRematchVote(playerId) {
+    this.rematchVotes.delete(playerId);
+  }
+
+  clearRematchVotes() {
+    this.rematchVotes.clear();
+  }
+
+  canStartRematch(humanPlayerCount) {
+    return this.rematchVotes.size >= humanPlayerCount;
+  }
+
+  getRematchVoterPublicIds() {
+    return this.players.filter((p) => this.rematchVotes.has(p.internalId)).map((p) => p.publicId);
+  }
+
+  resetForRematch(stockpileSize) {
+    this.phase = Phase.LOBBY;
+    this.winner = null;
+    this.deck = [];
+    this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
+    this.currentPlayerIndex = 0;
+    this.rematchVotes = new Set();
+
+    if (stockpileSize) {
+      this.stockpileSize = stockpileSize;
+    }
+
+    this.players.forEach((player) => {
+      player.stockpile = [];
+      player.hand = [];
+      player.discardPiles = Array.from({ length: DISCARD_PILES }, () => []);
+    });
   }
 
   getGameState() {
     return {
       roomId: this.roomId,
       players: this.players.map((p) => ({
-        id: p.id,
+        id: p.publicId,
         name: p.name,
         stockpileCount: p.stockpile.length,
         stockpileTop: p.stockpile.length > 0 ? p.stockpile[p.stockpile.length - 1] : null,
         handCount: p.hand.length,
         discardPiles: p.discardPiles,
       })),
+      maxPlayers: this.playerCount,
       buildingPiles: this.buildingPiles,
       currentPlayerIndex: this.currentPlayerIndex,
-      currentPlayerId: this.getCurrentPlayer()?.id,
+      currentPlayerId: this.getCurrentPlayer()?.publicId,
       deckCount: this.deck.length,
+      hostPlayerId: this.hostPublicId || null,
+      phase: this.phase,
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
-      winner: this.winner,
+      winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
+      stockpileSize: this.stockpileSize || this.getMaxStockpileSize(),
+      rematchVotes: this.getRematchVoterPublicIds(),
     };
   }
 
   getPlayerState(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p.internalId === playerId);
     if (!player) return null;
 
     return {
       hand: player.hand,
-      stockpile: player.stockpile,
+      stockpileCount: player.stockpile.length,
       stockpileTop:
         player.stockpile.length > 0 ? player.stockpile[player.stockpile.length - 1] : null,
       discardPiles: player.discardPiles,

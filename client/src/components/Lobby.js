@@ -4,11 +4,34 @@ import { useTranslation } from '../i18n';
 
 function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
   const { t } = useTranslation();
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem('skipBoPlayerName') || ''
+  );
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [stockpileSize, setStockpileSize] = useState(30);
   const [roomIdToJoin, setRoomIdToJoin] = useState('');
+
+  const handleNameChange = (name) => {
+    setPlayerName(name);
+    localStorage.setItem('skipBoPlayerName', name);
+  };
   const [showJoinForm, setShowJoinForm] = useState(false);
+
+  // Listen for invite link hand-offs from other tabs.
+  // Skip messages whose senderId matches initialRoomId's sender — that means
+  // the message came from our own tab (App.js in the same page).
+  useEffect(() => {
+    const channel = new BroadcastChannel('skipbo-lobby');
+    channel.onmessage = (e) => {
+      if (e.data.type === 'joinRoom' && !initialRoomId) {
+        setRoomIdToJoin(e.data.roomId);
+        setShowJoinForm(true);
+        channel.postMessage({ type: 'joinRoom:ack', senderId: e.data.senderId });
+        window.focus();
+      }
+    };
+    return () => channel.close();
+  }, [initialRoomId]);
 
   // If initialRoomId is provided from URL, pre-fill and show join form
   useEffect(() => {
@@ -60,7 +83,7 @@ function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
                   <input
                     type="text"
                     value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     placeholder={t('lobby.enterName')}
                     required
                   />
@@ -121,7 +144,7 @@ function Lobby({ onCreateRoom, onJoinRoom, initialRoomId }) {
                   <input
                     type="text"
                     value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     placeholder={t('lobby.enterName')}
                     required
                   />

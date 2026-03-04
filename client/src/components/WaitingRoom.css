@@ -1,0 +1,224 @@
+.waiting-room {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  margin: 20px;
+  max-width: 600px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .waiting-room {
+    margin: 40px auto;
+  }
+}
+
+.lobby-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-start-game {
+  padding: 8px 16px;
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-base);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-primary-sm);
+}
+
+.btn-start-game:hover {
+  background: var(--gradient-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-primary-md);
+}
+
+.btn-start-game:active {
+  transform: translateY(0);
+}
+
+.btn-leave-lobby {
+  padding: 8px 16px;
+  background: var(--color-danger);
+  color: white;
+  border: none;
+  border-radius: var(--radius-base);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-danger-sm);
+}
+
+.btn-leave-lobby:hover {
+  background: var(--color-danger-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-danger-md);
+}
+
+.btn-leave-lobby:active {
+  transform: translateY(0);
+}
+
+.waiting-room h2 {
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+}
+
+.waiting-room p {
+  color: var(--color-text-secondary);
+  margin-bottom: 30px;
+}
+
+.shareable-link-container {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  align-items: center;
+}
+
+.shareable-link-input {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-family: monospace;
+  background: var(--color-surface-alt);
+  cursor: pointer;
+}
+
+.shareable-link-input:focus {
+  outline: none;
+  border-color: var(--color-success);
+}
+
+.btn-copy {
+  padding: 12px 24px;
+  background: var(--color-success);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: bold;
+  transition: background var(--transition-normal);
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  background: var(--color-success-hover);
+}
+
+.or-text {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  margin: 15px 0;
+}
+
+.or-text strong {
+  color: var(--color-text-primary);
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.players-waiting {
+  margin: 30px 0;
+}
+
+.players-waiting h3 {
+  color: var(--color-text-secondary);
+  margin-bottom: 15px;
+}
+
+.players-waiting ul {
+  list-style: none;
+  padding: 0;
+}
+
+.players-waiting li {
+  padding: 10px;
+  background: var(--color-surface-alt);
+  margin: 5px 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.player-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bot-badge {
+  color: #4a9eff;
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.btn-remove-bot {
+  background: none;
+  border: 1px solid var(--color-danger, #e53e3e);
+  color: var(--color-danger, #e53e3e);
+  border-radius: var(--radius-base, 4px);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  line-height: 1;
+  transition: all var(--transition-normal, 0.2s);
+}
+
+.btn-remove-bot:hover {
+  background: var(--color-danger, #e53e3e);
+  color: white;
+}
+
+.add-bot-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.ai-type-select {
+  padding: 8px 12px;
+  border: 2px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-base, 4px);
+  font-size: 0.9rem;
+  background: var(--color-surface, white);
+  color: var(--color-text-primary, #1a202c);
+  cursor: pointer;
+}
+
+.btn-add-bot {
+  padding: 8px 16px;
+  background: #4a9eff;
+  color: white;
+  border: none;
+  border-radius: var(--radius-base, 4px);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal, 0.2s);
+}
+
+.btn-add-bot:hover {
+  background: #3182ce;
+  transform: translateY(-1px);
+}
+
+.btn-add-bot:disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+  transform: none;
+}

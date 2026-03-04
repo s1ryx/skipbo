@@ -1,0 +1,30 @@
+# The repo root is used as build context by Dockerfile.client,
+# which only needs client/ and deployment/docker/.  Exclude
+# everything else to keep the context small (~500 MB saved).
+
+# Dependencies (installed inside the container)
+**/node_modules
+
+# Git history
+.git
+
+# Server source (not needed for client build)
+server
+
+# Documentation and config at repo root
+*.md
+LICENSE
+.gitignore
+.prettierrc
+.eslintrc*
+.husky
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# CI / tooling
+.github
+.claude

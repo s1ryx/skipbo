@@ -1,5 +1,8 @@
 # Code Standards
 
+> Part of the [project documentation](../README.md#documentation).
+> See also: [Commit Guidelines](COMMIT_GUIDELINES.md) for commit message format.
+
 This document describes the formatting and linting rules enforced across
 the codebase. All rules are applied automatically via pre-commit hooks
 and verified in CI.
@@ -43,8 +46,8 @@ Extends `eslint:recommended`, plus:
 | ---------------- | ------ | --------------------------------------------- |
 | `no-unused-vars` | `warn` | Flags unused variables; `_` prefix is allowed |
 
-`no-console` is intentionally omitted — the server uses `console.log`
-for logging.
+`no-console` is intentionally omitted — the server uses a structured
+logger (`server/logger.js`) that wraps `console` methods.
 
 ## Enforcement
 
@@ -63,7 +66,7 @@ Configuration: `lint-staged` in [`package.json`](../package.json)
 
 ### CI (GitHub Actions)
 
-The [lint workflow](../.github/workflows/lint.yml) runs on every push
+The [CI workflow](../.github/workflows/ci.yml) runs on every push
 and pull request. It checks:
 
 1. `prettier --check` — fails if any file is not formatted

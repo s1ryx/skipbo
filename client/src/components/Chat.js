@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { useTranslation } from '../i18n';
 
-function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
+function Chat({ messages, onSendMessage, onMarkMessagesRead, playerId }) {
   const { t } = useTranslation();
   const [inputMessage, setInputMessage] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -51,7 +51,7 @@ function Chat({ messages, onSendMessage, onMarkMessagesRead, stablePlayerId }) {
 
   const isOwnMessage = (msg) => {
     // Use stable player ID that persists across reconnections
-    return msg.stablePlayerId === stablePlayerId;
+    return msg.stablePlayerId === playerId;
   };
 
   const unreadCount = messages.filter((msg) => !msg.read && !isOwnMessage(msg)).length;

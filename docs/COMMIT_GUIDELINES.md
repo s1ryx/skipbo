@@ -1,5 +1,8 @@
 # Commit Message Guidelines
 
+> Part of the [project documentation](../README.md#documentation).
+> See also: [Git Workflow](GIT_WORKFLOW.md) for branching model and PR process.
+
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This ensures a clear and consistent commit history.
 
 ## Format

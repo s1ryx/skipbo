@@ -1,0 +1,26 @@
+{$DOMAIN} {
+    tls {$ACME_EMAIL}
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
+
+    respond /health 200 {
+        body "healthy"
+        close
+    }
+
+    # Socket.IO to backend (preserves /socket.io/ path)
+    reverse_proxy /socket.io/* server:3001
+
+    # API endpoints: strip /api prefix before forwarding
+    handle_path /api/* {
+        reverse_proxy server:3001
+    }
+
+    # Frontend client (catch-all)
+    reverse_proxy client:80
+}

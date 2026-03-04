@@ -5,11 +5,11 @@
 }
 
 .App-header {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: var(--color-overlay-soft);
   padding: 12px 20px;
   text-align: center;
   color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm-heavy);
 }
 
 .App-header h1 {
@@ -23,13 +23,13 @@
   top: 100px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #f44336;
+  background-color: var(--color-danger);
   color: white;
   padding: 15px 30px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   z-index: 1000;
-  animation: slideDown 0.3s ease-out;
+  animation: slideDown var(--transition-normal) ease-out;
 }
 
 @keyframes slideDown {
@@ -41,6 +41,34 @@
     top: 100px;
     opacity: 1;
   }
+}
+
+.connection-status.disconnected {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--color-warning, #f0ad4e);
+  color: #333;
+  text-align: center;
+  padding: 8px;
+  font-weight: bold;
+  z-index: 1100;
+}
+
+.error-boundary {
+  text-align: center;
+  padding: 40px;
+}
+
+.error-boundary h2 {
+  margin-bottom: 16px;
+}
+
+.error-boundary button {
+  margin: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
 }
 
 .loading {
@@ -71,7 +99,7 @@
 .language-selector {
   font-size: 0.75rem;
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: rgba(255, 255, 255, 0.4);
@@ -79,6 +107,6 @@
 }
 
 .language-selector option {
-  background: #2d3748;
-  color: #e2e8f0;
+  background: var(--color-dropdown-bg);
+  color: var(--color-dropdown-text);
 }

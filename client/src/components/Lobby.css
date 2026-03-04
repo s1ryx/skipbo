@@ -7,17 +7,17 @@
 }
 
 .lobby-container {
-  background: white;
-  border-radius: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
   padding: 40px;
   max-width: 500px;
   width: 100%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
 }
 
 .lobby-container h2 {
   text-align: center;
-  color: #333;
+  color: var(--color-text-primary);
   margin-bottom: 30px;
 }
 
@@ -34,7 +34,7 @@
 
 .create-room-form h3,
 .join-room-form h3 {
-  color: #555;
+  color: var(--color-text-secondary);
   text-align: center;
   margin-bottom: 10px;
 }
@@ -46,7 +46,7 @@
 }
 
 .form-group label {
-  color: #666;
+  color: var(--color-text-secondary);
   font-weight: 500;
   font-size: 0.9rem;
 }
@@ -54,7 +54,7 @@
 .form-group label .label-hint {
   display: block;
   font-size: 0.75rem;
-  color: #999;
+  color: var(--color-text-muted);
   font-weight: 400;
   margin-top: 4px;
 }
@@ -62,59 +62,59 @@
 .form-group input,
 .form-group select {
   padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 1rem;
-  transition: border-color 0.3s;
+  transition: border-color var(--transition-normal);
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--color-primary);
 }
 
 .form-group input::placeholder {
-  color: #aaa;
+  color: var(--color-text-muted);
 }
 
 .btn-primary,
 .btn-secondary {
   padding: 14px 28px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all var(--transition-normal);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: var(--shadow-primary-md);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+  box-shadow: var(--shadow-primary-lg);
 }
 
 .btn-secondary {
-  background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
 }
 
 .btn-secondary:hover {
-  background: #f5f5ff;
+  background: var(--color-surface-primary-tint);
 }
 
 .divider {
   text-align: center;
-  color: #999;
+  color: var(--color-text-muted);
   margin: 20px 0;
   position: relative;
 }
@@ -126,7 +126,7 @@
   top: 50%;
   width: 40%;
   height: 1px;
-  background: #ddd;
+  background: var(--color-border);
 }
 
 .divider::before {
@@ -142,8 +142,8 @@
   appearance: none;
   width: 100%;
   height: 8px;
-  border-radius: 4px;
-  background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
   outline: none;
   padding: 0;
   border: none;
@@ -155,31 +155,31 @@
   appearance: none;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
-  background: white;
-  border: 3px solid #667eea;
+  border-radius: var(--radius-circle);
+  background: var(--color-surface);
+  border: 3px solid var(--color-primary);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s;
+  box-shadow: var(--shadow-primary-md);
+  transition: all var(--transition-normal);
 }
 
 .stockpile-slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+  box-shadow: var(--shadow-primary-lg);
 }
 
 .stockpile-slider::-moz-range-thumb {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
-  background: white;
-  border: 3px solid #667eea;
+  border-radius: var(--radius-circle);
+  background: var(--color-surface);
+  border: 3px solid var(--color-primary);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s;
+  box-shadow: var(--shadow-primary-md);
+  transition: all var(--transition-normal);
 }
 
 .stockpile-slider::-moz-range-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+  box-shadow: var(--shadow-primary-lg);
 }
