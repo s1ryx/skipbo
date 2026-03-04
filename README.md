@@ -76,181 +76,23 @@ The client will run on `http://localhost:3000` and open automatically in your br
 
 ---
 
-## Local Network Setup (Multiplayer Testing)
+## Local Network Play
 
-To play with multiple users on your local network (WiFi/LAN), follow these steps:
+To play with others on the same WiFi/LAN without Docker:
 
-### Step 1: Find Your IP Address
+1. Find your local IP (`ipconfig` on Windows, `hostname -I` on Linux/macOS)
+2. Set `HOST=0.0.0.0` and `CORS_ORIGIN=*` in `server/.env`
+3. Set `REACT_APP_SERVER_URL=http://<your-ip>:3001` in `client/.env`
+4. Start the server (`cd server && npm start`) and client (`cd client && npm run build && npx serve -s build -l 3000`)
+5. Other players open `http://<your-ip>:3000` in their browser
 
-**On Windows:**
-
-```bash
-ipconfig
-```
-
-Look for "IPv4 Address" under your active network adapter (usually starts with `192.168.x.x` or `10.0.x.x`)
-
-**On macOS/Linux:**
-
-```bash
-hostname -I
-# or
-ifconfig | grep "inet "
-```
-
-Look for an address that starts with `192.168.x.x` or `10.0.x.x`
-
-**Example:** Your IP might be `192.168.1.5`
-
-### Step 2: Configure the Server
-
-1. Create a `.env` file in the `server` directory:
-
-```bash
-cd server
-cp .env.example .env
-```
-
-2. Edit `server/.env`:
-
-```env
-PORT=3001
-HOST=0.0.0.0
-CORS_ORIGIN=*
-```
-
-- `HOST=0.0.0.0` allows connections from any IP address on the network
-- `CORS_ORIGIN=*` allows all origins (fine for local network testing)
-
-### Step 3: Configure the Client
-
-1. Create a `.env` file in the `client` directory:
-
-```bash
-cd client
-cp .env.example .env
-```
-
-2. Edit `client/.env` and replace with your IP address:
-
-```env
-REACT_APP_SERVER_URL=http://192.168.1.5:3001
-```
-
-**Important:** Replace `192.168.1.5` with YOUR actual IP address from Step 1!
-
-### Step 4: Start the Server
-
-```bash
-cd server
-npm start
-```
-
-You should see:
-
-```
-Skip-Bo server running on http://0.0.0.0:3001
-For local network access, use your machine's IP address instead of 0.0.0.0
-```
-
-### Step 5: Build and Serve the Client
-
-For better performance and easier access, build the client for production:
-
-```bash
-cd client
-npm run build
-```
-
-Then serve it using a simple HTTP server:
-
-```bash
-# Install serve globally (one time only)
-npm install -g serve
-
-# Serve the built app
-serve -s build -l 3000
-```
-
-The client will be available at `http://YOUR_IP:3000` (e.g., `http://192.168.1.5:3000`)
-
-### Step 6: Connect Other Players
-
-**Other players on the same network** can now access the game by:
-
-1. Opening their browser
-2. Going to `http://YOUR_IP:3000` (replace with your actual IP)
-   - Example: `http://192.168.1.5:3000`
-
-### Firewall Configuration
-
-If players can't connect, you may need to allow connections through your firewall:
-
-**Windows Firewall:**
-
-```powershell
-# Run as Administrator
-# First, allow script execution (required for setup scripts):
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-
-# Then add firewall rules:
-netsh advfirewall firewall add rule name="Skip-Bo Server" dir=in action=allow protocol=TCP localport=3001
-netsh advfirewall firewall add rule name="Skip-Bo Client" dir=in action=allow protocol=TCP localport=3000
-```
-
-**macOS:**
-
-```bash
-# System Preferences → Security & Privacy → Firewall → Firewall Options
-# Allow incoming connections for Node
-```
-
-**Linux (ufw):**
-
-```bash
-sudo ufw allow 3001/tcp
-sudo ufw allow 3000/tcp
-```
-
-### Testing the Setup
-
-1. **On the host machine:**
-   - Go to `http://localhost:3000` or `http://YOUR_IP:3000`
-   - Create a room
-
-2. **On another device (phone, laptop, etc.):**
-   - Connect to the same WiFi network
-   - Go to `http://HOST_IP:3000` (e.g., `http://192.168.1.5:3000`)
-   - Join the room with the Room ID
-
-3. **Start playing!**
-
-### Troubleshooting Local Network Play
-
-**Players can't connect:**
-
-- ✅ Verify all devices are on the same WiFi network
-- ✅ Check firewall settings (see above)
-- ✅ Ensure the server is running and showing the correct IP
-- ✅ Try pinging the host: `ping 192.168.1.5` (replace with your IP)
-- ✅ Make sure you're using `http://` not `https://`
-
-**Game is slow or laggy:**
-
-- ✅ Check WiFi signal strength
-- ✅ Move closer to the router
-- ✅ Restart the router if needed
-
-**Connection drops:**
-
-- ✅ Some routers have WiFi isolation enabled - check router settings
-- ✅ Ensure devices aren't going to sleep mode
+You may need to allow ports 3000 and 3001 through your firewall. For anything beyond quick local testing, Docker deployment is easier and more reliable.
 
 ---
 
-## Docker Deployment (Recommended for Internet Play)
+## Docker Deployment (Recommended)
 
-For production deployment or easy internet play, use Docker for containerized deployment with optimized performance and security.
+For production deployment or internet play, use Docker for containerized deployment with optimized performance and security.
 
 ### Prerequisites
 
