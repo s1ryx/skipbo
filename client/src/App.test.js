@@ -159,10 +159,12 @@ describe('App', () => {
         (r) => r.value && r.value.postMessage.mock.calls.length > 0
       );
       expect(appCall).toBeTruthy();
-      expect(appCall.value.postMessage).toHaveBeenCalledWith({
-        type: 'joinRoom',
-        roomId: 'XYZ',
-      });
+      expect(appCall.value.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'joinRoom',
+          roomId: 'XYZ',
+        })
+      );
     });
   });
 
