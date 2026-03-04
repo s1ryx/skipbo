@@ -13,9 +13,14 @@ function GameOverOverlay({
   const { t } = useTranslation();
 
   return (
-    <div className="game-over-overlay">
+    <div
+      className="game-over-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="game-over-title"
+    >
       <div className="game-over-message">
-        <h2>{t('game.gameOver')}</h2>
+        <h2 id="game-over-title">{t('game.gameOver')}</h2>
         <p className="winner-text">{t('game.winner', { name: gameState.winner?.name })}</p>
 
         <div className="rematch-section">

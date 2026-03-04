@@ -106,7 +106,11 @@ function GameBoard({
     <div className="game-board">
       <div className="game-header">
         <h3>{t('game.room', { roomId })}</h3>
-        <div className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
+        <div
+          className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
           {isMyTurn
             ? discardMode
               ? playerState?.hand.length === 0

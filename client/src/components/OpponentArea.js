@@ -31,11 +31,7 @@ function OpponentArea({ opponents, currentPlayerId }) {
               <div className="pile-label">{t('game.hand', { count: player.handCount })}</div>
               <div className="opponent-hand-stack">
                 {Array.from({ length: Math.min(player.handCount, 5) }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="card-in-hand"
-                    style={{ zIndex: idx }}
-                  >
+                  <div key={idx} className="card-in-hand" style={{ zIndex: idx }}>
                     <Card value="?" isVisible={false} size="small" />
                   </div>
                 ))}

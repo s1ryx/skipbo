@@ -5,9 +5,14 @@ function LeaveConfirmDialog({ onConfirm, onCancel }) {
   const { t } = useTranslation();
 
   return (
-    <div className="leave-confirm-overlay">
+    <div
+      className="leave-confirm-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="leave-confirm-text"
+    >
       <div className="leave-confirm-dialog">
-        <p>{t('game.leaveConfirm')}</p>
+        <p id="leave-confirm-text">{t('game.leaveConfirm')}</p>
         <div className="leave-confirm-buttons">
           <button onClick={onConfirm} className="btn-leave-confirm">
             {t('game.leaveYes')}
