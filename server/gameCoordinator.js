@@ -7,6 +7,7 @@ const { GameLogger, MoveAnalyzer } = require('./ai/GameLogger');
 const { createLogger } = require('./logger');
 const {
   LOBBY_GRACE_PERIOD_MS,
+  GAME_GRACE_PERIOD_MS,
   MAX_PENDING_ROOMS,
   MAX_TOTAL_ROOMS,
   COMPLETED_GAME_TTL_MS,
@@ -322,6 +323,12 @@ class GameCoordinator {
     });
 
     this.logger.info('player reconnected', { roomId, playerName: sanitizeForLog(validName) });
+
+    if (game.phase === Phase.PLAYING) {
+      this._scheduleBotTurnIfNeeded(roomId);
+    } else if (game.phase === Phase.FINISHED) {
+      this.scheduleCompletedGameCleanup(roomId);
+    }
   }
 
   handleStartGame(connectionId) {
@@ -725,18 +732,17 @@ class GameCoordinator {
         });
       }
     } else if (game.phase === Phase.FINISHED) {
-      // Post-game: soft remove, cancel rematch votes
-      if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
       game.clearRematchVotes();
 
-      const humanPlayers = game.players.filter((p) => !p.isBot);
-      if (humanPlayers.length === 0) {
+      const humansRemaining = game.players.some(
+        (p) =>
+          !p.isBot && p.connectionId !== connectionId && this.sessionManager.hasRoom(p.connectionId)
+      );
+      if (!humansRemaining) {
         this.cancelCompletedGameCleanup(roomId);
-        this._cleanupLogger(roomId);
-        this.botManager.cleanup(roomId);
-        this.sessionManager.removeAllForPlayers(game.players);
-        this.gameRepository.deleteGame(roomId);
+        this.scheduleGameDeletion(roomId);
       } else {
+        if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
           gameState: this._getDecoratedGameState(game),
         });
@@ -748,15 +754,8 @@ class GameCoordinator {
           !p.isBot && p.connectionId !== connectionId && this.sessionManager.hasRoom(p.connectionId)
       );
       if (!humansRemaining) {
-        // No humans left in-game — abort
-        this._cleanupLogger(roomId);
-        this.botManager.cleanup(roomId);
-        game.players.forEach((p) => {
-          this.transport.removeFromGroup(p.connectionId, roomId);
-          this.sessionManager.removeRoom(p.connectionId);
-        });
-        this.gameRepository.deleteGame(roomId);
-        this.logger.info('game aborted — no human players remain', { roomId });
+        this.botManager.clearTimers(roomId);
+        this.scheduleGameDeletion(roomId);
       } else {
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
@@ -784,6 +783,40 @@ class GameCoordinator {
         roomId,
         delaySec: LOBBY_GRACE_PERIOD_MS / 1000,
       });
+    }
+  }
+
+  scheduleGameDeletion(roomId) {
+    if (this.gameRepository.pendingDeletions.size >= MAX_PENDING_ROOMS) {
+      this._deleteGameFull(roomId);
+      this.logger.info('game deleted immediately (too many pending)', { roomId });
+    } else {
+      this.gameRepository.scheduleDeletion(
+        roomId,
+        () => {
+          this._deleteGameFull(roomId);
+          this.logger.info('game deleted after grace period', { roomId });
+        },
+        GAME_GRACE_PERIOD_MS
+      );
+      this.logger.info('game scheduled for deletion', {
+        roomId,
+        delaySec: GAME_GRACE_PERIOD_MS / 1000,
+      });
+    }
+  }
+
+  _deleteGameFull(roomId) {
+    const game = this.gameRepository.getGame(roomId);
+    if (game) {
+      this.cancelCompletedGameCleanup(roomId);
+      this._cleanupLogger(roomId);
+      this.botManager.cleanup(roomId);
+      game.players.forEach((p) => {
+        this.transport.removeFromGroup(p.connectionId, roomId);
+        this.sessionManager.removeRoom(p.connectionId);
+      });
+      this.gameRepository.deleteGame(roomId);
     }
   }
 

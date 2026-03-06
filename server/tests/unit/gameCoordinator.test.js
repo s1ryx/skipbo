@@ -1371,6 +1371,9 @@ describe('GameCoordinator', () => {
       handlers.onDisconnect('player1');
       handlers.onDisconnect('player2');
 
+      // Game survives during grace period
+      expect(coordinator.games.has(roomId)).toBe(true);
+      jest.advanceTimersByTime(300000);
       expect(coordinator.games.has(roomId)).toBe(false);
     });
 
@@ -1583,7 +1586,9 @@ describe('GameCoordinator', () => {
 
       handlers.onDisconnect('player1');
 
-      // Game should be deleted even though bot player remains
+      // Game survives during grace period
+      expect(coordinator.games.has(roomId)).toBe(true);
+      jest.advanceTimersByTime(300000);
       expect(coordinator.games.has(roomId)).toBe(false);
     });
   });
