@@ -195,6 +195,7 @@ describe('GameBoard', () => {
 
     it('renders quick discard checkbox', () => {
       renderGameBoard();
+      fireEvent.click(screen.getByLabelText('Options'));
       expect(screen.getByRole('checkbox')).toBeInTheDocument();
       expect(
         screen.getByText('Quick Discard (click discard pile with selected card)')
