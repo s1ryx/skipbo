@@ -111,9 +111,9 @@ describe('GameBoard', () => {
       expect(screen.getByText(/Bob/)).toBeInTheDocument();
     });
 
-    it('renders player area', () => {
+    it('renders player area with stockpile label', () => {
       renderGameBoard();
-      expect(screen.getByText('Your Area')).toBeInTheDocument();
+      expect(screen.getByText('Your Stockpile (30)')).toBeInTheDocument();
     });
 
     it('renders player hand', () => {
