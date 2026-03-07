@@ -58,7 +58,6 @@ export default function useGameConnection() {
     const transport = new SocketIOClientTransport({
       onConnect: (connectionId) => {
         connectionIdRef.current = connectionId;
-        setPlayerId(connectionId);
         setIsConnected(true);
 
         const savedSession = localStorage.getItem('skipBoSession');
