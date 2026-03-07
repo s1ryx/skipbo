@@ -109,23 +109,18 @@ function GameBoard({
     setSelectedSource(null);
   };
 
+  const turnText = isMyTurn
+    ? discardMode
+      ? playerState?.hand.length === 0
+        ? t('game.noCardsToDiscard')
+        : t('game.discardInstruction')
+      : t('game.yourTurn')
+    : t('game.waitingTurn');
+
   return (
     <div className="game-board">
       <div className="game-header">
         <h3>{t('game.room', { roomId })}</h3>
-        <div
-          className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}
-          role="status"
-          aria-live="polite"
-        >
-          {isMyTurn
-            ? discardMode
-              ? playerState?.hand.length === 0
-                ? t('game.noCardsToDiscard')
-                : t('game.discardInstruction')
-              : t('game.yourTurn')
-            : t('game.waitingTurn')}
-        </div>
         <button onClick={() => setShowLeaveConfirm(true)} className="btn-leave-game">
           {t('game.leaveGame')}
         </button>
@@ -140,6 +135,8 @@ function GameBoard({
         piles={gameState.buildingPiles}
         isClickable={selectedCard && isMyTurn && !discardMode}
         onPileClick={handleBuildingPileClick}
+        isMyTurn={isMyTurn}
+        turnText={turnText}
       />
 
       {playerState && (

@@ -3,12 +3,18 @@ import Card from './Card';
 import { getNextCardForPile } from '../utils/cardUtils';
 import { useTranslation } from '../i18n';
 
-function BuildingPiles({ piles, isClickable, onPileClick }) {
+function BuildingPiles({ piles, isClickable, onPileClick, isMyTurn, turnText }) {
   const { t } = useTranslation();
 
   return (
     <div className="game-center">
-      <h3>{t('game.buildingPiles')}</h3>
+      <div
+        className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}
+        role="status"
+        aria-live="polite"
+      >
+        {turnText}
+      </div>
       <div className="piles-container">
         {piles.map((pile, index) => (
           <div
