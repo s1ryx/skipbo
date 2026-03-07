@@ -28,6 +28,7 @@ Choose the appropriate type for your commit:
 - `chore`: Maintenance tasks (dependency updates, configuration, tooling)
 - `perf`: Performance improvements (optimizations, efficiency)
 - `style`: Code formatting only (prettier, linting, whitespace) - NOT CSS/UI styling
+- `merge`: `--no-ff` merge commits (subject: `merge: <branch> into <target>`)
 
 ## Subject Line
 

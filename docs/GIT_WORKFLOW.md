@@ -58,7 +58,10 @@ git push -u origin feature/new-game-mode
 # After review, merge to develop with --no-ff
 # (--no-ff preserves branch history and groups related commits)
 git checkout develop
-git merge --no-ff feature/new-game-mode
+git merge --no-ff feature/new-game-mode \
+  -m "merge: feature/new-game-mode into develop
+
+<description of what the branch adds>"
 git push origin develop
 
 # Delete local and remote branch
@@ -105,7 +108,10 @@ git push -u origin fix/reconnection-logic
 
 # After review, merge with --no-ff (multiple commits benefit from grouping)
 git checkout develop
-git merge --no-ff fix/reconnection-logic
+git merge --no-ff fix/reconnection-logic \
+  -m "merge: fix/reconnection-logic into develop
+
+<description of what the branch fixes>"
 git push origin develop
 
 # Delete branch
@@ -141,13 +147,15 @@ git push origin hotfix-1.2.1
 
 # Merge to master with --no-ff and create tag with generated changelog
 git checkout master
-git merge --no-ff hotfix-1.2.1
+git merge --no-ff hotfix-1.2.1 \
+  -m "merge: hotfix-1.2.1 into master"
 git tag -s v1.2.1 -m "$(git log --format='- %s' v1.2.0..hotfix-1.2.1)"
 git push origin master --tags
 
 # Merge to develop with --no-ff
 git checkout develop
-git merge --no-ff hotfix-1.2.1
+git merge --no-ff hotfix-1.2.1 \
+  -m "merge: hotfix-1.2.1 into develop"
 git push origin develop
 
 # Delete local and remote branch
@@ -233,7 +241,8 @@ git push origin release-1.2
 # Merge to master with --no-ff (preserves branch history)
 git checkout master
 git pull origin master
-git merge --no-ff release-1.2
+git merge --no-ff release-1.2 \
+  -m "merge: release-1.2 into master"
 
 # Create signed tag with generated changelog from commits
 git tag -s v1.2.0 -m "$(cat <<'EOF'
@@ -282,7 +291,8 @@ The release branch must be merged back into `develop` so that future releases al
 ```bash
 # Merge release to develop with --no-ff
 git checkout develop
-git merge --no-ff release-1.2
+git merge --no-ff release-1.2 \
+  -m "merge: release-1.2 into develop"
 git push origin develop
 ```
 
