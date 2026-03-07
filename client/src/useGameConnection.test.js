@@ -87,12 +87,12 @@ describe('useGameConnection', () => {
   });
 
   describe('connection', () => {
-    it('sets playerId on connect', () => {
+    it('does not set playerId on connect', () => {
       const { result } = renderHook(() => useGameConnection());
       act(() => {
         mockSocket._trigger('connect');
       });
-      expect(result.current.playerId).toBe('test-socket-id');
+      expect(result.current.playerId).toBeNull();
     });
 
     it('attempts reconnect when saved session exists', () => {
