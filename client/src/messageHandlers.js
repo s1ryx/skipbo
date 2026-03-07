@@ -12,7 +12,7 @@ export function createMessageHandlers({
   sessionTokenRef,
 }) {
   function saveSession(roomId, playerId, playerName, sessionToken) {
-    sessionStorage.setItem(
+    localStorage.setItem(
       'skipBoSession',
       JSON.stringify({ roomId, playerId, playerName, sessionToken })
     );
@@ -77,7 +77,7 @@ export function createMessageHandlers({
     },
 
     reconnectFailed({ message }) {
-      sessionStorage.removeItem('skipBoSession');
+      localStorage.removeItem('skipBoSession');
       setError(message);
       setTimeout(() => setError(null), 5000);
     },
@@ -96,7 +96,7 @@ export function createMessageHandlers({
 
     gameOver({ gameState }) {
       setGameState(gameState);
-      const savedSession = sessionStorage.getItem('skipBoSession');
+      const savedSession = localStorage.getItem('skipBoSession');
       if (savedSession) {
         try {
           const { roomId } = JSON.parse(savedSession);
@@ -105,7 +105,7 @@ export function createMessageHandlers({
           // ignore parse errors
         }
       }
-      sessionStorage.removeItem('skipBoSession');
+      localStorage.removeItem('skipBoSession');
     },
 
     playerDisconnected({ playerId }) {
@@ -133,7 +133,7 @@ export function createMessageHandlers({
     },
 
     gameAborted() {
-      const savedSession = sessionStorage.getItem('skipBoSession');
+      const savedSession = localStorage.getItem('skipBoSession');
       if (savedSession) {
         try {
           const { roomId } = JSON.parse(savedSession);
@@ -142,7 +142,7 @@ export function createMessageHandlers({
           // ignore parse errors
         }
       }
-      sessionStorage.removeItem('skipBoSession');
+      localStorage.removeItem('skipBoSession');
       roomIdRef.current = null;
       setGameState(null);
       setPlayerState(null);

@@ -69,6 +69,7 @@ const fakePlayerState = {
 beforeEach(() => {
   mockSocket._reset();
   sessionStorage.clear();
+  localStorage.clear();
 });
 
 describe('useGameConnection', () => {
@@ -95,7 +96,7 @@ describe('useGameConnection', () => {
     });
 
     it('attempts reconnect when saved session exists', () => {
-      sessionStorage.setItem(
+      localStorage.setItem(
         'skipBoSession',
         JSON.stringify({ roomId: 'OLD01', playerName: 'Alice', sessionToken: 'tok-123' })
       );
@@ -135,7 +136,7 @@ describe('useGameConnection', () => {
       expect(result.current.inLobby).toBe(false);
     });
 
-    it('saves session with token to sessionStorage', () => {
+    it('saves session with token to localStorage', () => {
       renderHook(() => useGameConnection());
       act(() => {
         mockSocket._trigger('roomCreated', {
@@ -146,7 +147,7 @@ describe('useGameConnection', () => {
         });
       });
 
-      const session = JSON.parse(sessionStorage.getItem('skipBoSession'));
+      const session = JSON.parse(localStorage.getItem('skipBoSession'));
       expect(session).toEqual({
         roomId: 'ROOM01',
         playerId: 'test-socket-id',
@@ -205,7 +206,7 @@ describe('useGameConnection', () => {
       expect(result.current.roomId).toBe('ROOM01');
       expect(result.current.inLobby).toBe(false);
 
-      const session = JSON.parse(sessionStorage.getItem('skipBoSession'));
+      const session = JSON.parse(localStorage.getItem('skipBoSession'));
       expect(session.roomId).toBe('ROOM01');
       expect(session.playerId).toBe('pub-123');
       expect(session.sessionToken).toBe('tok-456');
@@ -235,7 +236,7 @@ describe('useGameConnection', () => {
       expect(result.current.playerState).toEqual(fakePlayerState);
       expect(result.current.inLobby).toBe(false);
 
-      const session = JSON.parse(sessionStorage.getItem('skipBoSession'));
+      const session = JSON.parse(localStorage.getItem('skipBoSession'));
       expect(session.sessionToken).toBe('new-tok');
     });
   });
@@ -243,7 +244,7 @@ describe('useGameConnection', () => {
   describe('reconnectFailed event', () => {
     it('clears session and sets error', () => {
       jest.useFakeTimers();
-      sessionStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'OLD01' }));
+      localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'OLD01' }));
       const { result } = renderHook(() => useGameConnection());
 
       act(() => {
@@ -251,7 +252,7 @@ describe('useGameConnection', () => {
       });
 
       expect(result.current.error).toBe('error.roomNoLongerExists');
-      expect(sessionStorage.getItem('skipBoSession')).toBeNull();
+      expect(localStorage.getItem('skipBoSession')).toBeNull();
 
       act(() => {
         jest.advanceTimersByTime(5000);
@@ -295,8 +296,8 @@ describe('useGameConnection', () => {
   });
 
   describe('gameOver event', () => {
-    it('clears session and chat from sessionStorage', () => {
-      sessionStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
+    it('clears session from localStorage and chat from sessionStorage', () => {
+      localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
       sessionStorage.setItem('skipBoChat_ROOM01', JSON.stringify([{ message: 'hi' }]));
 
       renderHook(() => useGameConnection());
@@ -304,7 +305,7 @@ describe('useGameConnection', () => {
         mockSocket._trigger('gameOver', { gameState: { ...fakeGameState, gameOver: true } });
       });
 
-      expect(sessionStorage.getItem('skipBoSession')).toBeNull();
+      expect(localStorage.getItem('skipBoSession')).toBeNull();
       expect(sessionStorage.getItem('skipBoChat_ROOM01')).toBeNull();
     });
   });
@@ -367,7 +368,7 @@ describe('useGameConnection', () => {
 
   describe('gameAborted event', () => {
     it('resets to lobby state and clears session', () => {
-      sessionStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
+      localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
       sessionStorage.setItem('skipBoChat_ROOM01', JSON.stringify([{ message: 'hi' }]));
 
       const { result } = renderHook(() => useGameConnection());
@@ -391,7 +392,7 @@ describe('useGameConnection', () => {
       expect(result.current.playerState).toBeNull();
       expect(result.current.roomId).toBeNull();
       expect(result.current.chatMessages).toEqual([]);
-      expect(sessionStorage.getItem('skipBoSession')).toBeNull();
+      expect(localStorage.getItem('skipBoSession')).toBeNull();
       expect(sessionStorage.getItem('skipBoChat_ROOM01')).toBeNull();
     });
   });
@@ -506,7 +507,7 @@ describe('useGameConnection', () => {
       expect(result.current.inLobby).toBe(true);
       expect(result.current.gameState).toBeNull();
       expect(result.current.roomId).toBeNull();
-      expect(sessionStorage.getItem('skipBoSession')).toBeNull();
+      expect(localStorage.getItem('skipBoSession')).toBeNull();
     });
 
     it('leaveGame sends event and clears chat from sessionStorage', () => {
@@ -675,7 +676,7 @@ describe('useGameConnection', () => {
 
   describe('chat persistence', () => {
     it('loads chat messages from sessionStorage on init', () => {
-      sessionStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
+      localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
       sessionStorage.setItem(
         'skipBoChat_ROOM01',
         JSON.stringify([{ message: 'saved msg', read: true }])
