@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../i18n';
 
 function GameOverOverlay({
@@ -11,6 +11,32 @@ function GameOverOverlay({
   onLeaveGame,
 }) {
   const { t } = useTranslation();
+  const [localStockpileSize, setLocalStockpileSize] = useState(null);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    setLocalStockpileSize(null);
+  }, [rematchStockpileSize]);
+
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
+
+  const displaySize = localStockpileSize ?? rematchStockpileSize ?? gameState.stockpileSize;
+
+  const handleSliderChange = (e) => {
+    const value = parseInt(e.target.value);
+    setLocalStockpileSize(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => onUpdateRematchSettings(value), 300);
+  };
+
+  const handleRematch = () => {
+    if (debounceRef.current && localStockpileSize !== null) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+      onUpdateRematchSettings(localStockpileSize);
+    }
+    onRequestRematch();
+  };
 
   return (
     <div
@@ -27,24 +53,20 @@ function GameOverOverlay({
           <div className="rematch-settings">
             {gameState.hostPlayerId === playerId ? (
               <label className="rematch-stockpile-label">
-                {t('game.rematchStockpile', {
-                  count: rematchStockpileSize || gameState.stockpileSize,
-                })}
+                {t('game.rematchStockpile', { count: displaySize })}
                 <input
                   type="range"
                   min="5"
                   max={gameState.players.length <= 4 ? 30 : 20}
                   step="5"
-                  value={rematchStockpileSize || gameState.stockpileSize}
-                  onChange={(e) => onUpdateRematchSettings(parseInt(e.target.value))}
+                  value={displaySize}
+                  onChange={handleSliderChange}
                   className="stockpile-slider"
                 />
               </label>
             ) : (
               <span className="rematch-stockpile-display">
-                {t('game.rematchStockpile', {
-                  count: rematchStockpileSize || gameState.stockpileSize,
-                })}
+                {t('game.rematchStockpile', { count: displaySize })}
               </span>
             )}
           </div>
@@ -67,7 +89,7 @@ function GameOverOverlay({
 
           <div className="rematch-buttons">
             <button
-              onClick={onRequestRematch}
+              onClick={handleRematch}
               className={`btn-rematch ${rematchVotes.includes(playerId) ? 'voted' : ''}`}
               disabled={rematchVotes.includes(playerId)}
             >
