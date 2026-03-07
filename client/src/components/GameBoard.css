@@ -477,6 +477,9 @@
   cursor: pointer;
   transition: all var(--transition-normal);
   box-shadow: var(--shadow-primary-md);
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
 }
 
 .btn-end-turn:hover {
