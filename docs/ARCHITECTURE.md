@@ -14,7 +14,7 @@ The application is a real-time multiplayer card game with two processes:
 - **Server** — Node.js + Express + Socket.IO
   ([server/server.js](https://github.com/s1ryx/skipbo/blob/f7179e8d/server/server.js))
 - **Client** — React single-page app
-  ([client/src/App.js](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/App.js))
+  ([client/src/App.js](https://github.com/s1ryx/skipbo/blob/1ad65ca/client/src/App.js))
 
 All game state lives on the server. The client is a thin view layer that
 renders whatever the server tells it and forwards user actions back through
@@ -264,12 +264,13 @@ index.js
             │
             └─ <GameBoard>           ← active game UI (layout composition)
                 (when !inLobby && gameStarted)
+                ├─ <OptionsMenu>     ← gear dropdown (room code, settings, leave)
                 ├─ <OpponentArea>    ← other players' visible state
-                ├─ <BuildingPiles>   ← shared center piles with click handling
-                ├─ <PlayerArea>      ← stockpile, discard piles
+                ├─ <BuildingPiles>   ← turn indicator + shared center piles
+                ├─ <PlayerArea>      ← stockpile + hand (side by side), discard piles
                 │  └─ <PlayerHand>   ← current player's hand cards
                 │      └─ <Card>     ← individual card rendering
-                ├─ actions bar       ← end turn, cancel, quick discard
+                ├─ actions bar       ← end turn, cancel discard
                 ├─ <GameOverOverlay> ← winner display, rematch controls
                 ├─ <LeaveConfirmDialog> ← confirmation modal
                 └─ <Chat>            ← collapsible chat panel
@@ -300,7 +301,7 @@ Message handlers are defined in [`messageHandlers.js`](https://github.com/s1ryx/
 with state setters and refs, receiving a handler map that the transport
 dispatches to.
 
-App-level state in [`App.js`](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/App.js):
+App-level state in [`App.js`](https://github.com/s1ryx/skipbo/blob/1ad65ca/client/src/App.js):
 
 | State           | Type   | Purpose                                   |
 | --------------- | ------ | ----------------------------------------- |
@@ -311,15 +312,17 @@ server-related state themselves — they receive data and call callbacks.
 
 ### Component Responsibilities
 
-**`App`** ([App.js](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/App.js), ~130 lines)
+**`App`** ([App.js](https://github.com/s1ryx/skipbo/blob/1ad65ca/client/src/App.js), ~142 lines)
 
 - Thin rendering shell that routes between Lobby, WaitingRoom, and GameBoard
 - Extracts `?room=` URL parameter on mount
-  ([App.js:18-39](https://github.com/s1ryx/skipbo/blob/77a11220/client/src/App.js#L18-L39))
+  ([App.js:18-43](https://github.com/s1ryx/skipbo/blob/1ad65ca/client/src/App.js#L18-L43))
 - Calls `useGameConnection()` for all server interaction
-  ([App.js:41-65](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/App.js#L41-L65))
+  ([App.js:45-70](https://github.com/s1ryx/skipbo/blob/1ad65ca/client/src/App.js#L45-L70))
 - Three-way routing: `inLobby` → Lobby, `!gameStarted` → WaitingRoom,
   else → GameBoard
+- Hides the app header and footer when an active game is in progress,
+  giving the game board the full viewport height
 
 **`useGameConnection`** ([useGameConnection.js](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js), 180 lines)
 
@@ -359,7 +362,7 @@ server-related state themselves — they receive data and call callbacks.
 - Shows "Start Game" button when 2+ players present
 - Calls `onStartGame`, `onLeaveLobby`, `onAddBot`, `onRemoveBot`
 
-**`GameBoard`** ([GameBoard.js](https://github.com/s1ryx/skipbo/blob/5077ad1/client/src/components/GameBoard.js), 177 lines)
+**`GameBoard`** ([GameBoard.js](https://github.com/s1ryx/skipbo/blob/6006d61/client/src/components/GameBoard.js), 189 lines)
 
 - Layout composition component (only rendered when game has started)
 - Manages card selection state locally
@@ -369,10 +372,13 @@ server-related state themselves — they receive data and call callbacks.
   2. Click a building pile → [`handleBuildingPileClick`](https://github.com/s1ryx/skipbo/blob/b786cb08/client/src/components/GameBoard.js#L61-L68)
   3. Click "End Turn" → [enters discard mode](https://github.com/s1ryx/skipbo/blob/e42f1ee6/client/src/components/GameBoard.js#L92-L102)
   4. Click a discard pile → [`handleDiscardPileClick`](https://github.com/s1ryx/skipbo/blob/f03e48d7/client/src/components/GameBoard.js#L70-L84)
+- Computes turn status text and passes it to BuildingPiles
+  ([turnText:112-118](https://github.com/s1ryx/skipbo/blob/acbc9cc/client/src/components/GameBoard.js#L112-L118))
 - Delegates rendering to sub-components:
+  - [`OptionsMenu`](https://github.com/s1ryx/skipbo/blob/d11a166/client/src/components/OptionsMenu.js) (102 lines) — gear dropdown with room code, quick discard toggle, language selector, leave button
   - [`OpponentArea`](https://github.com/s1ryx/skipbo/blob/1b02ddbe/client/src/components/OpponentArea.js) (75 lines) — opponent info and visible state
-  - [`BuildingPiles`](https://github.com/s1ryx/skipbo/blob/21c061ff/client/src/components/BuildingPiles.js) (46 lines) — center piles with click handling
-  - [`PlayerArea`](https://github.com/s1ryx/skipbo/blob/5077ad1/client/src/components/PlayerArea.js) (132 lines) — stockpile, discard piles, hand
+  - [`BuildingPiles`](https://github.com/s1ryx/skipbo/blob/acbc9cc/client/src/components/BuildingPiles.js) (54 lines) — turn indicator + center piles with click handling
+  - [`PlayerArea`](https://github.com/s1ryx/skipbo/blob/6ea856b/client/src/components/PlayerArea.js) (131 lines) — stockpile and hand (side by side), discard piles (below)
   - [`GameOverOverlay`](https://github.com/s1ryx/skipbo/blob/4c4174cb/client/src/components/GameOverOverlay.js) (81 lines) — winner display, rematch voting
   - [`LeaveConfirmDialog`](https://github.com/s1ryx/skipbo/blob/84a51994/client/src/components/LeaveConfirmDialog.js) (24 lines) — confirmation modal
 - Quick discard setting persisted to localStorage
@@ -657,18 +663,18 @@ Player disconnects (tab close, network loss)
                         │ onRemoveBot │  │ onLeaveGame    │
                         └─────────────┘  │ chatMessages   │
                                          │ onSendChat     │
-                                         └─┬──┬──┬──┬─────┘
-                                           │  │  │  │
-                            ┌──────────────┘  │  │  └────────────┐
-                            ▼                 ▼  ▼               ▼
-                      ┌───────────┐  ┌──────────────┐  ┌──────────────────┐
-                      │ Opponent  │  │  Building    │  │   PlayerArea     │
-                      │ Area      │  │  Piles       │  │                  │
-                      └───────────┘  └──────────────┘  │ ┌──────────┐    │
-                                                       │ │PlayerHand│    │
-                                                       │ │  └─Card  │    │
-                                                       │ └──────────┘    │
-                                                       └──────────────────┘
+                                         └─┬──┬──┬──┬──┬──┘
+                                           │  │  │  │  │
+                       ┌───────────────────┘  │  │  │  └───────────┐
+                       ▼                      ▼  ▼  ▼              ▼
+                 ┌─────────────┐  ┌───────────┐  ┌──────────────┐  ┌──────────────────┐
+                 │ OptionsMenu │  │ Opponent  │  │  Building    │  │   PlayerArea     │
+                 │ (gear ⚙)    │  │ Area      │  │  Piles       │  │                  │
+                 └─────────────┘  └───────────┘  └──────────────┘  │ ┌──────────┐    │
+                                                                   │ │PlayerHand│    │
+                                                                   │ │  └─Card  │    │
+                                                                   │ └──────────┘    │
+                                                                   └──────────────────┘
                   ┌──────────────────┐   ┌──────┐
                   │ GameOverOverlay  │   │ Chat │
                   │ rematch controls │   │      │
