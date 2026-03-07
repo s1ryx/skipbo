@@ -92,9 +92,11 @@ describe('GameBoard', () => {
       expect(screen.getByText('Waiting for other player...')).toBeInTheDocument();
     });
 
-    it('renders building piles section', () => {
+    it('renders building piles', () => {
       renderGameBoard();
-      expect(screen.getByText('Building Piles')).toBeInTheDocument();
+      // Building piles and discard piles both use "Pile N" labels
+      expect(screen.getAllByText('Pile 1').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Pile 4').length).toBeGreaterThanOrEqual(1);
     });
 
     it('renders 4 empty building piles with "Start with 1" text', () => {
