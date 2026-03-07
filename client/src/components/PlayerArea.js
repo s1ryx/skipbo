@@ -20,6 +20,9 @@ function PlayerArea({
 }) {
   const { t } = useTranslation();
 
+  const canDiscard =
+    discardMode || (quickDiscardEnabled && selectedCard && selectedSource?.startsWith('hand-'));
+
   return (
     <div className={`player-area ${!isMyTurn ? 'inactive' : ''}`}>
       <h3>{t('game.yourArea')}</h3>
@@ -49,7 +52,7 @@ function PlayerArea({
             {playerState.discardPiles.map((pile, index) => (
               <div
                 key={index}
-                className={`discard-pile ${discardMode ? 'discard-mode' : ''}`}
+                className={`discard-pile ${discardMode ? 'discard-mode' : ''} ${canDiscard ? 'discard-target' : ''}`}
                 onClick={() => onDiscardPileClick(index)}
               >
                 <div className="pile-label-small">{t('game.pile', { index: index + 1 })}</div>
@@ -82,7 +85,7 @@ function PlayerArea({
                   </div>
                 ) : (
                   <div className="empty-pile-small">
-                    {discardMode ? t('game.clickToDiscard') : t('game.empty')}
+                    {canDiscard ? t('game.clickToDiscard') : t('game.empty')}
                   </div>
                 )}
               </div>

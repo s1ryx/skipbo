@@ -402,8 +402,20 @@
   align-items: center;
 }
 
-.discard-pile.discard-mode {
+.discard-pile.discard-target {
   cursor: pointer;
+}
+
+.discard-pile.discard-target .discard-pile-stack,
+.discard-pile.discard-target .empty-pile-small {
+  background: rgba(220, 53, 69, 0.15);
+  outline: 2px solid var(--color-danger);
+  outline-offset: 5px;
+  box-shadow: 0 0 12px rgba(220, 53, 69, 0.3);
+  border-radius: var(--radius-base);
+}
+
+.discard-pile.discard-mode {
   animation: highlight 1s infinite;
 }
 
