@@ -1592,4 +1592,69 @@ describe('GameCoordinator', () => {
       expect(coordinator.games.has(roomId)).toBe(false);
     });
   });
+
+  describe('in-game disconnect grace period', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('does not delete game when last human disconnects mid-game', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createRoomWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('player1', 'startGame', {});
+      coordinator.botManager.clearTimers(roomId);
+
+      handlers.onDisconnect('player1');
+
+      expect(coordinator.games.has(roomId)).toBe(true);
+      expect(coordinator.pendingDeletions.has(roomId)).toBe(true);
+    });
+
+    it('deletes game after grace period expires', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createRoomWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('player1', 'startGame', {});
+      coordinator.botManager.clearTimers(roomId);
+
+      handlers.onDisconnect('player1');
+
+      expect(coordinator.games.has(roomId)).toBe(true);
+      jest.advanceTimersByTime(300000);
+      expect(coordinator.games.has(roomId)).toBe(false);
+    });
+
+    it('cancels deletion when human reconnects within grace period', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('player1', 'startGame', {});
+      coordinator.botManager.clearTimers(roomId);
+
+      const game = coordinator.games.get(roomId);
+      const sessionToken = game.players[0].sessionToken;
+
+      handlers.onDisconnect('player1');
+      expect(coordinator.pendingDeletions.has(roomId)).toBe(true);
+
+      transport.send.mockClear();
+      handlers.onMessage('player1-new', 'reconnect', {
+        roomId,
+        sessionToken,
+        playerName: 'Alice',
+      });
+
+      expect(coordinator.pendingDeletions.has(roomId)).toBe(false);
+      expect(coordinator.games.has(roomId)).toBe(true);
+      expect(transport.send).toHaveBeenCalledWith(
+        'player1-new',
+        'reconnected',
+        expect.objectContaining({ roomId })
+      );
+
+      // Grace period timer should no longer delete the game
+      jest.advanceTimersByTime(300000);
+      expect(coordinator.games.has(roomId)).toBe(true);
+    });
+  });
 });
