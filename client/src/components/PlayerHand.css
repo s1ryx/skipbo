@@ -1,5 +1,5 @@
 .player-hand {
-  margin-top: 15px;
+  min-width: 0;
   padding: 15px;
   background: var(--color-surface-alt);
   border-radius: var(--radius-md);
@@ -8,7 +8,7 @@
 .hand-label {
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 10px;
+  margin-bottom: 22px;
   text-align: center;
   font-size: 1rem;
 }
@@ -71,7 +71,6 @@
 
   .player-hand {
     padding: 12px;
-    margin-top: 12px;
   }
 
   .hand-label {
@@ -87,7 +86,6 @@
 
   .player-hand {
     padding: 10px;
-    margin-top: 10px;
   }
 
   .hand-label {
@@ -111,7 +109,6 @@
 
   .player-hand {
     padding: 8px;
-    margin-top: 8px;
   }
 
   .hand-label {
