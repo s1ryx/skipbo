@@ -16,7 +16,6 @@ function PlayerArea({
   onPassTurn,
   onCancelDiscard,
   onClearSelection,
-  onToggleQuickDiscard,
 }) {
   const { t } = useTranslation();
 
@@ -126,12 +125,6 @@ function PlayerArea({
             <button onClick={onClearSelection}>{t('game.cancel')}</button>
           </div>
         )}
-        <div className="settings-toggle">
-          <label>
-            <input type="checkbox" checked={quickDiscardEnabled} onChange={onToggleQuickDiscard} />
-            {t('game.quickDiscard')}
-          </label>
-        </div>
       </div>
     </div>
   );

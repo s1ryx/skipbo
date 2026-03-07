@@ -157,7 +157,6 @@ function GameBoard({
             setSelectedCard(null);
             setSelectedSource(null);
           }}
-          onToggleQuickDiscard={toggleQuickDiscard}
         />
       )}
 

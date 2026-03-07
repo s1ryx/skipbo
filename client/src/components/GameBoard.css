@@ -509,37 +509,6 @@
   color: white;
 }
 
-.settings-toggle {
-  padding: 10px 20px;
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  transition: all var(--transition-normal);
-}
-
-.settings-toggle:hover {
-  border-color: var(--color-primary);
-}
-
-.settings-toggle label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin: 0;
-}
-
-.settings-toggle input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
 
 .leave-confirm-overlay {
   position: fixed;
@@ -842,14 +811,6 @@
     gap: 8px;
   }
 
-  .settings-toggle {
-    padding: 8px 15px;
-  }
-
-  .settings-toggle label {
-    font-size: 0.85rem;
-  }
-
   /* More aggressive card overlap in discard piles */
   .card-in-pile:not(:first-child) {
     margin-top: -42px;
@@ -986,20 +947,6 @@
   .btn-end-turn {
     padding: 10px 20px;
     font-size: 0.9rem;
-  }
-
-  .settings-toggle {
-    padding: 6px 12px;
-  }
-
-  .settings-toggle label {
-    font-size: 0.8rem;
-    gap: 6px;
-  }
-
-  .settings-toggle input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
   }
 
   .selected-card-info {
