@@ -1,26 +1,11 @@
 .game-board {
+  position: relative;
   padding: 10px;
   width: 100%;
   margin: 0;
   min-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
-}
-
-.game-header {
-  background: var(--color-surface);
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.game-header h3 {
-  color: var(--color-text-primary);
-  margin: 0;
 }
 
 .turn-indicator {
@@ -90,28 +75,6 @@
   }
 }
 
-.btn-leave-game {
-  padding: 8px 16px;
-  background: var(--color-danger);
-  color: white;
-  border: none;
-  border-radius: var(--radius-base);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  box-shadow: var(--shadow-danger-sm);
-}
-
-.btn-leave-game:hover {
-  background: var(--color-danger-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-danger-md);
-}
-
-.btn-leave-game:active {
-  transform: translateY(0);
-}
 
 .other-players {
   display: grid;
@@ -937,12 +900,6 @@
     padding: 5px;
   }
 
-  .game-header {
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-  }
-
   .building-pile {
     min-height: 115px;
     padding: 5px;
@@ -1072,7 +1029,6 @@
     padding: 5px;
   }
 
-  .game-header,
   .game-center,
   .player-area {
     margin-bottom: 5px;
