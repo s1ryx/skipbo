@@ -128,7 +128,7 @@
 }
 
 .opponent-cards > .discard-piles-opponent {
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .opponent-cards .pile-label {
