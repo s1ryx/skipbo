@@ -252,7 +252,7 @@
   margin-top: 25px;
 }
 
-.building-piles {
+.game-center {
   background: var(--color-surface);
   padding: 15px;
   border-radius: var(--radius-md);
@@ -261,7 +261,7 @@
   flex: 1;
 }
 
-.building-piles h3 {
+.game-center h3 {
   margin: 0 0 10px 0;
   color: var(--color-text-primary);
   text-align: center;
@@ -816,11 +816,11 @@
     padding: 8px;
   }
 
-  .building-piles {
+  .game-center {
     padding: 12px;
   }
 
-  .building-piles h3 {
+  .game-center h3 {
     font-size: 1.1rem;
     margin-bottom: 8px;
   }
@@ -907,7 +907,7 @@
     padding: 6px;
   }
 
-  .building-piles {
+  .game-center {
     padding: 10px;
     gap: 8px;
   }
@@ -958,11 +958,11 @@
     padding: 5px;
   }
 
-  .building-piles {
+  .game-center {
     padding: 8px;
   }
 
-  .building-piles h3 {
+  .game-center h3 {
     font-size: 1rem;
     margin-bottom: 6px;
   }
@@ -1088,7 +1088,7 @@
   }
 
   .game-header,
-  .building-piles,
+  .game-center,
   .player-area {
     margin-bottom: 5px;
     padding: 10px;

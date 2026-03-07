@@ -7,7 +7,7 @@ function BuildingPiles({ piles, isClickable, onPileClick }) {
   const { t } = useTranslation();
 
   return (
-    <div className="building-piles">
+    <div className="game-center">
       <h3>{t('game.buildingPiles')}</h3>
       <div className="piles-container">
         {piles.map((pile, index) => (
