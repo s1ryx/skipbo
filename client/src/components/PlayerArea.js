@@ -24,8 +24,6 @@ function PlayerArea({
 
   return (
     <div className={`player-area ${!isMyTurn ? 'inactive' : ''}`}>
-      <h3>{t('game.yourArea')}</h3>
-
       <div className="player-piles">
         {/* Stockpile */}
         <div className="stockpile-section">
