@@ -124,9 +124,9 @@ transport.attach(server);
 
 | Module                                                                                          | Lines | Responsibility                              |
 | ----------------------------------------------------------------------------------------------- | ----- | ------------------------------------------- |
-| [`gameCoordinator.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/gameCoordinator.js) | ~1020 | Event handling, orchestration, broadcasting |
+| [`gameCoordinator.js`](https://github.com/s1ryx/skipbo/blob/1a2880a/server/gameCoordinator.js) | ~1114 | Event handling, orchestration, broadcasting |
 | [`gameLogic.js`](https://github.com/s1ryx/skipbo/blob/75c49393/server/gameLogic.js)             | ~437  | Game rules engine (SkipBoGame class)        |
-| [`config.js`](https://github.com/s1ryx/skipbo/blob/e757e5c4/server/config.js)                   | ~67   | Constants, Phase enum, BOT_ID_PREFIX        |
+| [`config.js`](https://github.com/s1ryx/skipbo/blob/1a2880a/server/config.js)                    | ~68   | Constants, Phase enum, BOT_ID_PREFIX        |
 | [`errors.js`](https://github.com/s1ryx/skipbo/blob/833f1737/server/errors.js)                   | ~42   | GameError class and ErrorCodes              |
 | [`logger.js`](https://github.com/s1ryx/skipbo/blob/c1a03c5/server/logger.js)                    | ~30   | Structured JSON logger factory              |
 | [`SessionManager.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/SessionManager.js)   | ~44   | Connection-to-room mapping                  |
@@ -135,7 +135,7 @@ transport.attach(server);
 
 ### Game Coordinator
 
-[`GameCoordinator`](https://github.com/s1ryx/skipbo/blob/2af34157/server/gameCoordinator.js)
+[`GameCoordinator`](https://github.com/s1ryx/skipbo/blob/1a2880a/server/gameCoordinator.js)
 owns all game coordination logic. It receives events from the transport
 through [`handleMessage()`](https://github.com/s1ryx/skipbo/blob/50a590e7/server/gameCoordinator.js#L89-L120)
 and calls `this.transport.send()` / `sendToGroup()` / etc. for outbound
@@ -277,9 +277,9 @@ index.js
 
 ### State Management
 
-Server-related state lives in the [`useGameConnection`](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/useGameConnection.js)
-custom hook (175 lines,
-[state declarations:6-35](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/useGameConnection.js#L6-L35)):
+Server-related state lives in the [`useGameConnection`](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js)
+custom hook (180 lines,
+[state declarations:6-35](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L6-L35)):
 
 | State                  | Type    | Purpose                                    |
 | ---------------------- | ------- | ------------------------------------------ |
@@ -321,25 +321,25 @@ server-related state themselves — they receive data and call callbacks.
 - Three-way routing: `inLobby` → Lobby, `!gameStarted` → WaitingRoom,
   else → GameBoard
 
-**`useGameConnection`** ([useGameConnection.js](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/useGameConnection.js), 175 lines)
+**`useGameConnection`** ([useGameConnection.js](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js), 180 lines)
 
 - Creates a `SocketIOClientTransport` and connects on mount
-  ([useGameConnection.js:43-87](https://github.com/s1ryx/skipbo/blob/4c098fa1/client/src/useGameConnection.js#L43-L87))
+  ([useGameConnection.js:43-87](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L43-L87))
 - Wires message handlers from `messageHandlers.js`
 - Defines 11 action functions that send events through the transport
-  ([useGameConnection.js:89-148](https://github.com/s1ryx/skipbo/blob/80b0360b/client/src/useGameConnection.js#L89-L148)):
+  ([useGameConnection.js:89-152](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L89-L152)):
   `createRoom`, `joinRoom`, `startGame`, `playCard`, `discardCard`,
   `leaveLobby`, `leaveGame`, `requestRematch`, `updateRematchSettings`,
   `sendChatMessage`, `addBot`, `removeBot`
-- Chat message persistence to sessionStorage
-  ([useGameConnection.js:36-41](https://github.com/s1ryx/skipbo/blob/e7ee09e0/client/src/useGameConnection.js#L36-L41))
+- Session persistence to localStorage, chat persistence to sessionStorage
+  ([useGameConnection.js:37-41](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L37-L41))
 
-**`messageHandlers.js`** ([messageHandlers.js](https://github.com/s1ryx/skipbo/blob/aa958d98/client/src/messageHandlers.js), 176 lines)
+**`messageHandlers.js`** ([messageHandlers.js](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/messageHandlers.js), 176 lines)
 
-- Pure factory function [`createMessageHandlers()`](https://github.com/s1ryx/skipbo/blob/aa958d98/client/src/messageHandlers.js#L1-L13) — no hooks, no transport
+- Pure factory function [`createMessageHandlers()`](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/messageHandlers.js#L1-L13) — no hooks, no transport
 - Handles all 16 server events via injected state setters
-- Session persistence (sessionStorage read/write) for roomCreated,
-  playerJoined, reconnected events
+- Session persistence (localStorage read/write) for roomCreated,
+  sessionToken, reconnected events
 - Independently testable with mock setters
 
 **`Lobby`** ([Lobby.js](https://github.com/s1ryx/skipbo/blob/77a11220/client/src/components/Lobby.js))
@@ -420,8 +420,9 @@ server-related state themselves — they receive data and call callbacks.
 
 ### Session Persistence
 
-The message handlers save session data to sessionStorage on room creation,
-join, and reconnection:
+The message handlers save session data to localStorage on room creation,
+join, and reconnection. Using localStorage ensures the session survives
+tab closures and browser restarts:
 
 ```json
 skipBoSession: { "roomId": "ABC123", "playerId": "connection-id", "playerName": "Alice", "sessionToken": "..." }
@@ -599,7 +600,7 @@ Player types message and submits
 ```
 Player reloads page
   → App mounts, useGameConnection creates transport
-  → On connect, checks sessionStorage for saved session
+  → On connect, checks localStorage for saved session
   → If session found, sends 'reconnect' with sessionToken
   → Server finds player by sessionToken
   → Server calls game.updateConnectionId(internalId, newConnectionId)
@@ -627,8 +628,12 @@ Player disconnects (tab close, network loss)
   → Server 'disconnect' handler fires
   → If pre-game: removes player, may schedule deletion
   → If mid-game: sends 'playerDisconnected'
-    → Room persists for reconnection
+    → If humans remain: room persists for reconnection
+    → If no humans remain: schedules game deletion after
+      grace period (GAME_GRACE_PERIOD_MS), pauses bot turns
   → If post-game: removes rematch vote
+    → If no humans remain: schedules game deletion after
+      grace period
 ```
 
 ## Data Flow Diagram
@@ -672,17 +677,17 @@ Player disconnects (tab close, network loss)
 
 ## Browser Storage Keys
 
-**sessionStorage** (cleared when tab closes):
-
-| Key                   | Value                                            | Used by                  |
-| --------------------- | ------------------------------------------------ | ------------------------ |
-| `skipBoSession`       | `{ roomId, playerId, playerName, sessionToken }` | Reconnection on reload   |
-| `skipBoChat_{roomId}` | `[{ message, playerName, ... }]`                 | Chat message persistence |
-
 **localStorage** (persists across sessions):
 
-| Key                  | Value                  | Used by                       |
-| -------------------- | ---------------------- | ----------------------------- |
-| `skipBoPlayerName`   | `"Alice"`              | Remember player name in Lobby |
-| `skipBoLanguage`     | `"en"`, `"de"`, `"tr"` | Language preference           |
-| `skipBoQuickDiscard` | `"true"` or `"false"`  | Quick discard setting         |
+| Key                  | Value                                            | Used by                       |
+| -------------------- | ------------------------------------------------ | ----------------------------- |
+| `skipBoSession`      | `{ roomId, playerId, playerName, sessionToken }` | Reconnection on reload        |
+| `skipBoPlayerName`   | `"Alice"`                                        | Remember player name in Lobby |
+| `skipBoLanguage`     | `"en"`, `"de"`, `"tr"`                           | Language preference            |
+| `skipBoQuickDiscard` | `"true"` or `"false"`                            | Quick discard setting          |
+
+**sessionStorage** (cleared when tab closes):
+
+| Key                   | Value                            | Used by                  |
+| --------------------- | -------------------------------- | ------------------------ |
+| `skipBoChat_{roomId}` | `[{ message, playerName, ... }]` | Chat message persistence |
