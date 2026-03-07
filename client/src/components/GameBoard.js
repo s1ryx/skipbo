@@ -55,6 +55,13 @@ function GameBoard({
     const sourceType = getSourceType(source);
     if (discardMode && sourceType !== 'hand') return;
 
+    // Toggle off if clicking the same card again
+    if (selectedCard === card && selectedSource === source) {
+      setSelectedCard(null);
+      setSelectedSource(null);
+      return;
+    }
+
     setSelectedCard(card);
     setSelectedSource(source);
   };
