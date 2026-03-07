@@ -75,9 +75,10 @@ describe('GameBoard', () => {
   });
 
   describe('active game', () => {
-    it('renders room ID in game header', () => {
+    it('renders room ID in options menu', () => {
       renderGameBoard();
-      expect(screen.getByText('Room: TESTROOM')).toBeInTheDocument();
+      fireEvent.click(screen.getByLabelText('Options'));
+      expect(screen.getByText('TESTROOM')).toBeInTheDocument();
     });
 
     it('shows "Your Turn" when it is the player turn', () => {
@@ -92,9 +93,11 @@ describe('GameBoard', () => {
       expect(screen.getByText('Waiting for other player...')).toBeInTheDocument();
     });
 
-    it('renders building piles section', () => {
+    it('renders building piles', () => {
       renderGameBoard();
-      expect(screen.getByText('Building Piles')).toBeInTheDocument();
+      // Building piles and discard piles both use "Pile N" labels
+      expect(screen.getAllByText('Pile 1').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Pile 4').length).toBeGreaterThanOrEqual(1);
     });
 
     it('renders 4 empty building piles with "Start with 1" text', () => {
@@ -108,9 +111,9 @@ describe('GameBoard', () => {
       expect(screen.getByText(/Bob/)).toBeInTheDocument();
     });
 
-    it('renders player area', () => {
+    it('renders player area with stockpile label', () => {
       renderGameBoard();
-      expect(screen.getByText('Your Area')).toBeInTheDocument();
+      expect(screen.getByText('Your Stockpile (30)')).toBeInTheDocument();
     });
 
     it('renders player hand', () => {
@@ -130,13 +133,15 @@ describe('GameBoard', () => {
       expect(screen.queryByText('End Turn (Discard a Card)')).not.toBeInTheDocument();
     });
 
-    it('renders leave game button', () => {
+    it('renders leave game button in options menu', () => {
       renderGameBoard();
+      fireEvent.click(screen.getByLabelText('Options'));
       expect(screen.getByText('Leave Game')).toBeInTheDocument();
     });
 
     it('shows leave confirmation dialog on leave click', () => {
       renderGameBoard();
+      fireEvent.click(screen.getByLabelText('Options'));
       fireEvent.click(screen.getByText('Leave Game'));
       expect(screen.getByText('Are you sure you want to leave the game?')).toBeInTheDocument();
     });
@@ -190,6 +195,7 @@ describe('GameBoard', () => {
 
     it('renders quick discard checkbox', () => {
       renderGameBoard();
+      fireEvent.click(screen.getByLabelText('Options'));
       expect(screen.getByRole('checkbox')).toBeInTheDocument();
       expect(
         screen.getByText('Quick Discard (click discard pile with selected card)')

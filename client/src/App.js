@@ -69,12 +69,16 @@ function App() {
     removeBot,
   } = useGameConnection();
 
+  const isInGame = gameState?.gameStarted && !inLobby;
+
   return (
     <ErrorBoundary>
       <div className="App">
-        <header className="App-header">
-          <h1>{t('app.title')}</h1>
-        </header>
+        {!isInGame && (
+          <header className="App-header">
+            <h1>{t('app.title')}</h1>
+          </header>
+        )}
 
         <ConnectionStatus isConnected={isConnected} />
         {error && <div className="error-message">{t(error)}</div>}
@@ -111,23 +115,25 @@ function App() {
           />
         )}
 
-        <footer className="App-footer">
-          <span className="version">
-            v{VERSION}
-            {COMMIT_HASH && ` (${COMMIT_HASH})`}
-          </span>
-          <select
-            className="language-selector"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-          >
-            {supportedLanguages.map((lang) => (
-              <option key={lang} value={lang}>
-                {t(`language.${lang}`)}
-              </option>
-            ))}
-          </select>
-        </footer>
+        {!isInGame && (
+          <footer className="App-footer">
+            <span className="version">
+              v{VERSION}
+              {COMMIT_HASH && ` (${COMMIT_HASH})`}
+            </span>
+            <select
+              className="language-selector"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              {supportedLanguages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {t(`language.${lang}`)}
+                </option>
+              ))}
+            </select>
+          </footer>
+        )}
       </div>
     </ErrorBoundary>
   );

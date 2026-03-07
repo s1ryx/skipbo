@@ -6,6 +6,7 @@ import GameOverOverlay from './GameOverOverlay';
 import OpponentArea from './OpponentArea';
 import BuildingPiles from './BuildingPiles';
 import PlayerArea from './PlayerArea';
+import OptionsMenu from './OptionsMenu';
 import { useTranslation } from '../i18n';
 
 function GameBoard({
@@ -109,27 +110,22 @@ function GameBoard({
     setSelectedSource(null);
   };
 
+  const turnText = isMyTurn
+    ? discardMode
+      ? playerState?.hand.length === 0
+        ? t('game.noCardsToDiscard')
+        : t('game.discardInstruction')
+      : t('game.yourTurn')
+    : t('game.waitingTurn');
+
   return (
     <div className="game-board">
-      <div className="game-header">
-        <h3>{t('game.room', { roomId })}</h3>
-        <div
-          className={`turn-indicator ${isMyTurn ? 'my-turn' : ''}`}
-          role="status"
-          aria-live="polite"
-        >
-          {isMyTurn
-            ? discardMode
-              ? playerState?.hand.length === 0
-                ? t('game.noCardsToDiscard')
-                : t('game.discardInstruction')
-              : t('game.yourTurn')
-            : t('game.waitingTurn')}
-        </div>
-        <button onClick={() => setShowLeaveConfirm(true)} className="btn-leave-game">
-          {t('game.leaveGame')}
-        </button>
-      </div>
+      <OptionsMenu
+        roomId={roomId}
+        quickDiscardEnabled={quickDiscardEnabled}
+        onToggleQuickDiscard={toggleQuickDiscard}
+        onLeaveGame={() => setShowLeaveConfirm(true)}
+      />
 
       <OpponentArea
         opponents={gameState.players.filter((p) => p.id !== playerId)}
@@ -140,6 +136,8 @@ function GameBoard({
         piles={gameState.buildingPiles}
         isClickable={selectedCard && isMyTurn && !discardMode}
         onPileClick={handleBuildingPileClick}
+        isMyTurn={isMyTurn}
+        turnText={turnText}
       />
 
       {playerState && (
@@ -159,7 +157,6 @@ function GameBoard({
             setSelectedCard(null);
             setSelectedSource(null);
           }}
-          onToggleQuickDiscard={toggleQuickDiscard}
         />
       )}
 

@@ -36,6 +36,8 @@
 
   "game.yourTurn": "Your Turn!",
   "game.waitingTurn": "Waiting for other player...",
+  "game.options": "Options",
+  "game.language": "Language",
   "game.leaveGame": "Leave Game",
   "game.leaveConfirm": "Are you sure you want to leave the game?",
   "game.leaveYes": "Leave",

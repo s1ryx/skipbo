@@ -16,7 +16,6 @@ function PlayerArea({
   onPassTurn,
   onCancelDiscard,
   onClearSelection,
-  onToggleQuickDiscard,
 }) {
   const { t } = useTranslation();
 
@@ -25,9 +24,7 @@ function PlayerArea({
 
   return (
     <div className={`player-area ${!isMyTurn ? 'inactive' : ''}`}>
-      <h3>{t('game.yourArea')}</h3>
-
-      <div className="player-piles">
+      <div className="player-top-row">
         {/* Stockpile */}
         <div className="stockpile-section">
           <div className="pile-label">
@@ -45,63 +42,63 @@ function PlayerArea({
           )}
         </div>
 
-        {/* Discard Piles */}
-        <div className="discard-piles-section">
-          <div className="pile-label">{t('game.yourDiscardPiles')}</div>
-          <div className="discard-piles-container">
-            {playerState.discardPiles.map((pile, index) => (
-              <div
-                key={index}
-                className={`discard-pile ${discardMode ? 'discard-mode' : ''} ${canDiscard ? 'discard-target' : ''}`}
-                onClick={() => onDiscardPileClick(index)}
-              >
-                <div className="pile-label-small">{t('game.pile', { index: index + 1 })}</div>
-                {pile.length > 0 ? (
-                  <div className="discard-pile-stack">
-                    {pile.map((card, cardIndex) => (
-                      <div
-                        key={`${index}-${cardIndex}-${card}-${pile.length}`}
-                        className={`card-in-pile ${cardIndex === pile.length - 1 ? 'top-card' : ''} ${selectedCard === card && cardIndex === pile.length - 1 && selectedSource === `discard${index}` ? 'selected' : ''}`}
-                        onClick={(e) => {
-                          if (discardMode) {
-                            return;
-                          }
-                          if (
-                            quickDiscardEnabled &&
-                            selectedCard &&
-                            selectedSource?.startsWith('hand-')
-                          ) {
-                            return;
-                          }
-                          if (cardIndex === pile.length - 1) {
-                            e.stopPropagation();
-                            onCardSelect(card, `discard${index}`);
-                          }
-                        }}
-                      >
-                        <Card value={card} isVisible={true} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="empty-pile-small">
-                    {canDiscard ? t('game.clickToDiscard') : t('game.empty')}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Player Hand */}
+        <PlayerHand
+          hand={playerState.hand}
+          selectedCard={selectedCard}
+          selectedSource={selectedSource}
+          onCardSelect={onCardSelect}
+          disabled={!isMyTurn}
+        />
       </div>
 
-      {/* Player Hand */}
-      <PlayerHand
-        hand={playerState.hand}
-        selectedCard={selectedCard}
-        selectedSource={selectedSource}
-        onCardSelect={onCardSelect}
-        disabled={!isMyTurn}
-      />
+      {/* Discard Piles */}
+      <div className="discard-piles-section">
+        <div className="pile-label">{t('game.yourDiscardPiles')}</div>
+        <div className="discard-piles-container">
+          {playerState.discardPiles.map((pile, index) => (
+            <div
+              key={index}
+              className={`discard-pile ${discardMode ? 'discard-mode' : ''} ${canDiscard ? 'discard-target' : ''}`}
+              onClick={() => onDiscardPileClick(index)}
+            >
+              <div className="pile-label-small">{t('game.pile', { index: index + 1 })}</div>
+              {pile.length > 0 ? (
+                <div className="discard-pile-stack">
+                  {pile.map((card, cardIndex) => (
+                    <div
+                      key={`${index}-${cardIndex}-${card}-${pile.length}`}
+                      className={`card-in-pile ${cardIndex === pile.length - 1 ? 'top-card' : ''} ${selectedCard === card && cardIndex === pile.length - 1 && selectedSource === `discard${index}` ? 'selected' : ''}`}
+                      onClick={(e) => {
+                        if (discardMode) {
+                          return;
+                        }
+                        if (
+                          quickDiscardEnabled &&
+                          selectedCard &&
+                          selectedSource?.startsWith('hand-')
+                        ) {
+                          return;
+                        }
+                        if (cardIndex === pile.length - 1) {
+                          e.stopPropagation();
+                          onCardSelect(card, `discard${index}`);
+                        }
+                      }}
+                    >
+                      <Card value={card} isVisible={true} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-pile-small">
+                  {canDiscard ? t('game.clickToDiscard') : t('game.empty')}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Actions */}
       <div className="actions">
@@ -126,12 +123,6 @@ function PlayerArea({
             <button onClick={onClearSelection}>{t('game.cancel')}</button>
           </div>
         )}
-        <div className="settings-toggle">
-          <label>
-            <input type="checkbox" checked={quickDiscardEnabled} onChange={onToggleQuickDiscard} />
-            {t('game.quickDiscard')}
-          </label>
-        </div>
       </div>
     </div>
   );

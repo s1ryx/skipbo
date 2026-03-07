@@ -36,6 +36,8 @@
 
   "game.yourTurn": "Sıra Sende!",
   "game.waitingTurn": "Diğer oyuncu bekleniyor...",
+  "game.options": "Seçenekler",
+  "game.language": "Dil",
   "game.leaveGame": "Oyundan Ayrıl",
   "game.leaveConfirm": "Oyundan ayrılmak istediğine emin misin?",
   "game.leaveYes": "Ayrıl",

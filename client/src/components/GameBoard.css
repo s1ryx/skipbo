@@ -1,34 +1,23 @@
 .game-board {
-  padding: 10px;
+  position: relative;
+  padding: 8px;
   width: 100%;
+  min-width: 100px;
   margin: 0;
-  min-height: calc(100vh - 80px);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.game-header {
-  background: var(--color-surface);
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.game-header h3 {
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
 .turn-indicator {
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: var(--radius-md);
   font-weight: 600;
+  font-size: 0.9rem;
   background: var(--color-border);
   color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: 10px;
 }
 
 .turn-indicator.my-turn {
@@ -87,28 +76,6 @@
   }
 }
 
-.btn-leave-game {
-  padding: 8px 16px;
-  background: var(--color-danger);
-  color: white;
-  border: none;
-  border-radius: var(--radius-base);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  box-shadow: var(--shadow-danger-sm);
-}
-
-.btn-leave-game:hover {
-  background: var(--color-danger-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-danger-md);
-}
-
-.btn-leave-game:active {
-  transform: translateY(0);
-}
 
 .other-players {
   display: grid;
@@ -162,7 +129,7 @@
 }
 
 .opponent-cards > .discard-piles-opponent {
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .opponent-cards .pile-label {
@@ -252,20 +219,12 @@
   margin-top: 25px;
 }
 
-.building-piles {
+.game-center {
   background: var(--color-surface);
-  padding: 15px;
+  padding: 12px;
   border-radius: var(--radius-md);
   margin-bottom: 10px;
   box-shadow: var(--shadow-sm);
-  flex: 1;
-}
-
-.building-piles h3 {
-  margin: 0 0 10px 0;
-  color: var(--color-text-primary);
-  text-align: center;
-  font-size: 1.2rem;
 }
 
 .piles-container {
@@ -288,9 +247,9 @@
   background: var(--color-surface-alt);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 10px;
+  padding: 8px;
   text-align: center;
-  min-height: 160px;
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -351,7 +310,7 @@
 
 .player-area {
   background: var(--color-surface);
-  padding: 15px;
+  padding: 12px;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   transition:
@@ -370,21 +329,22 @@
   font-size: 1.2rem;
 }
 
-.player-piles {
-  display: flex;
+.player-top-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
   gap: 15px;
   margin-bottom: 15px;
-  flex-wrap: wrap;
 }
 
 .stockpile-section {
-  flex: 1;
-  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .discard-piles-section {
-  flex: 2;
-  min-width: 300px;
+  margin-bottom: 15px;
 }
 
 .discard-piles-container {
@@ -518,6 +478,9 @@
   cursor: pointer;
   transition: all var(--transition-normal);
   box-shadow: var(--shadow-primary-md);
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
 }
 
 .btn-end-turn:hover {
@@ -551,37 +514,6 @@
   color: white;
 }
 
-.settings-toggle {
-  padding: 10px 20px;
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  transition: all var(--transition-normal);
-}
-
-.settings-toggle:hover {
-  border-color: var(--color-primary);
-}
-
-.settings-toggle label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin: 0;
-}
-
-.settings-toggle input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
 
 .leave-confirm-overlay {
   position: fixed;
@@ -778,7 +710,7 @@
 
 /* Additional responsive optimizations */
 @media (max-width: 768px) {
-  .player-piles {
+  .player-top-row {
     gap: 10px;
   }
 
@@ -788,14 +720,6 @@
 
   .discard-pile {
     min-width: 70px;
-  }
-
-  .stockpile-section {
-    min-width: 100px;
-  }
-
-  .discard-piles-section {
-    min-width: 220px;
   }
 
   .player-area {
@@ -816,13 +740,8 @@
     padding: 8px;
   }
 
-  .building-piles {
+  .game-center {
     padding: 12px;
-  }
-
-  .building-piles h3 {
-    font-size: 1.1rem;
-    margin-bottom: 8px;
   }
 
   .pile-info {
@@ -853,7 +772,7 @@
     gap: 6px;
   }
 
-  .player-piles {
+  .player-top-row {
     gap: 8px;
   }
 
@@ -863,14 +782,6 @@
 
   .discard-pile {
     min-width: 60px;
-  }
-
-  .stockpile-section {
-    min-width: 80px;
-  }
-
-  .discard-piles-section {
-    min-width: 200px;
   }
 
   .player-area {
@@ -889,14 +800,6 @@
     gap: 8px;
   }
 
-  .settings-toggle {
-    padding: 8px 15px;
-  }
-
-  .settings-toggle label {
-    font-size: 0.85rem;
-  }
-
   /* More aggressive card overlap in discard piles */
   .card-in-pile:not(:first-child) {
     margin-top: -42px;
@@ -907,7 +810,7 @@
     padding: 6px;
   }
 
-  .building-piles {
+  .game-center {
     padding: 10px;
     gap: 8px;
   }
@@ -947,24 +850,13 @@
     padding: 5px;
   }
 
-  .game-header {
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-  }
-
   .building-pile {
     min-height: 115px;
     padding: 5px;
   }
 
-  .building-piles {
+  .game-center {
     padding: 8px;
-  }
-
-  .building-piles h3 {
-    font-size: 1rem;
-    margin-bottom: 6px;
   }
 
   .pile-info {
@@ -993,17 +885,6 @@
     grid-template-columns: repeat(auto-fit, minmax(65px, 1fr));
     max-width: 100%;
     gap: 5px;
-  }
-
-  .player-piles {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .stockpile-section,
-  .discard-piles-section {
-    min-width: unset;
-    width: 100%;
   }
 
   .discard-piles-container {
@@ -1046,20 +927,6 @@
     font-size: 0.9rem;
   }
 
-  .settings-toggle {
-    padding: 6px 12px;
-  }
-
-  .settings-toggle label {
-    font-size: 0.8rem;
-    gap: 6px;
-  }
-
-  .settings-toggle input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
-  }
-
   .selected-card-info {
     padding: 8px 15px;
     gap: 8px;
@@ -1087,8 +954,7 @@
     padding: 5px;
   }
 
-  .game-header,
-  .building-piles,
+  .game-center,
   .player-area {
     margin-bottom: 5px;
     padding: 10px;
@@ -1106,6 +972,15 @@
 @media (max-width: 300px) {
   .piles-container {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .player-top-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .player-hand {
+    justify-self: stretch;
   }
 }
 
