@@ -63,6 +63,7 @@ const renderApp = () => {
 beforeEach(() => {
   mockSocket._reset();
   sessionStorage.clear();
+  localStorage.clear();
   // Lobby.js creates a BroadcastChannel on mount; provide a mock for jsdom
   global.BroadcastChannel = jest.fn().mockImplementation(() => ({
     postMessage: jest.fn(),
@@ -219,7 +220,7 @@ describe('App', () => {
     });
 
     it('attempts reconnection when saved session exists', () => {
-      sessionStorage.setItem(
+      localStorage.setItem(
         'skipBoSession',
         JSON.stringify({ roomId: 'OLD123', playerName: 'Alice', sessionToken: 'tok-123' })
       );

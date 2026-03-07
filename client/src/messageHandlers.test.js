@@ -17,8 +17,8 @@ function createMockDeps() {
   return deps;
 }
 
-// Mock sessionStorage
-const sessionStorageMock = (() => {
+// Mock sessionStorage and localStorage
+function createStorageMock() {
   let store = {};
   return {
     getItem: jest.fn((key) => store[key] || null),
@@ -32,12 +32,18 @@ const sessionStorageMock = (() => {
       store = {};
     }),
   };
-})();
+}
+
+const sessionStorageMock = createStorageMock();
+const localStorageMock = createStorageMock();
 // eslint-disable-next-line no-undef
 Object.defineProperty(globalThis, 'sessionStorage', { value: sessionStorageMock });
+// eslint-disable-next-line no-undef
+Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 
 beforeEach(() => {
   sessionStorageMock.clear();
+  localStorageMock.clear();
   jest.clearAllMocks();
   jest.useFakeTimers();
 });
@@ -64,7 +70,7 @@ describe('createMessageHandlers', () => {
       expect(deps.setInLobby).toHaveBeenCalledWith(false);
       expect(deps.roomIdRef.current).toBe('ABC');
       expect(deps.sessionTokenRef.current).toBe('tok');
-      expect(sessionStorageMock.setItem).toHaveBeenCalledWith(
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'skipBoSession',
         expect.stringContaining('Alice')
       );
@@ -135,7 +141,7 @@ describe('createMessageHandlers', () => {
 
       handlers.reconnectFailed({ message: 'Room not found' });
 
-      expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('skipBoSession');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('skipBoSession');
       expect(deps.setError).toHaveBeenCalledWith('Room not found');
 
       jest.advanceTimersByTime(5000);
@@ -179,7 +185,7 @@ describe('createMessageHandlers', () => {
       handlers.gameOver({ gameState: { winner: 'p1' } });
 
       expect(deps.setGameState).toHaveBeenCalled();
-      expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('skipBoSession');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('skipBoSession');
     });
   });
 

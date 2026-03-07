@@ -13,7 +13,7 @@ export default function useGameConnection() {
   const [rematchVotes, setRematchVotes] = useState([]);
   const [rematchStockpileSize, setRematchStockpileSize] = useState(null);
   const [chatMessages, setChatMessages] = useState(() => {
-    const savedSession = sessionStorage.getItem('skipBoSession');
+    const savedSession = localStorage.getItem('skipBoSession');
     if (savedSession) {
       try {
         const { roomId } = JSON.parse(savedSession);
@@ -61,13 +61,13 @@ export default function useGameConnection() {
         setPlayerId(connectionId);
         setIsConnected(true);
 
-        const savedSession = sessionStorage.getItem('skipBoSession');
+        const savedSession = localStorage.getItem('skipBoSession');
         if (savedSession) {
           try {
             const { roomId, playerName, sessionToken } = JSON.parse(savedSession);
             transport.send('reconnect', { roomId, sessionToken, playerName });
           } catch {
-            sessionStorage.removeItem('skipBoSession');
+            localStorage.removeItem('skipBoSession');
           }
         }
       },
@@ -112,7 +112,7 @@ export default function useGameConnection() {
 
   const leaveLobby = useCallback(() => {
     transportRef.current?.send('leaveLobby');
-    sessionStorage.removeItem('skipBoSession');
+    localStorage.removeItem('skipBoSession');
     roomIdRef.current = null;
     setGameState(null);
     setPlayerState(null);
