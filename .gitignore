@@ -37,6 +37,9 @@ yarn-error.log*
 lerna-debug.log*
 pnpm-debug.log*
 
+# SQLite data
+server/data/
+
 # Docker
 .env.production
 docker-compose.override.yml
