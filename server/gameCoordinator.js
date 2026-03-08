@@ -54,6 +54,11 @@ class GameCoordinator {
     this.sessionManager = new SessionManager();
     this.botManager = new BotManager();
 
+    // Authentication
+    this.authService = options.authService || null;
+    this.playerStore = options.playerStore || null;
+    this.loggedInAccounts = new Map(); // connectionId → username
+
     // Game logging
     this.loggingEnabled = options.logging ?? false;
     this.logAnalysis = options.logAnalysis ?? false;
@@ -90,6 +95,48 @@ class GameCoordinator {
     this.logger.debug('player connected', { connectionId });
   }
 
+  handleLogin(connectionId, { username, password } = {}) {
+    if (!this.authService) {
+      this.transport.send(connectionId, 'loginFailed', {
+        error: 'Login is not available',
+      });
+      return;
+    }
+
+    const validName = validatePlayerName(username);
+    if (!validName) {
+      this.transport.send(connectionId, 'loginFailed', {
+        error: ErrorCodes.INVALID_PLAYER_NAME,
+      });
+      return;
+    }
+
+    const result = this.authService.login(validName, password || null);
+
+    if (!result.success) {
+      this.transport.send(connectionId, 'loginFailed', { error: result.error });
+      return;
+    }
+
+    this.loggedInAccounts.set(connectionId, validName.toLowerCase());
+
+    const sessionData = this.playerStore
+      ? this.playerStore.getSessionData(validName)
+      : null;
+
+    this.transport.send(connectionId, 'loggedIn', {
+      username: result.player.display_name,
+      hasPassword: result.hasPassword,
+      sessionData,
+    });
+
+    this.logger.info('player logged in', {
+      connectionId,
+      username: validName,
+      isNew: !!result.isNew,
+    });
+  }
+
   handleMessage(connectionId, event, data) {
     switch (event) {
       case 'createRoom':
@@ -120,6 +167,8 @@ class GameCoordinator {
         return this.handleAddBot(connectionId, data);
       case 'removeBot':
         return this.handleRemoveBot(connectionId, data);
+      case 'login':
+        return this.handleLogin(connectionId, data);
       default:
         this.logger.warn('unknown event', { event });
     }
@@ -704,6 +753,7 @@ class GameCoordinator {
 
   handleDisconnect(connectionId) {
     this.logger.info('player disconnected', { connectionId });
+    this.loggedInAccounts.delete(connectionId);
 
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
