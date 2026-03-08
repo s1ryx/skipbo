@@ -120,6 +120,24 @@ class GameCoordinator {
 
     this.loggedInAccounts.set(connectionId, validName.toLowerCase());
 
+    // If the player is already in a room, save their session data immediately
+    const roomId = this.sessionManager.getRoom(connectionId);
+    if (roomId) {
+      const game = this.gameRepository.getGame(roomId);
+      if (game) {
+        const player = game.getPlayerByConnectionId(connectionId);
+        if (player) {
+          this._saveSessionForPlayer(
+            connectionId,
+            roomId,
+            player.publicId,
+            player.name,
+            player.sessionToken
+          );
+        }
+      }
+    }
+
     const sessionData = this.playerStore ? this.playerStore.getSessionData(validName) : null;
 
     this.transport.send(connectionId, 'loggedIn', {
