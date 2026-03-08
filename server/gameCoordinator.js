@@ -622,6 +622,7 @@ class GameCoordinator {
     if (!player) return;
     this.logger.info('player leaving lobby', { roomId, connectionId });
 
+    this._clearSessionForPlayer(connectionId);
     game.removePlayer(player.internalId);
     this.transport.removeFromGroup(connectionId, roomId);
     this.sessionManager.removeRoom(connectionId);
@@ -657,6 +658,7 @@ class GameCoordinator {
 
     if (game.phase === Phase.FINISHED) {
       // Post-game: soft leave (only the leaving player exits)
+      this._clearSessionForPlayer(connectionId);
       if (leavingPlayer) game.removePlayer(leavingPlayer.internalId);
       this.transport.removeFromGroup(connectionId, roomId);
       this.sessionManager.removeRoom(connectionId);
@@ -679,6 +681,7 @@ class GameCoordinator {
       this.logger.info('player left post-game room', { roomId, connectionId });
     } else {
       // Mid-game: abort entire game
+      this._clearSessionForAllPlayers(game);
       this.transport.sendToGroup(roomId, 'gameAborted');
 
       game.players.forEach((p) => {
@@ -1124,6 +1127,8 @@ class GameCoordinator {
       this.turnCounters.delete(roomId);
     }
 
+    this._clearSessionForAllPlayers(game);
+
     this.transport.sendToGroup(roomId, 'gameOver', {
       winner: game.winner,
       gameState: this._getDecoratedGameState(game),
@@ -1142,6 +1147,22 @@ class GameCoordinator {
       playerId,
       playerName,
       sessionToken,
+    });
+  }
+
+  _clearSessionForPlayer(connectionId) {
+    if (!this.playerStore) return;
+    const username = this.loggedInAccounts.get(connectionId);
+    if (!username) return;
+    this.playerStore.clearSessionData(username);
+  }
+
+  _clearSessionForAllPlayers(game) {
+    if (!this.playerStore) return;
+    game.players.forEach((p) => {
+      if (!p.isBot && p.connectionId) {
+        this._clearSessionForPlayer(p.connectionId);
+      }
     });
   }
 
