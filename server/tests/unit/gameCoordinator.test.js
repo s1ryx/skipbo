@@ -1,4 +1,6 @@
 const GameCoordinator = require('../../gameCoordinator');
+const AuthService = require('../../AuthService');
+const InMemoryPlayerStore = require('../../InMemoryPlayerStore');
 
 function createMockTransport() {
   return {
@@ -12,6 +14,15 @@ function createMockTransport() {
 
 function createCoordinator() {
   const coordinator = new GameCoordinator();
+  const transport = createMockTransport();
+  coordinator.setTransport(transport);
+  return { coordinator, transport };
+}
+
+function createCoordinatorWithAuth() {
+  const playerStore = new InMemoryPlayerStore();
+  const authService = new AuthService(playerStore);
+  const coordinator = new GameCoordinator({ authService, playerStore });
   const transport = createMockTransport();
   coordinator.setTransport(transport);
   return { coordinator, transport };
@@ -1656,6 +1667,161 @@ describe('GameCoordinator', () => {
       // Grace period timer should no longer delete the game
       jest.advanceTimersByTime(300000);
       expect(coordinator.games.has(roomId)).toBe(true);
+    });
+  });
+
+  describe('persistent games for logged-in players', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    function loginAndCreateRoom(coordinator, connectionId, username) {
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage(connectionId, 'login', { username });
+      handlers.onMessage(connectionId, 'createRoom', {
+        playerName: username,
+        maxPlayers: 2,
+      });
+      const call = coordinator.transport.send.mock.calls.find(
+        (c) => c[0] === connectionId && c[1] === 'roomCreated'
+      );
+      return call[2].roomId;
+    }
+
+    function loginAndJoinRoom(coordinator, connectionId, username, roomId) {
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage(connectionId, 'login', { username });
+      handlers.onMessage(connectionId, 'joinRoom', {
+        roomId,
+        playerName: username,
+      });
+    }
+
+    it('sets accountId on player when logged in', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const roomId = loginAndCreateRoom(coordinator, 'p1', 'Alice');
+      const game = coordinator.games.get(roomId);
+      expect(game.players[0].accountId).toBe('alice');
+    });
+
+    it('uses persistent TTL when all players are logged in', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const roomId = loginAndCreateRoom(coordinator, 'p1', 'Alice');
+      loginAndJoinRoom(coordinator, 'p2', 'Bob', roomId);
+
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('p1', 'startGame', {});
+
+      handlers.onDisconnect('p1');
+      handlers.onDisconnect('p2');
+
+      expect(coordinator.games.has(roomId)).toBe(true);
+      expect(coordinator.persistentGames.has(roomId)).toBe(true);
+
+      // Should survive the normal 5-minute grace period
+      jest.advanceTimersByTime(300000);
+      expect(coordinator.games.has(roomId)).toBe(true);
+
+      // Should be deleted after 24-hour TTL
+      jest.advanceTimersByTime(86400000);
+      expect(coordinator.games.has(roomId)).toBe(false);
+      expect(coordinator.persistentGames.has(roomId)).toBe(false);
+    });
+
+    it('uses normal TTL when not all players are logged in', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const roomId = loginAndCreateRoom(coordinator, 'p1', 'Alice');
+
+      // p2 joins without logging in
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('p2', 'joinRoom', {
+        roomId,
+        playerName: 'Bob',
+      });
+      handlers.onMessage('p1', 'startGame', {});
+
+      handlers.onDisconnect('p1');
+      handlers.onDisconnect('p2');
+
+      expect(coordinator.persistentGames.has(roomId)).toBe(false);
+      expect(coordinator.pendingDeletions.has(roomId)).toBe(true);
+
+      jest.advanceTimersByTime(300000);
+      expect(coordinator.games.has(roomId)).toBe(false);
+    });
+
+    it('cancels persistent deletion on reconnect', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const roomId = loginAndCreateRoom(coordinator, 'p1', 'Alice');
+      loginAndJoinRoom(coordinator, 'p2', 'Bob', roomId);
+
+      const handlers = coordinator.getTransportHandlers();
+      handlers.onMessage('p1', 'startGame', {});
+
+      const game = coordinator.games.get(roomId);
+      const sessionToken = game.players[0].sessionToken;
+
+      handlers.onDisconnect('p1');
+      handlers.onDisconnect('p2');
+      expect(coordinator.persistentGames.has(roomId)).toBe(true);
+
+      handlers.onMessage('p1-new', 'reconnect', {
+        roomId,
+        sessionToken,
+        playerName: 'Alice',
+      });
+
+      expect(coordinator.persistentGames.has(roomId)).toBe(false);
+      expect(coordinator.pendingDeletions.has(roomId)).toBe(false);
+
+      // Game should survive indefinitely now
+      jest.advanceTimersByTime(86400000);
+      expect(coordinator.games.has(roomId)).toBe(true);
+    });
+
+    it('respects MAX_PERSISTENT_GAMES limit', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Fill up persistent games to the limit
+      for (let i = 0; i < 50; i++) {
+        coordinator.persistentGames.add(`fake-room-${i}`);
+      }
+
+      const roomId = loginAndCreateRoom(coordinator, 'p1', 'Alice');
+      loginAndJoinRoom(coordinator, 'p2', 'Bob', roomId);
+      handlers.onMessage('p1', 'startGame', {});
+
+      handlers.onDisconnect('p1');
+      handlers.onDisconnect('p2');
+
+      // Should fall back to normal deletion since limit is reached
+      expect(coordinator.persistentGames.has(roomId)).toBe(false);
+      expect(coordinator.pendingDeletions.has(roomId)).toBe(true);
+
+      jest.advanceTimersByTime(300000);
+      expect(coordinator.games.has(roomId)).toBe(false);
+    });
+
+    it('sets accountId on mid-game login', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Create room without logging in first
+      handlers.onMessage('p1', 'createRoom', {
+        playerName: 'Alice',
+        maxPlayers: 2,
+      });
+      const call = coordinator.transport.send.mock.calls.find(
+        (c) => c[0] === 'p1' && c[1] === 'roomCreated'
+      );
+      const roomId = call[2].roomId;
+
+      const game = coordinator.games.get(roomId);
+      expect(game.players[0].accountId).toBeUndefined();
+
+      // Login mid-game
+      handlers.onMessage('p1', 'login', { username: 'Alice' });
+      expect(game.players[0].accountId).toBe('alice');
     });
   });
 });
