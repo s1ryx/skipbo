@@ -117,6 +117,9 @@ function App() {
             chatMessages={chatMessages}
             onSendChatMessage={sendChatMessage}
             onMarkMessagesRead={markMessagesAsRead}
+            loginState={loginState}
+            onLogin={login}
+            onLogout={logout}
           />
         )}
 

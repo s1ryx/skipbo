@@ -56,6 +56,9 @@ const defaultProps = {
   chatMessages: [],
   onSendChatMessage: jest.fn(),
   onMarkMessagesRead: jest.fn(),
+  loginState: { isLoggedIn: false, username: null, hasPassword: false, error: null },
+  onLogin: jest.fn(),
+  onLogout: jest.fn(),
 };
 
 const renderGameBoard = (props = {}) => {

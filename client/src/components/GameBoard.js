@@ -25,6 +25,9 @@ function GameBoard({
   chatMessages,
   onSendChatMessage,
   onMarkMessagesRead,
+  loginState,
+  onLogin,
+  onLogout,
 }) {
   const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState(null);
@@ -125,6 +128,9 @@ function GameBoard({
         quickDiscardEnabled={quickDiscardEnabled}
         onToggleQuickDiscard={toggleQuickDiscard}
         onLeaveGame={() => setShowLeaveConfirm(true)}
+        loginState={loginState}
+        onLogin={onLogin}
+        onLogout={onLogout}
       />
 
       <OpponentArea

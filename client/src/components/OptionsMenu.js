@@ -1,9 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import './OptionsMenu.css';
+import LoginForm from './LoginForm';
 import { useTranslation } from '../i18n';
 
-function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeaveGame }) {
+function OptionsMenu({
+  roomId,
+  quickDiscardEnabled,
+  onToggleQuickDiscard,
+  onLeaveGame,
+  loginState,
+  onLogin,
+  onLogout,
+}) {
   const { t, language, setLanguage, supportedLanguages } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef(null);
@@ -22,8 +31,10 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
     updatePosition();
     const handleClickOutside = (e) => {
       if (
-        buttonRef.current && !buttonRef.current.contains(e.target) &&
-        dropdownRef.current && !dropdownRef.current.contains(e.target)
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
       ) {
         setIsOpen(false);
       }
@@ -40,11 +51,7 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
 
   const dropdown = isOpen
     ? ReactDOM.createPortal(
-        <div
-          className="options-dropdown"
-          ref={dropdownRef}
-          style={{ top: dropdownTop }}
-        >
+        <div className="options-dropdown" ref={dropdownRef} style={{ top: dropdownTop }}>
           <div className="options-item options-room">
             <span className="room-label">{roomId}</span>
           </div>
@@ -61,10 +68,7 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
           <div className="options-item">
             <label>
               {t('game.language')}
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
+              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
                 {supportedLanguages.map((lang) => (
                   <option key={lang} value={lang}>
                     {t(`language.${lang}`)}
@@ -72,6 +76,9 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
                 ))}
               </select>
             </label>
+          </div>
+          <div className="options-item options-login">
+            <LoginForm loginState={loginState} onLogin={onLogin} onLogout={onLogout} />
           </div>
           <div className="options-item">
             <button className="btn-leave" onClick={onLeaveGame}>
