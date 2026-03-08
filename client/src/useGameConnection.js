@@ -12,6 +12,12 @@ export default function useGameConnection() {
   const [isConnected, setIsConnected] = useState(false);
   const [rematchVotes, setRematchVotes] = useState([]);
   const [rematchStockpileSize, setRematchStockpileSize] = useState(null);
+  const [loginState, setLoginState] = useState({
+    isLoggedIn: false,
+    username: null,
+    hasPassword: false,
+    error: null,
+  });
   const [chatMessages, setChatMessages] = useState(() => {
     const savedSession = localStorage.getItem('skipBoSession');
     if (savedSession) {
@@ -51,8 +57,10 @@ export default function useGameConnection() {
       setRematchVotes,
       setRematchStockpileSize,
       setChatMessages,
+      setLoginState,
       roomIdRef,
       sessionTokenRef,
+      transportRef,
     });
 
     const transport = new SocketIOClientTransport({
@@ -150,6 +158,14 @@ export default function useGameConnection() {
     transportRef.current?.send('removeBot', { botPlayerId });
   }, []);
 
+  const login = useCallback((username, password) => {
+    transportRef.current?.send('login', { username, password: password || null });
+  }, []);
+
+  const logout = useCallback(() => {
+    setLoginState({ isLoggedIn: false, username: null, hasPassword: false, error: null });
+  }, []);
+
   return {
     gameState,
     playerState,
@@ -175,5 +191,8 @@ export default function useGameConnection() {
     markMessagesAsRead,
     addBot,
     removeBot,
+    loginState,
+    login,
+    logout,
   };
 }
