@@ -18,6 +18,8 @@ const SERVER_EVENTS = [
   'playerLeftPostGame',
   'chatMessage',
   'error',
+  'loggedIn',
+  'loginFailed',
 ];
 
 class SocketIOClientTransport {
