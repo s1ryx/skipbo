@@ -4,6 +4,7 @@ import ConnectionStatus from './components/ConnectionStatus';
 import ErrorBoundary from './components/ErrorBoundary';
 import GameBoard from './components/GameBoard';
 import Lobby from './components/Lobby';
+import LoginForm from './components/LoginForm';
 import WaitingRoom from './components/WaitingRoom';
 import { useTranslation } from './i18n';
 import useGameConnection from './useGameConnection';
@@ -67,6 +68,9 @@ function App() {
     markMessagesAsRead,
     addBot,
     removeBot,
+    loginState,
+    login,
+    logout,
   } = useGameConnection();
 
   const isInGame = gameState?.gameStarted && !inLobby;
@@ -77,6 +81,13 @@ function App() {
         {!isInGame && (
           <header className="App-header">
             <h1>{t('app.title')}</h1>
+            {inLobby && (
+              <LoginForm
+                loginState={loginState}
+                onLogin={login}
+                onLogout={logout}
+              />
+            )}
           </header>
         )}
 
