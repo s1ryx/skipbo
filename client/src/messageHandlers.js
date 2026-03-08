@@ -8,8 +8,10 @@ export function createMessageHandlers({
   setRematchVotes,
   setRematchStockpileSize,
   setChatMessages,
+  setLoginState,
   roomIdRef,
   sessionTokenRef,
+  transportRef,
 }) {
   function saveSession(roomId, playerId, playerName, sessionToken) {
     localStorage.setItem(
@@ -166,6 +168,32 @@ export function createMessageHandlers({
 
     chatMessage(messageData) {
       setChatMessages((prevMessages) => [...prevMessages, messageData]);
+    },
+
+    loggedIn({ username, hasPassword, sessionData }) {
+      setLoginState({
+        isLoggedIn: true,
+        username,
+        hasPassword,
+        error: null,
+      });
+
+      if (sessionData) {
+        localStorage.setItem('skipBoSession', JSON.stringify(sessionData));
+        transportRef.current?.send('reconnect', {
+          roomId: sessionData.roomId,
+          sessionToken: sessionData.sessionToken,
+          playerName: sessionData.playerName,
+        });
+      }
+    },
+
+    loginFailed({ error }) {
+      setLoginState((prev) => ({ ...prev, error }));
+      setTimeout(
+        () => setLoginState((prev) => ({ ...prev, error: null })),
+        5000
+      );
     },
 
     error({ message }) {
