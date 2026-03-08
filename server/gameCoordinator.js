@@ -297,6 +297,7 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
+      this._clearSessionForPlayer(connectionId);
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.ROOM_NO_LONGER_EXISTS,
       });
@@ -345,6 +346,7 @@ class GameCoordinator {
         return;
       }
 
+      this._clearSessionForPlayer(connectionId);
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.PLAYER_NOT_FOUND,
       });
