@@ -81,13 +81,7 @@ function App() {
         {!isInGame && (
           <header className="App-header">
             <h1>{t('app.title')}</h1>
-            {inLobby && (
-              <LoginForm
-                loginState={loginState}
-                onLogin={login}
-                onLogout={logout}
-              />
-            )}
+            {inLobby && <LoginForm loginState={loginState} onLogin={login} onLogout={logout} />}
           </header>
         )}
 

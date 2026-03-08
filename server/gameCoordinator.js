@@ -120,9 +120,7 @@ class GameCoordinator {
 
     this.loggedInAccounts.set(connectionId, validName.toLowerCase());
 
-    const sessionData = this.playerStore
-      ? this.playerStore.getSessionData(validName)
-      : null;
+    const sessionData = this.playerStore ? this.playerStore.getSessionData(validName) : null;
 
     this.transport.send(connectionId, 'loggedIn', {
       username: result.player.display_name,

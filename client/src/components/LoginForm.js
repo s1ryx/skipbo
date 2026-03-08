@@ -46,9 +46,7 @@ export default function LoginForm({ loginState, onLogin, onLogout }) {
       <button className="login-btn" type="submit">
         {t('login.login')}
       </button>
-      {loginState.error && (
-        <span className="login-error">{t(loginState.error)}</span>
-      )}
+      {loginState.error && <span className="login-error">{t(loginState.error)}</span>}
     </form>
   );
 }

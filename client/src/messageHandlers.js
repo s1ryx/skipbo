@@ -190,10 +190,7 @@ export function createMessageHandlers({
 
     loginFailed({ error }) {
       setLoginState((prev) => ({ ...prev, error }));
-      setTimeout(
-        () => setLoginState((prev) => ({ ...prev, error: null })),
-        5000
-      );
+      setTimeout(() => setLoginState((prev) => ({ ...prev, error: null })), 5000);
     },
 
     error({ message }) {
