@@ -11,6 +11,8 @@ const {
   MAX_PENDING_ROOMS,
   MAX_TOTAL_ROOMS,
   COMPLETED_GAME_TTL_MS,
+  MAX_PERSISTENT_GAMES,
+  PERSISTENT_GAME_TTL_MS,
   MIN_PLAYERS,
   MAX_PLAYERS,
   MIN_STOCKPILE_SIZE,
@@ -58,6 +60,7 @@ class GameCoordinator {
     this.authService = options.authService || null;
     this.playerStore = options.playerStore || null;
     this.loggedInAccounts = new Map(); // connectionId → username
+    this.persistentGames = new Set(); // roomIds kept alive for logged-in players
 
     // Game logging
     this.loggingEnabled = options.logging ?? false;
@@ -838,7 +841,12 @@ class GameCoordinator {
       );
       if (!humansRemaining) {
         this.botManager.clearTimers(roomId);
-        this.scheduleGameDeletion(roomId);
+        if (this._allPlayersLoggedIn(game) && this.persistentGames.size < MAX_PERSISTENT_GAMES) {
+          this.persistentGames.add(roomId);
+          this.schedulePersistentGameDeletion(roomId);
+        } else {
+          this.scheduleGameDeletion(roomId);
+        }
       } else {
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
@@ -869,6 +877,22 @@ class GameCoordinator {
     }
   }
 
+  schedulePersistentGameDeletion(roomId) {
+    this.gameRepository.scheduleDeletion(
+      roomId,
+      () => {
+        this.persistentGames.delete(roomId);
+        this._deleteGameFull(roomId);
+        this.logger.info('persistent game deleted after TTL', { roomId });
+      },
+      PERSISTENT_GAME_TTL_MS
+    );
+    this.logger.info('persistent game scheduled for deletion', {
+      roomId,
+      delaySec: PERSISTENT_GAME_TTL_MS / 1000,
+    });
+  }
+
   scheduleGameDeletion(roomId) {
     if (this.gameRepository.pendingDeletions.size >= MAX_PENDING_ROOMS) {
       this._deleteGameFull(roomId);
@@ -890,6 +914,7 @@ class GameCoordinator {
   }
 
   _deleteGameFull(roomId) {
+    this.persistentGames.delete(roomId);
     const game = this.gameRepository.getGame(roomId);
     if (game) {
       this.cancelCompletedGameCleanup(roomId);
@@ -905,6 +930,7 @@ class GameCoordinator {
 
   cancelPendingDeletion(roomId) {
     if (this.gameRepository.cancelDeletion(roomId)) {
+      this.persistentGames.delete(roomId);
       this.logger.info('cancelled pending deletion', { roomId });
     }
   }
@@ -1159,6 +1185,11 @@ class GameCoordinator {
 
     this.botManager.clearTimers(roomId);
     this.scheduleCompletedGameCleanup(roomId);
+  }
+
+  _allPlayersLoggedIn(game) {
+    const humanPlayers = game.players.filter((p) => !p.isBot);
+    return humanPlayers.length > 0 && humanPlayers.every((p) => !!p.accountId);
   }
 
   _setAccountId(connectionId, player) {
