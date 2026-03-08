@@ -223,6 +223,7 @@ class GameCoordinator {
       gameState: this._getDecoratedGameState(game),
     });
 
+    this._saveSessionForPlayer(connectionId, roomId, player.publicId, validName, sessionToken);
     this.logger.info('room created', { roomId, playerName: sanitizeForLog(validName) });
   }
 
@@ -273,6 +274,7 @@ class GameCoordinator {
       sessionToken,
     });
 
+    this._saveSessionForPlayer(connectionId, roomId, player.publicId, validName, sessionToken);
     this.logger.info('player joined room', { roomId, playerName: sanitizeForLog(validName) });
   }
 
@@ -335,6 +337,7 @@ class GameCoordinator {
           gameState: this._getDecoratedGameState(game),
         });
 
+        this._saveSessionForPlayer(connectionId, roomId, newPlayer.publicId, validName, newToken);
         this.logger.info('player rejoined lobby', {
           roomId,
           playerName: sanitizeForLog(validName),
@@ -374,6 +377,7 @@ class GameCoordinator {
       playerName: player.name,
     });
 
+    this._saveSessionForPlayer(connectionId, roomId, player.publicId, player.name, newToken);
     this.logger.info('player reconnected', { roomId, playerName: sanitizeForLog(validName) });
 
     if (game.phase === Phase.PLAYING) {
@@ -1127,6 +1131,18 @@ class GameCoordinator {
 
     this.botManager.clearTimers(roomId);
     this.scheduleCompletedGameCleanup(roomId);
+  }
+
+  _saveSessionForPlayer(connectionId, roomId, playerId, playerName, sessionToken) {
+    if (!this.playerStore) return;
+    const username = this.loggedInAccounts.get(connectionId);
+    if (!username) return;
+    this.playerStore.setSessionData(username, {
+      roomId,
+      playerId,
+      playerName,
+      sessionToken,
+    });
   }
 
   _getDecoratedGameState(game) {
