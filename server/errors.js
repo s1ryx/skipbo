@@ -32,6 +32,10 @@ const ErrorCodes = Object.freeze({
   PLAYER_NOT_FOUND_DRAW: 'error.playerNotFoundDraw',
   CANNOT_PASS: 'error.cannotPass',
 
+  // Authentication
+  PASSWORD_REQUIRED: 'error.passwordRequired',
+  WRONG_PASSWORD: 'error.wrongPassword',
+
   // Bot management
   ONLY_HOST_CAN_ADD_BOT: 'error.onlyHostCanAddBot',
   ONLY_HOST_CAN_REMOVE_BOT: 'error.onlyHostCanRemoveBot',
