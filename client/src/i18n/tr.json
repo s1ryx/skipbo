@@ -112,6 +112,14 @@
   "error.onlyHostCanStart": "Sadece oda sahibi oyunu başlatabilir",
   "error.cannotPass": "Şu anda sıranı pas geçemezsin",
   "error.serverFull": "Sunucu dolu",
+  "error.passwordRequired": "Bu hesap için şifre gerekli",
+  "error.wrongPassword": "Yanlış şifre",
+
+  "login.username": "Kullanıcı adı",
+  "login.password": "Şifre (isteğe bağlı)",
+  "login.login": "Giriş yap",
+  "login.logout": "Çıkış yap",
+  "login.loggedInAs": "{{username}} olarak giriş yapıldı",
 
   "connection.disconnected": "Bağlantı kesildi. Yeniden bağlanılıyor...",
 

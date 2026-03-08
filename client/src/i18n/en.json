@@ -112,6 +112,14 @@
   "error.onlyHostCanStart": "Only the host can start the game",
   "error.cannotPass": "Cannot pass turn right now",
   "error.serverFull": "Server is full",
+  "error.passwordRequired": "Password required for this account",
+  "error.wrongPassword": "Wrong password",
+
+  "login.username": "Username",
+  "login.password": "Password (optional)",
+  "login.login": "Log in",
+  "login.logout": "Log out",
+  "login.loggedInAs": "Logged in as {{username}}",
 
   "connection.disconnected": "Connection lost. Reconnecting...",
 
