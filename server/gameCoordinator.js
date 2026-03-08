@@ -127,6 +127,7 @@ class GameCoordinator {
       if (game) {
         const player = game.getPlayerByConnectionId(connectionId);
         if (player) {
+          this._setAccountId(connectionId, player);
           this._saveSessionForPlayer(
             connectionId,
             roomId,
@@ -239,6 +240,7 @@ class GameCoordinator {
       gameState: this._getDecoratedGameState(game),
     });
 
+    this._setAccountId(connectionId, player);
     this._saveSessionForPlayer(connectionId, roomId, player.publicId, validName, sessionToken);
     this.logger.info('room created', { roomId, playerName: sanitizeForLog(validName) });
   }
@@ -290,6 +292,7 @@ class GameCoordinator {
       sessionToken,
     });
 
+    this._setAccountId(connectionId, player);
     this._saveSessionForPlayer(connectionId, roomId, player.publicId, validName, sessionToken);
     this.logger.info('player joined room', { roomId, playerName: sanitizeForLog(validName) });
   }
@@ -354,6 +357,7 @@ class GameCoordinator {
           gameState: this._getDecoratedGameState(game),
         });
 
+        this._setAccountId(connectionId, newPlayer);
         this._saveSessionForPlayer(connectionId, roomId, newPlayer.publicId, validName, newToken);
         this.logger.info('player rejoined lobby', {
           roomId,
@@ -395,6 +399,7 @@ class GameCoordinator {
       playerName: player.name,
     });
 
+    this._setAccountId(connectionId, player);
     this._saveSessionForPlayer(connectionId, roomId, player.publicId, player.name, newToken);
     this.logger.info('player reconnected', { roomId, playerName: sanitizeForLog(validName) });
 
@@ -1154,6 +1159,13 @@ class GameCoordinator {
 
     this.botManager.clearTimers(roomId);
     this.scheduleCompletedGameCleanup(roomId);
+  }
+
+  _setAccountId(connectionId, player) {
+    const username = this.loggedInAccounts.get(connectionId);
+    if (username) {
+      player.accountId = username;
+    }
   }
 
   _saveSessionForPlayer(connectionId, roomId, playerId, playerName, sessionToken) {
