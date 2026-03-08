@@ -16,6 +16,7 @@ const CLIENT_EVENTS = [
   'updateRematchSettings',
   'addBot',
   'removeBot',
+  'login',
 ];
 
 class SocketIOTransport {
