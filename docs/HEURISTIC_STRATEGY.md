@@ -1082,14 +1082,17 @@ VALUE(A, S) =
     + 100 × stockpile_plays_in_chain(A)
 
     // Chain quality
-    + 10 × total_plays_in_chain(A)
-    + 5 × discard_cards_revealed(A)
+    + 5 × plays_before_and_including_stockpile(A)
+    + 2..5 × plays_after_stockpile(A)  // +5 if hand empties, +2 otherwise
+    + 3 × discard_cards_revealed(A)    // or quality-aware bonus when enabled
+    + 2 × piles_completed(A)
 
     // Cycling bonus (if action empties hand)
     + hand_empties(A) × cycling_EV(S)
 
     // Pile advancement toward own stockpile
-    + 8 × steps_toward_own_stock(A)
+    + 3 × steps_toward_own_stock(A)
+    + 10 × one_step_from_own_stock(A)  // next play could be stockpile
 
     // Opponent danger zone (NEGATIVE) — uses effective distance (§7.2)
     // Accounts for ALL visible opponent cards (full discard piles + stock top)
@@ -1101,8 +1104,9 @@ VALUE(A, S) =
     - 7 × unrelated_plays_before_stockpile(A)
 
     // Card cost
-    - 20 × skipbo_cards_used(A)
-    - 5 × scarce_cards_used(A)    // (scarce = ≤ 4 copies remaining)
+    - 15 × skipbo_cards_used_with_stockpile(A)   // SKIP-BO that enables stockpile play
+    - 30 × skipbo_cards_used_without_stockpile(A) // SKIP-BO with no stockpile payoff
+    - 3..5 × scarce_cards_used(A)  // -5 for ≤2 remaining, -3 for ≤4 remaining
 
     // Blocking value
     + 8 × opponent_values_denied(A)
@@ -1126,7 +1130,8 @@ The "hold instead of play" action has VALUE = hold_value of the card.
 
 In practice, these weights should be discovered by self-play tuning, not fixed.
 The formula above is a starting framework showing WHAT factors matter, not the
-exact weights.
+exact weights. The current implementation's weights were tuned through
+play-testing and intentionally diverge from earlier theoretical values.
 
 ---
 
@@ -1252,3 +1257,11 @@ It should instead:
 This is fundamentally a **multi-turn lookahead on discard structure**, not a single-turn
 scoring function. It requires the AI to "see" its discard piles as one interconnected
 resource, not four independent stacks.
+
+**Implementation note:** The current AI uses combined `(card, pile)` formula scoring
+rather than the hierarchical sequential approach above. This is intentional — the
+combined approach handles tradeoffs between card selection and pile placement more
+flexibly, with runway detection as a weighted bonus (±3/±8) rather than a hard
+constraint. The flat formula can approximate the hierarchy when weights are tuned
+correctly, while avoiding edge cases where rigid sequencing misses non-obvious
+optimal placements.
