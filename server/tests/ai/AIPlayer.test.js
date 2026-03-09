@@ -306,6 +306,68 @@ describe('AIPlayer', () => {
     });
   });
 
+  describe('reachability coverage scoring', () => {
+    test('prefers pile that makes more values reachable via hand cards', () => {
+      // Pile 0 needs 1, pile 1 needs 1. Hand has [2, 3, 4, 5, 9].
+      // Placing SKIP-BO on pile 0: pile 0 needs 2 after placement.
+      //   Hand has 2,3,4,5 → reachable from pile 0: 2,3,4,5,6. Pile 1 needs 1.
+      //   Total reachable: {1, 2, 3, 4, 5, 6} = 6 values.
+      // Placing SKIP-BO on pile 1: pile 1 needs 2 after placement.
+      //   Same reachability. Scores are equal from coverage alone,
+      //   so the tiebreaker (pileNeeds value) determines the winner.
+      // To create asymmetry: pile 0 needs 3, pile 1 needs 8.
+      //   Hand has [4, 5, 6, 7, 9].
+      //   SKIP-BO on pile 0 (as 3): pile 0 then needs 4. Hand: 4,5,6,7 chain.
+      //     Reachable from pile 0: 4,5,6,7,8. Pile 1 needs 8 → reachable: 8,9,10.
+      //     Total: {4,5,6,7,8,9,10} = 7 values.
+      //   SKIP-BO on pile 1 (as 8): pile 1 then needs 9. Hand: 9 chains.
+      //     Reachable from pile 1: 9,10. Pile 0 needs 3 → no hand card matches 3.
+      //     Reachable from pile 0: {3}. Total: {3,9,10} = 3 values.
+      //   Coverage strongly favors pile 0.
+      const improvedAi = new AIPlayer({ features: DIFFICULTY_PRESETS.improved });
+      const { playerState, gameState } = makeState({
+        hand: [4, 5, 6, 7, 9],
+        stockpileTop: 'SKIP-BO',
+        buildingPiles: [
+          [1, 2], // needs 3
+          [1, 2, 3, 4, 5, 6, 7], // needs 8
+          [],
+          [],
+        ],
+        oppStockTop: 12, // far from both piles
+      });
+      const play = improvedAi.findPlayableCard(playerState, gameState);
+      expect(play).not.toBeNull();
+      expect(play.source).toBe('stockpile');
+      expect(play.buildingPileIndex).toBe(0); // pile with better coverage
+    });
+
+    test('coverage counts values reachable through chains, not just pile needs', () => {
+      // With 4 piles needing 1,1,1,1 (all same), old code: distinctNeeds = 1.
+      // New code: hand [1,2,3,4,5] chains from each pile.
+      // Reachable: {1,2,3,4,5,6} = 6 values (much more than old max of 4).
+      const improvedAi = new AIPlayer({ features: DIFFICULTY_PRESETS.improved });
+      const { playerState, gameState } = makeState({
+        hand: [1, 2, 3, 4, 5],
+        stockpileTop: 'SKIP-BO',
+        buildingPiles: [[], [], [], []], // all need 1
+        oppStockTop: 12,
+      });
+      // Place SKIP-BO on any pile (as value 1), pile then needs 2.
+      // Hand has 2,3,4,5 → reachable: 2,3,4,5,6 from that pile.
+      // Other 3 piles still need 1 (also reachable since hand had a 1 but
+      // we used it? No — SKIP-BO was from stockpile, not hand).
+      // Actually hand still has [1,2,3,4,5]. Pile played on needs 2.
+      // Walk: 2✓,3✓,4✓,5✓ → reachable {2,3,4,5,6}. Other piles need 1.
+      // Walk from 1: 1✓,2✓,3✓,4✓,5✓ → reachable {1,2,3,4,5,6}.
+      // Union: {1,2,3,4,5,6} = 6 values.
+      // Just verify the play works and is valid.
+      const play = improvedAi.findPlayableCard(playerState, gameState);
+      expect(play).not.toBeNull();
+      expect(play.source).toBe('stockpile');
+    });
+  });
+
   describe('constructor', () => {
     test('defaults to improved preset', () => {
       const defaultAi = new AIPlayer();

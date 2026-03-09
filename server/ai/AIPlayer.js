@@ -275,24 +275,49 @@ class AIPlayer {
       score += pileNeeds[pi]; // tiebreaker: higher piles closer to completion
 
       // ── Reachability scoring (§4.1 next-stockpile reachability) ──
+      // For each value V (1-12), check if the player can chain from
+      // hand + discard tops to reach V on any building pile after this
+      // placement. Higher coverage = higher chance the next stockpile
+      // card is immediately playable.
       if (this.features.reachabilityScoring) {
-        // After placing SKIP-BO + chain, compute the resulting pile needs.
-        // More distinct values needed = higher chance next stockpile card is playable.
         const resultNeeds = [...pileNeeds];
         let endVal = pileNeeds[pi]; // SKIP-BO plays as this value
-        if (endVal === 12) {
-          resultNeeds[pi] = 1;
-        } else {
-          resultNeeds[pi] = endVal + 1;
-        }
+        resultNeeds[pi] = endVal === 12 ? 1 : endVal + 1;
         // Apply chain advancement
         let cv = resultNeeds[pi];
         for (let c = 0; c < chainLen; c++) {
           cv = cv === 12 ? 1 : cv + 1;
         }
         resultNeeds[pi] = cv;
-        const distinctNeeds = new Set(resultNeeds.filter((v) => v != null));
-        score += distinctNeeds.size * 3;
+
+        // Build available-cards map (value → count) from hand + discard tops
+        const available = new Map();
+        for (const card of playerState.hand) {
+          if (card === 'SKIP-BO') continue; // SKIP-BO handled separately
+          available.set(card, (available.get(card) || 0) + 1);
+        }
+        for (const dp of playerState.discardPiles) {
+          if (dp.length === 0) continue;
+          const top = dp[dp.length - 1];
+          if (top === 'SKIP-BO') continue;
+          available.set(top, (available.get(top) || 0) + 1);
+        }
+
+        // Walk forward from each pile's need, consuming available cards
+        const reachable = new Set();
+        for (let rpi = 0; rpi < 4; rpi++) {
+          if (resultNeeds[rpi] == null) continue;
+          reachable.add(resultNeeds[rpi]); // pile need itself is reachable
+          const avail = new Map(available); // clone per pile
+          let v = resultNeeds[rpi];
+          // Walk: if v is available, the NEXT value (v+1) becomes reachable
+          while (avail.get(v) > 0) {
+            avail.set(v, avail.get(v) - 1);
+            v = v === 12 ? 1 : v + 1;
+            reachable.add(v);
+          }
+        }
+        score += reachable.size * 3;
       }
 
       // Opponent penalty
