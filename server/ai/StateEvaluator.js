@@ -324,7 +324,13 @@ class StateEvaluator {
     }
 
     // ── SKIP-BO cost ──
-    score -= chain.skipBosUsed * 15;
+    // Base cost per SKIP-BO used. When no stockpile play results from the
+    // chain, the cost is much steeper — using a wildcard without advancing
+    // toward the win condition is almost always wasteful.
+    if (chain.skipBosUsed > 0) {
+      const perCard = chain.stockpilePlays > 0 ? 15 : 30;
+      score -= chain.skipBosUsed * perCard;
+    }
 
     // ── Opponent proximity penalty ──
     score += this._opponentImpact(chain, playerState, gameState);
