@@ -1506,8 +1506,9 @@ describe('GameCoordinator', () => {
       const bot = game.players.find((p) => p.isBot);
       expect(game.getCurrentPlayer().internalId).toBe(bot.internalId);
 
-      // Empty the bot's hand and the deck
+      // Empty the bot's hand, stockpile, and the deck
       bot.hand = [];
+      bot.stockpile = [];
       game.deck = [];
 
       // Advance timers to trigger bot turn
