@@ -1038,3 +1038,115 @@ describe('effectiveDangerDist', () => {
     expect(effectiveDangerDist(5, 8, opp)).toBe(0);
   });
 });
+// ── source preference scoring (expert) ───────────────────────────────
+
+describe('source preference scoring', () => {
+  test('discard play revealing a pile-needed card gets extra bonus', () => {
+    const expertEval = makeEvaluator(DIFFICULTY_PRESETS.expert);
+    const improvedEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+
+    // Chain plays from discard0: top=6 (played), revealed=5
+    // Building pile 1 needs 5 → revealed card is directly playable
+    const chain = {
+      plays: [{ card: 6, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [8, 9, 10, 11, 12],
+      discardPiles: [[5, 6], [], [], []], // top=6, underneath=5
+      buildingPiles: [
+        [1, 2, 3, 4, 5], // needs 6 (where the play goes)
+        [1, 2, 3, 4], // needs 5 (matches revealed card!)
+        [],
+        [],
+      ],
+    });
+    expertEval.cc.update(playerState, gameState);
+    improvedEval.cc.update(playerState, gameState);
+
+    const expertScore = expertEval.scoreChain(chain, playerState, gameState);
+    const improvedScore = improvedEval.scoreChain(chain, playerState, gameState);
+
+    // Expert should score higher due to +8 source preference bonus
+    expect(expertScore).toBeGreaterThan(improvedScore);
+  });
+
+  test('revealed card close to pile need gets smaller bonus', () => {
+    const expertEval = makeEvaluator(DIFFICULTY_PRESETS.expert);
+
+    // Chain plays from discard0: top=6 (played), revealed=7
+    // Building pile 1 needs 5 → revealed 7 is 2 steps away (+3)
+    const chainNear = {
+      plays: [{ card: 6, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    // revealed=5, pile needs 5 → exact match (+8)
+    const stateExact = makeState({
+      hand: [8, 9, 10, 11, 12],
+      discardPiles: [[5, 6], [], [], []],
+      buildingPiles: [[1, 2, 3, 4, 5], [1, 2, 3, 4], [], []],
+    });
+
+    // revealed=7, pile needs 5 → 2 steps away (+3)
+    const stateNear = makeState({
+      hand: [8, 9, 10, 11, 12],
+      discardPiles: [[7, 6], [], [], []],
+      buildingPiles: [[1, 2, 3, 4, 5], [1, 2, 3, 4], [], []],
+    });
+
+    expertEval.cc.update(stateExact.playerState, stateExact.gameState);
+    const scoreExact = expertEval.scoreChain(
+      chainNear,
+      stateExact.playerState,
+      stateExact.gameState
+    );
+
+    expertEval.cc.update(stateNear.playerState, stateNear.gameState);
+    const scoreNear = expertEval.scoreChain(chainNear, stateNear.playerState, stateNear.gameState);
+
+    // Exact match should score higher than near match
+    expect(scoreExact).toBeGreaterThan(scoreNear);
+  });
+
+  test('not active without sourcePreference feature', () => {
+    const advancedEval = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+
+    const chain = {
+      plays: [{ card: 6, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [8, 9, 10, 11, 12],
+      discardPiles: [[5, 6], [], [], []],
+      buildingPiles: [[1, 2, 3, 4, 5], [1, 2, 3, 4], [], []],
+    });
+    advancedEval.cc.update(playerState, gameState);
+
+    const expertEval = makeEvaluator(DIFFICULTY_PRESETS.expert);
+    expertEval.cc.update(playerState, gameState);
+
+    const advancedScore = advancedEval.scoreChain(chain, playerState, gameState);
+    const expertScore = expertEval.scoreChain(chain, playerState, gameState);
+
+    // Expert should score higher due to source preference bonus
+    expect(expertScore).toBeGreaterThan(advancedScore);
+  });
+});
