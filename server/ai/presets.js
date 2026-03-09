@@ -30,6 +30,17 @@ const DIFFICULTY_PRESETS = {
     stockpileOrderingPenalty: true,
     scarceCardScoring: true,
   },
+  expert: {
+    reachabilityScoring: true,
+    runwayDetection: true,
+    qualityAwareScoring: true,
+    advancedOpponentPenalty: true,
+    stockpileOrderingPenalty: true,
+    scarceCardScoring: true,
+    effectiveDangerDistance: true,
+    sourcePreference: true,
+    optionCoverageScoring: true,
+  },
 };
 
 const DEFAULT_DIFFICULTY = 'improved';
