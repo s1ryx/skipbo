@@ -37,6 +37,11 @@ const Phase = Object.freeze({
   FINISHED: 'finished',
 });
 
+// Bot timing
+const BOT_TURN_START_DELAY_MS = 1500;
+const BOT_PLAY_DELAY_MS = 1500;
+const BOT_PLAY_JITTER_MS = 500;
+
 // Bot ID convention
 const BOT_ID_PREFIX = 'bot-';
 
@@ -64,5 +69,8 @@ module.exports = {
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_EVENTS,
   Phase,
+  BOT_TURN_START_DELAY_MS,
+  BOT_PLAY_DELAY_MS,
+  BOT_PLAY_JITTER_MS,
   BOT_ID_PREFIX,
 };

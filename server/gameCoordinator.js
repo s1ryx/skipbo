@@ -18,6 +18,9 @@ const {
   MAX_PLAYER_NAME_LENGTH,
   MAX_CHAT_MESSAGE_LENGTH,
   BOT_ID_PREFIX,
+  BOT_TURN_START_DELAY_MS,
+  BOT_PLAY_DELAY_MS,
+  BOT_PLAY_JITTER_MS,
   Phase,
 } = require('./config');
 const { ErrorCodes } = require('./errors');
@@ -864,9 +867,13 @@ class GameCoordinator {
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer || !currentPlayer.isBot) return;
 
-    this.botManager.scheduleTimer(roomId, () => {
-      this._playBotTurn(roomId);
-    });
+    this.botManager.scheduleTimer(
+      roomId,
+      () => {
+        this._playBotTurn(roomId);
+      },
+      BOT_TURN_START_DELAY_MS
+    );
   }
 
   _playBotTurn(roomId) {
@@ -900,7 +907,11 @@ class GameCoordinator {
         if (!result.success) return this._botDiscard(roomId, game, botId, ai);
         if (game.phase === Phase.FINISHED) return;
 
-        this.botManager.scheduleTimer(roomId, playNext, 500 + Math.random() * 300);
+        this.botManager.scheduleTimer(
+          roomId,
+          playNext,
+          BOT_PLAY_DELAY_MS + Math.random() * BOT_PLAY_JITTER_MS
+        );
         return;
       }
 
