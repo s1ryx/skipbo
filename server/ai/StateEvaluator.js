@@ -929,6 +929,26 @@ class StateEvaluator {
             }
           }
         }
+
+        // Messy-pile preference: when the same card value sits on another
+        // discard pile top, reward playing from the messier pile (structural
+        // repair) and penalize playing from the cleaner one (missed repair).
+        if (this.features.sourcePreference) {
+          const cardValue = play.card;
+          for (let oi = 0; oi < 4; oi++) {
+            if (oi === di) continue;
+            const otherPile = playerState.discardPiles[oi];
+            if (!otherPile || otherPile.length === 0) continue;
+            if (otherPile[otherPile.length - 1] !== cardValue) continue;
+            const otherQuality = pileChainQuality(otherPile);
+            if (qualityBefore < otherQuality) {
+              bonus += 2; // chose messier pile — good repair choice
+            } else if (qualityBefore > otherQuality) {
+              bonus -= 2; // chose cleaner pile — missed repair opportunity
+            }
+            break; // compare against first matching alternative only
+          }
+        }
       }
     }
 
