@@ -77,6 +77,7 @@
   "game.removeBot": "Remove",
   "game.aiImproved": "Improved AI",
   "game.aiAdvanced": "Advanced AI",
+  "game.aiExpert": "Expert AI",
   "game.aiBaseline": "Baseline AI",
 
   "card.wild": "WILD",

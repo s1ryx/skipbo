@@ -77,6 +77,7 @@
   "game.removeBot": "Kaldır",
   "game.aiImproved": "Gelişmiş Bot",
   "game.aiAdvanced": "Uzman Bot",
+  "game.aiExpert": "Usta Bot",
   "game.aiBaseline": "Temel Bot",
 
   "card.wild": "JOKER",

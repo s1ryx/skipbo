@@ -93,6 +93,7 @@ function WaitingRoom({
           >
             <option value="improved">{t('game.aiImproved')}</option>
             <option value="advanced">{t('game.aiAdvanced')}</option>
+            <option value="expert">{t('game.aiExpert')}</option>
             <option value="baseline">{t('game.aiBaseline')}</option>
           </select>
           <button className="btn-add-bot" onClick={() => onAddBot(aiType)}>
