@@ -163,6 +163,7 @@ export default function useGameConnection() {
   }, []);
 
   const logout = useCallback(() => {
+    transportRef.current?.send('logout');
     setLoginState({ isLoggedIn: false, username: null, hasPassword: false, error: null });
   }, []);
 

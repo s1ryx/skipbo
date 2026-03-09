@@ -17,6 +17,7 @@ const CLIENT_EVENTS = [
   'addBot',
   'removeBot',
   'login',
+  'logout',
 ];
 
 class SocketIOTransport {

@@ -157,6 +157,14 @@ class GameCoordinator {
     });
   }
 
+  handleLogout(connectionId) {
+    const username = this.loggedInAccounts.get(connectionId);
+    if (!username) return;
+
+    this.loggedInAccounts.delete(connectionId);
+    this.logger.info('player logged out', { connectionId, username });
+  }
+
   handleMessage(connectionId, event, data) {
     switch (event) {
       case 'createRoom':
@@ -189,6 +197,8 @@ class GameCoordinator {
         return this.handleRemoveBot(connectionId, data);
       case 'login':
         return this.handleLogin(connectionId, data);
+      case 'logout':
+        return this.handleLogout(connectionId);
       default:
         this.logger.warn('unknown event', { event });
     }
