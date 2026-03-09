@@ -281,6 +281,57 @@ function opponentDistances(gameState, opponentStockTop) {
   });
 }
 
+/**
+ * Compute effective danger distance for a specific building pile need
+ * relative to an opponent's stockpile value.
+ *
+ * Scans ALL cards in the opponent's discard piles (not just tops) plus
+ * their stockpile top to determine how many UNKNOWN cards the opponent
+ * would need to chain from pileNeed to their stockpile value.
+ *
+ * Example: piles need 6, opponent stock = 12, opponent discard has
+ * [11, 10, 9, 8, 7] → gaps = 1 (only the 6 is missing).
+ *
+ * @param {number} pileNeed - what the building pile currently needs
+ * @param {number} oppStock - opponent's stockpile top value
+ * @param {Object} opponent - opponent player object with discardPiles
+ * @returns {number} number of unknown cards needed (0 = opponent has everything)
+ */
+function effectiveDangerDist(pileNeed, oppStock, opponent) {
+  if (pileNeed > oppStock) return Infinity; // already past their value
+
+  // Collect ALL visible cards from opponent (full discard piles + stock top)
+  const oppVisible = new Map(); // value → count
+  for (const dp of opponent.discardPiles) {
+    for (const card of dp) {
+      if (card === 'SKIP-BO') {
+        oppVisible.set('SKIP-BO', (oppVisible.get('SKIP-BO') || 0) + 1);
+      } else if (typeof card === 'number') {
+        oppVisible.set(card, (oppVisible.get(card) || 0) + 1);
+      }
+    }
+  }
+
+  // Count gaps: values in [pileNeed, oppStock-1] not covered by opponent's visible cards
+  let gaps = 0;
+  let skipBosAvailable = oppVisible.get('SKIP-BO') || 0;
+
+  for (let v = pileNeed; v < oppStock; v++) {
+    const available = oppVisible.get(v) || 0;
+    if (available > 0) {
+      // Opponent has this value visible — not a gap
+      oppVisible.set(v, available - 1);
+    } else if (skipBosAvailable > 0) {
+      // Opponent can use a SKIP-BO as wild
+      skipBosAvailable--;
+    } else {
+      gaps++;
+    }
+  }
+
+  return gaps;
+}
+
 // ── Main evaluator ───────────────────────────────────────────────────
 
 class StateEvaluator {
@@ -824,4 +875,5 @@ module.exports = {
   pileChainQuality,
   isPileFrozen,
   detectRunway,
+  effectiveDangerDist,
 };
