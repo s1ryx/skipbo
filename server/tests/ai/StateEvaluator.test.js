@@ -5,6 +5,7 @@ const {
   pileChainQuality,
   isPileFrozen,
   detectRunway,
+  effectiveDangerDist,
 } = require('../../ai/StateEvaluator');
 const { CardCounter } = require('../../ai/CardCounter');
 const { ChainDetector } = require('../../ai/ChainDetector');
@@ -963,5 +964,77 @@ describe('constructor defaults', () => {
     const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);
     expect(evaluator.features.qualityAwareScoring).toBe(false);
     expect(evaluator.features.advancedOpponentPenalty).toBe(false);
+  });
+});
+
+// ── effectiveDangerDist ──────────────────────────────────────────────
+
+describe('effectiveDangerDist', () => {
+  function makeOpponent(discardPiles) {
+    return { discardPiles: discardPiles || [[], [], [], []] };
+  }
+
+  test('returns 0 when opponent has all cards needed', () => {
+    // Pile needs 5, opponent stock = 8, opponent has [5, 6, 7] visible
+    const opp = makeOpponent([[7, 6, 5]]);
+    expect(effectiveDangerDist(5, 8, opp)).toBe(0);
+  });
+
+  test('returns gap count for missing values', () => {
+    // Pile needs 5, opponent stock = 8, opponent has [7] → missing 5, 6
+    const opp = makeOpponent([[7]]);
+    expect(effectiveDangerDist(5, 8, opp)).toBe(2);
+  });
+
+  test('SKIP-BO cards fill gaps as wildcards', () => {
+    // Pile needs 5, opponent stock = 8, opponent has [7, SKIP-BO] → 1 gap (5 or 6)
+    const opp = makeOpponent([[7, 'SKIP-BO']]);
+    expect(effectiveDangerDist(5, 8, opp)).toBe(1);
+  });
+
+  test('scans all cards in discard piles not just tops', () => {
+    // Pile needs 6, opponent stock = 12
+    // Opponent discard pile: top=11, underneath=[10, 9, 8, 7]
+    // Needs [6,7,8,9,10,11] → has {7,8,9,10,11} → 1 gap (the 6)
+    const opp = makeOpponent([[7, 8, 9, 10, 11]]);
+    expect(effectiveDangerDist(6, 12, opp)).toBe(1);
+  });
+
+  test('returns Infinity when pile need exceeds opponent stock', () => {
+    const opp = makeOpponent([]);
+    expect(effectiveDangerDist(10, 5, opp)).toBe(Infinity);
+  });
+
+  test('returns 0 when pile need equals opponent stock', () => {
+    // Pile needs exactly what opponent has → direct play, no chain needed
+    const opp = makeOpponent([]);
+    expect(effectiveDangerDist(8, 8, opp)).toBe(0);
+  });
+
+  test('counts each visible card only once', () => {
+    // Pile needs 5, opponent stock = 7, needs [5, 6]
+    // Opponent has one 5 across two piles — only covers one gap
+    const opp = makeOpponent([[5], []]);
+    expect(effectiveDangerDist(5, 7, opp)).toBe(1);
+  });
+
+  test('handles multiple SKIP-BOs filling multiple gaps', () => {
+    // Pile needs 5, opponent stock = 8, needs [5, 6, 7]
+    // Opponent has 2 SKIP-BOs and no number cards → 1 gap
+    const opp = makeOpponent([['SKIP-BO', 'SKIP-BO']]);
+    expect(effectiveDangerDist(5, 8, opp)).toBe(1);
+  });
+
+  test('empty opponent discards means all gaps', () => {
+    // Pile needs 5, opponent stock = 9, needs [5,6,7,8] → 4 gaps
+    const opp = makeOpponent([[], [], [], []]);
+    expect(effectiveDangerDist(5, 9, opp)).toBe(4);
+  });
+
+  test('cards spread across multiple discard piles are aggregated', () => {
+    // Pile needs 5, opponent stock = 8, needs [5, 6, 7]
+    // Cards spread: pile0=[5], pile1=[7], pile2=[6]
+    const opp = makeOpponent([[5], [7], [6], []]);
+    expect(effectiveDangerDist(5, 8, opp)).toBe(0);
   });
 });
