@@ -108,3 +108,31 @@
 .options-item .btn-leave:hover {
   background: var(--color-danger-hover);
 }
+
+/* Login form inside dropdown needs dark-on-light colors */
+.options-login .login-form {
+  margin-top: 0;
+}
+
+.options-login .login-input {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.options-login .login-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.options-login .login-username {
+  color: var(--color-text-secondary);
+}
+
+.options-login .login-logout-btn {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.options-login .login-logout-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
