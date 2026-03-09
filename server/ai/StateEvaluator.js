@@ -463,6 +463,45 @@ class StateEvaluator {
       score += discardPlacementScore(card, pile, undefined, this.features);
     }
 
+    // ── Option coverage (expert): prefer placements that create new distinct tops ──
+    if (this.features.optionCoverageScoring && typeof card === 'number') {
+      const currentTops = new Set();
+      for (let di = 0; di < 4; di++) {
+        const dp = playerState.discardPiles[di];
+        if (dp.length > 0) {
+          const top = dp[dp.length - 1];
+          if (typeof top === 'number') currentTops.add(top);
+        }
+      }
+
+      // After placing card on pileIndex, that pile's top becomes card
+      const newTops = new Set(currentTops);
+      // Remove old top of target pile if it exists
+      if (pile.length > 0) {
+        const oldTop = pile[pile.length - 1];
+        // Only remove if no OTHER pile also has this value as its top
+        let otherHasIt = false;
+        for (let di = 0; di < 4; di++) {
+          if (di === pileIndex) continue;
+          const dp = playerState.discardPiles[di];
+          if (dp.length > 0 && dp[dp.length - 1] === oldTop) {
+            otherHasIt = true;
+            break;
+          }
+        }
+        if (!otherHasIt) newTops.delete(oldTop);
+      }
+      newTops.add(card);
+
+      const coverageChange = newTops.size - currentTops.size;
+      if (coverageChange > 0) {
+        score += 4; // new distinct value — increases options
+      } else if (coverageChange < 0) {
+        score -= 3; // lost a distinct value — reduces options
+      }
+      // coverageChange === 0: neutral (replaced one distinct value with another)
+    }
+
     // ── Hold value (inverted — lower hold value = better to discard) ──
     score -= this._holdValue(card, playerState, gameState);
 
