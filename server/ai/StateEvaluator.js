@@ -591,7 +591,7 @@ class StateEvaluator {
           for (let v = finalNeed; v < oppStock; v++) {
             if (oppDiscardTops.has(v) || oppDiscardTops.has('SKIP-BO')) bridgesVisible++;
           }
-          oppPenalty -= bridgesVisible >= 2 ? 12 : 1;
+          oppPenalty -= bridgesVisible >= 2 ? 30 : 10;
         }
         // distance >= 3 or negative (past opponent stock): safe
       }
