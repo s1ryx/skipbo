@@ -1824,4 +1824,39 @@ describe('GameCoordinator', () => {
       expect(game.players[0].accountId).toBe('alice');
     });
   });
+
+  describe('logout', () => {
+    it('removes connection from loggedInAccounts', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'login', { username: 'Alice' });
+      expect(coordinator.loggedInAccounts.has('p1')).toBe(true);
+
+      handlers.onMessage('p1', 'logout');
+      expect(coordinator.loggedInAccounts.has('p1')).toBe(false);
+    });
+
+    it('is a no-op when not logged in', () => {
+      const { coordinator } = createCoordinatorWithAuth();
+      const handlers = coordinator.getTransportHandlers();
+
+      // Should not throw
+      handlers.onMessage('p1', 'logout');
+      expect(coordinator.loggedInAccounts.has('p1')).toBe(false);
+    });
+  });
+
+  describe('login without auth service', () => {
+    it('sends loginFailed with i18n error code', () => {
+      const { coordinator, transport } = createCoordinator();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'login', { username: 'Alice' });
+
+      expect(transport.send).toHaveBeenCalledWith('p1', 'loginFailed', {
+        error: 'error.loginUnavailable',
+      });
+    });
+  });
 });
