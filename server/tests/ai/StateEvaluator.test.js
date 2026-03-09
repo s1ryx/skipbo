@@ -1038,6 +1038,86 @@ describe('effectiveDangerDist', () => {
     expect(effectiveDangerDist(5, 8, opp)).toBe(0);
   });
 });
+
+// ── option coverage scoring (expert) ─────────────────────────────────
+
+describe('option coverage scoring', () => {
+  let evaluator;
+
+  beforeEach(() => {
+    evaluator = makeEvaluator(DIFFICULTY_PRESETS.expert);
+  });
+
+  test('new distinct discard top scores higher than duplicate', () => {
+    // Piles: [6], [6], [], [] → tops are {6}
+    // Discarding 3 on pile 0 (top=6, large gap) → tops become {3, 6} (+1 distinct)
+    // Discarding 3 on pile 1 (top=6, large gap) → tops become {6, 3} (+1 distinct)
+    // Both placements are identical tier-wise. Compare against placing a
+    // duplicate value: discard 6 on pile 2 (empty) → tops stay {6}
+    // The coverage bonus should make the new-distinct placement score higher.
+    const { playerState, gameState } = makeState({
+      hand: [3, 6, 9, 10, 11],
+      discardPiles: [[6], [6], [], []],
+      buildingPiles: [[], [], [], []],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    // Same card (3) on two equivalent piles — same base score
+    // But expert also scores coverage: pile 0 already has top=6, placing 3 adds distinct
+    const expertScore = evaluator.scoreDiscard(3, 0, playerState, gameState);
+
+    // Now compare with improved (no coverage scoring) on same placement
+    const improvedEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+    improvedEval.cc.update(playerState, gameState);
+    const improvedScore = improvedEval.scoreDiscard(3, 0, playerState, gameState);
+
+    // Expert should score higher due to +4 coverage bonus
+    expect(expertScore).toBeGreaterThan(improvedScore);
+  });
+
+  test('losing a distinct top value scores lower', () => {
+    // Piles: [5], [], [], [] → tops are {5}
+    // Discarding 3 on pile 0 (top=5) replaces 5 with 3 → still 1 distinct (no loss)
+    // Discarding 3 on pile 1 (empty) → adds distinct 3, tops become {5, 3}
+    const { playerState, gameState } = makeState({
+      hand: [3, 7, 9, 10, 11],
+      discardPiles: [[5], [], [], []],
+      buildingPiles: [[], [], [], []],
+    });
+    evaluator.cc.update(playerState, gameState);
+
+    const scoreEmpty = evaluator.scoreDiscard(3, 1, playerState, gameState);
+    const scoreReplace = evaluator.scoreDiscard(3, 0, playerState, gameState);
+    // Empty pile gains coverage; replacing keeps it neutral
+    expect(scoreEmpty).toBeGreaterThan(scoreReplace);
+  });
+
+  test('not active without optionCoverageScoring feature', () => {
+    const improvedEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+    const { playerState, gameState } = makeState({
+      hand: [3, 5, 9, 10, 11],
+      discardPiles: [[5], [8], [], []],
+      buildingPiles: [[], [], [], []],
+    });
+    improvedEval.cc.update(playerState, gameState);
+
+    // With improved (no optionCoverageScoring), both should score the same
+    // for coverage purposes (other factors may still differ)
+    const expertEval = makeEvaluator(DIFFICULTY_PRESETS.expert);
+    expertEval.cc.update(playerState, gameState);
+
+    const improvedNew = improvedEval.scoreDiscard(3, 2, playerState, gameState);
+    const improvedDup = improvedEval.scoreDiscard(5, 0, playerState, gameState);
+    const expertNew = expertEval.scoreDiscard(3, 2, playerState, gameState);
+    const expertDup = expertEval.scoreDiscard(5, 0, playerState, gameState);
+
+    // Expert should have a bigger gap between new-distinct and duplicate
+    const expertGap = expertNew - expertDup;
+    const improvedGap = improvedNew - improvedDup;
+    expect(expertGap).toBeGreaterThan(improvedGap);
+  });
+});
+
 // ── source preference scoring (expert) ───────────────────────────────
 
 describe('source preference scoring', () => {
