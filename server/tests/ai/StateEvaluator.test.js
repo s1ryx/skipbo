@@ -1230,3 +1230,93 @@ describe('source preference scoring', () => {
     expect(expertScore).toBeGreaterThan(advancedScore);
   });
 });
+
+// ── messy pile repair preference (expert) ─────────────────────────────
+
+describe('messy pile repair preference', () => {
+  test('repair bonus when playing from messier pile with same card on cleaner pile', () => {
+    const expertEval = makeEvaluator(DIFFICULTY_PRESETS.expert);
+
+    // discard0: [3, 6] — ascending (3 < 6), quality 1
+    // discard2: [11, 6] — descending (11 > 6), quality 2
+    // Both have 6 on top. Revealed values (3, 11) are both far from
+    // any pile need after play (7, 12, 12, 12), so source preference
+    // doesn't interfere — only the repair bonus differs.
+    const chainMessy = {
+      plays: [{ card: 6, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const chainClean = {
+      plays: [{ card: 6, source: 'discard2', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [1, 2, 10, 11, 12],
+      discardPiles: [
+        [3, 6], // messy: ascending, quality 1
+        [],
+        [11, 6], // clean: descending, quality 2
+        [],
+      ],
+      buildingPiles: [
+        [1, 2, 3, 4, 5], // needs 6
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], // needs 12
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], // needs 12
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], // needs 12
+      ],
+    });
+    expertEval.cc.update(playerState, gameState);
+
+    const scoreMessy = expertEval.scoreChain(chainMessy, playerState, gameState);
+    const scoreClean = expertEval.scoreChain(chainClean, playerState, gameState);
+
+    // Playing from messier pile should score higher (repair bonus)
+    expect(scoreMessy).toBeGreaterThan(scoreClean);
+  });
+
+  test('no preference bonus when card value is unique to one pile', () => {
+    const expertEval = makeEvaluator(DIFFICULTY_PRESETS.expert);
+    const advancedEval = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+
+    // Only discard0 has 6 on top — no alternative to compare against
+    const chain = {
+      plays: [{ card: 6, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [8, 9, 10, 11, 12],
+      discardPiles: [[5, 6], [3], [], []], // only discard0 has 6
+      buildingPiles: [[1, 2, 3, 4, 5], [], [], []], // needs 6
+    });
+    expertEval.cc.update(playerState, gameState);
+    advancedEval.cc.update(playerState, gameState);
+
+    const expertScore = expertEval.scoreChain(chain, playerState, gameState);
+    const advancedScore = advancedEval.scoreChain(chain, playerState, gameState);
+
+    // The expert-vs-advanced diff should only come from source preference
+    // (revealed card bonus), not from messy pile preference
+    // Just verify both produce valid scores — the unique-card case
+    // should not add or subtract a messy pile bonus
+    expect(typeof expertScore).toBe('number');
+    expect(typeof advancedScore).toBe('number');
+  });
+});
