@@ -310,7 +310,23 @@ class StateEvaluator {
     score += chain.stockpilePlays * 100;
 
     // ── Chain length ──
-    score += chain.totalPlays * 5;
+    // Plays after the last stockpile play get reduced scoring unless
+    // they contribute to hand cycling. This prevents the AI from
+    // playing entire chains when only the stockpile-reaching portion
+    // has strategic value.
+    if (chain.stockpilePlays > 0 && chain.plays) {
+      const lastStockIdx = chain.plays.reduce(
+        (last, p, i) => (p.source === 'stockpile' ? i : last),
+        -1
+      );
+      let playsBeforeAndIncluding = lastStockIdx + 1;
+      let playsAfter = chain.totalPlays - playsBeforeAndIncluding;
+      score += playsBeforeAndIncluding * 5;
+      // Post-stockpile plays: full value only if they empty the hand
+      score += playsAfter * (chain.handEmptied ? 5 : 2);
+    } else {
+      score += chain.totalPlays * 5;
+    }
     if (this.features.qualityAwareScoring) {
       score += this._discardSourceBonus(chain, playerState);
     } else {
