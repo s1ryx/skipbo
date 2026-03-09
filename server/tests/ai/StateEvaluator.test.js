@@ -549,6 +549,149 @@ describe('baseline StateEvaluator.scoreChain', () => {
   });
 });
 
+describe('scarce card scoring', () => {
+  test('penalizes chains using scarce hand cards', () => {
+    // Value 11 is scarce: 12 total copies. Make 9 visible in discard piles
+    // → 3 remaining. Playing an 11 from hand should incur a -3 penalty.
+    const advEval = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+
+    const chain = {
+      plays: [{ card: 11, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    // 1 copy in hand + 8 copies spread across discard piles = 9 visible → 3 remaining
+    const { playerState, gameState } = makeState({
+      hand: [11, 3, 4, 5, 6],
+      discardPiles: [
+        [11, 11],
+        [11, 11],
+        [11, 11],
+        [11, 11],
+      ],
+      buildingPiles: [
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // needs 11
+        [],
+        [],
+        [],
+      ],
+      oppStockTop: 1, // far from 11
+      oppDiscards: [[11], [], [], []], // opponent also has one
+    });
+    advEval.cc.update(playerState, gameState);
+
+    const advScore = advEval.scoreChain(chain, playerState, gameState);
+
+    // Compare with improved (no scarce card scoring)
+    const impEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+    impEval.cc.update(playerState, gameState);
+    const impScore = impEval.scoreChain(chain, playerState, gameState);
+
+    expect(advScore).toBeLessThan(impScore);
+  });
+
+  test('no penalty for non-scarce hand cards', () => {
+    const advEval = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+
+    const chain = {
+      plays: [{ card: 3, source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    // Few copies of 3 visible → many remaining (not scarce)
+    const { playerState, gameState } = makeState({
+      hand: [3, 4, 5, 6, 7],
+      buildingPiles: [[1, 2], [], [], []], // needs 3, only 2 copies of 3 visible
+      oppStockTop: 1,
+    });
+    advEval.cc.update(playerState, gameState);
+    const advScore = advEval.scoreChain(chain, playerState, gameState);
+
+    const impEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+    impEval.cc.update(playerState, gameState);
+    const impScore = impEval.scoreChain(chain, playerState, gameState);
+
+    // No scarcity penalty — scores should be equal
+    expect(advScore).toBe(impScore);
+  });
+
+  test('no penalty for discard-source plays', () => {
+    // Even if the card is scarce, discard-source plays are not penalized
+    // (the card was already "spent" to the discard pile).
+    const advEval = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+
+    const chain = {
+      plays: [{ card: 11, source: 'discard0', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 1,
+      pilesCompleted: 0,
+      skipBosUsed: 0,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: [3, 4, 5, 6, 7],
+      discardPiles: [[11], [], [], []],
+      buildingPiles: [
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // needs 11
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // needs 11
+        [],
+        [],
+      ],
+      oppStockTop: 1,
+    });
+    advEval.cc.update(playerState, gameState);
+    const advScore = advEval.scoreChain(chain, playerState, gameState);
+
+    const impEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+    impEval.cc.update(playerState, gameState);
+    const impScore = impEval.scoreChain(chain, playerState, gameState);
+
+    // Discard source → no scarce penalty difference
+    expect(advScore).toBe(impScore);
+  });
+
+  test('no double-penalty on SKIP-BO cards', () => {
+    const advEval = makeEvaluator(DIFFICULTY_PRESETS.advanced);
+
+    const chain = {
+      plays: [{ card: 'SKIP-BO', source: 'hand', pileIndex: 0 }],
+      totalPlays: 1,
+      stockpilePlays: 0,
+      discardsRevealed: 0,
+      pilesCompleted: 0,
+      skipBosUsed: 1,
+      handEmptied: false,
+    };
+
+    const { playerState, gameState } = makeState({
+      hand: ['SKIP-BO', 4, 5, 6, 7],
+      buildingPiles: [[1, 2], [], [], []], // needs 3
+      oppStockTop: 1,
+    });
+    advEval.cc.update(playerState, gameState);
+    const advScore = advEval.scoreChain(chain, playerState, gameState);
+
+    const impEval = makeEvaluator(DIFFICULTY_PRESETS.improved);
+    impEval.cc.update(playerState, gameState);
+    const impScore = impEval.scoreChain(chain, playerState, gameState);
+
+    // Both should have the same SKIP-BO penalty, no extra scarce penalty
+    expect(advScore).toBe(impScore);
+  });
+});
+
 describe('baseline StateEvaluator.scoreDiscard', () => {
   test('no frozen pile discount in baseline', () => {
     const evaluator = makeEvaluator(DIFFICULTY_PRESETS.baseline);

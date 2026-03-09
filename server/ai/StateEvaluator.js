@@ -359,6 +359,21 @@ class StateEvaluator {
       score += this._stockpileOrderingPenalty(chain);
     }
 
+    // ── Scarce card cost (§9 of strategy doc) ──
+    if (this.features.scarceCardScoring) {
+      for (const play of chain.plays) {
+        if (play.source !== 'hand') continue;
+        if (play.card === 'SKIP-BO') continue; // already penalized above
+        if (typeof play.card !== 'number') continue;
+        const remaining = this.cc.remaining(play.card);
+        if (remaining <= 2) {
+          score -= 5;
+        } else if (remaining <= 4) {
+          score -= 3;
+        }
+      }
+    }
+
     return score;
   }
 

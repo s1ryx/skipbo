@@ -28,6 +28,7 @@ const DIFFICULTY_PRESETS = {
     qualityAwareScoring: true,
     advancedOpponentPenalty: true,
     stockpileOrderingPenalty: true,
+    scarceCardScoring: true,
   },
 };
 
