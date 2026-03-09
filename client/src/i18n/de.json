@@ -112,6 +112,7 @@
   "error.onlyHostCanStart": "Nur der Gastgeber kann das Spiel starten",
   "error.cannotPass": "Zug kann gerade nicht gepasst werden",
   "error.serverFull": "Server ist voll",
+  "error.loginUnavailable": "Anmeldung nicht verfügbar",
   "error.passwordRequired": "Passwort für dieses Konto erforderlich",
   "error.wrongPassword": "Falsches Passwort",
 

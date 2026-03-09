@@ -112,6 +112,7 @@
   "error.onlyHostCanStart": "Sadece oda sahibi oyunu başlatabilir",
   "error.cannotPass": "Şu anda sıranı pas geçemezsin",
   "error.serverFull": "Sunucu dolu",
+  "error.loginUnavailable": "Giriş mevcut değil",
   "error.passwordRequired": "Bu hesap için şifre gerekli",
   "error.wrongPassword": "Yanlış şifre",
 

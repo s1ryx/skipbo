@@ -101,7 +101,7 @@ class GameCoordinator {
   handleLogin(connectionId, { username, password } = {}) {
     if (!this.authService) {
       this.transport.send(connectionId, 'loginFailed', {
-        error: 'Login is not available',
+        error: ErrorCodes.LOGIN_UNAVAILABLE,
       });
       return;
     }

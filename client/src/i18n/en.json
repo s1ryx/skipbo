@@ -112,6 +112,7 @@
   "error.onlyHostCanStart": "Only the host can start the game",
   "error.cannotPass": "Cannot pass turn right now",
   "error.serverFull": "Server is full",
+  "error.loginUnavailable": "Login is not available",
   "error.passwordRequired": "Password required for this account",
   "error.wrongPassword": "Wrong password",
 

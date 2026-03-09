@@ -33,6 +33,7 @@ const ErrorCodes = Object.freeze({
   CANNOT_PASS: 'error.cannotPass',
 
   // Authentication
+  LOGIN_UNAVAILABLE: 'error.loginUnavailable',
   PASSWORD_REQUIRED: 'error.passwordRequired',
   WRONG_PASSWORD: 'error.wrongPassword',
 
