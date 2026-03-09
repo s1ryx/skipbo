@@ -118,6 +118,13 @@ class SkipBoGame {
     return true;
   }
 
+  setAccountId(internalId, accountId) {
+    const player = this.players.find((p) => p.internalId === internalId);
+    if (!player) return false;
+    player.accountId = accountId;
+    return true;
+  }
+
   setHost(publicId) {
     this.hostPublicId = publicId;
   }
