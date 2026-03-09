@@ -3,12 +3,16 @@ class InMemoryPlayerStore {
     this.players = new Map();
   }
 
+  _id(username) {
+    return username.toLowerCase();
+  }
+
   findByUsername(username) {
-    return this.players.get(username.toLowerCase()) || null;
+    return this.players.get(this._id(username)) || null;
   }
 
   createPlayer(username, passwordHash) {
-    const id = username.toLowerCase();
+    const id = this._id(username);
     const now = new Date().toISOString();
     const player = {
       id,
@@ -23,28 +27,28 @@ class InMemoryPlayerStore {
   }
 
   touchLastSeen(username) {
-    const player = this.players.get(username.toLowerCase());
+    const player = this.players.get(this._id(username));
     if (player) {
       player.last_seen_at = new Date().toISOString();
     }
   }
 
   setPassword(username, passwordHash) {
-    const player = this.players.get(username.toLowerCase());
+    const player = this.players.get(this._id(username));
     if (player) {
       player.password_hash = passwordHash;
     }
   }
 
   setSessionData(username, sessionData) {
-    const player = this.players.get(username.toLowerCase());
+    const player = this.players.get(this._id(username));
     if (player) {
       player.session_data = sessionData ? JSON.stringify(sessionData) : null;
     }
   }
 
   getSessionData(username) {
-    const player = this.players.get(username.toLowerCase());
+    const player = this.players.get(this._id(username));
     if (!player || !player.session_data) return null;
     try {
       return JSON.parse(player.session_data);
@@ -54,7 +58,7 @@ class InMemoryPlayerStore {
   }
 
   clearSessionData(username) {
-    const player = this.players.get(username.toLowerCase());
+    const player = this.players.get(this._id(username));
     if (player) {
       player.session_data = null;
     }

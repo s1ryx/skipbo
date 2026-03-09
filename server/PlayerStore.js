@@ -4,6 +4,10 @@ class PlayerStore {
     this._prepareStatements();
   }
 
+  _id(username) {
+    return username.toLowerCase();
+  }
+
   _prepareStatements() {
     this.stmts = {
       findById: this.db.prepare('SELECT * FROM players WHERE id = ?'),
@@ -19,26 +23,26 @@ class PlayerStore {
   }
 
   findByUsername(username) {
-    return this.stmts.findById.get(username.toLowerCase()) || null;
+    return this.stmts.findById.get(this._id(username)) || null;
   }
 
   createPlayer(username, passwordHash) {
-    const id = username.toLowerCase();
+    const id = this._id(username);
     this.stmts.insert.run(id, username, passwordHash || null);
     return this.stmts.findById.get(id);
   }
 
   touchLastSeen(username) {
-    this.stmts.updateLastSeen.run(username.toLowerCase());
+    this.stmts.updateLastSeen.run(this._id(username));
   }
 
   setPassword(username, passwordHash) {
-    this.stmts.setPassword.run(passwordHash, username.toLowerCase());
+    this.stmts.setPassword.run(passwordHash, this._id(username));
   }
 
   setSessionData(username, sessionData) {
     const json = sessionData ? JSON.stringify(sessionData) : null;
-    this.stmts.setSessionData.run(json, username.toLowerCase());
+    this.stmts.setSessionData.run(json, this._id(username));
   }
 
   getSessionData(username) {
@@ -52,7 +56,7 @@ class PlayerStore {
   }
 
   clearSessionData(username) {
-    this.stmts.setSessionData.run(null, username.toLowerCase());
+    this.stmts.setSessionData.run(null, this._id(username));
   }
 }
 
