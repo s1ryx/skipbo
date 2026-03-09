@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { ErrorCodes } = require('./errors');
 
 const SALT_ROUNDS = 10;
 
@@ -21,10 +22,10 @@ class AuthService {
     if (existing) {
       if (existing.password_hash) {
         if (!password) {
-          return { success: false, error: 'error.passwordRequired' };
+          return { success: false, error: ErrorCodes.PASSWORD_REQUIRED };
         }
         if (!bcrypt.compareSync(password, existing.password_hash)) {
-          return { success: false, error: 'error.wrongPassword' };
+          return { success: false, error: ErrorCodes.WRONG_PASSWORD };
         }
       }
 
