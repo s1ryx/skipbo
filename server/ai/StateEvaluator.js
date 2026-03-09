@@ -379,7 +379,7 @@ class StateEvaluator {
       score += chain.totalPlays * 5;
     }
     if (this.features.qualityAwareScoring) {
-      score += this._discardSourceBonus(chain, playerState);
+      score += this._discardSourceBonus(chain, playerState, gameState);
     } else {
       score += chain.discardsRevealed * 3;
     }
@@ -836,9 +836,10 @@ class StateEvaluator {
    *
    * @param {Object} chain
    * @param {Object} playerState
+   * @param {Object} gameState
    * @returns {number} bonus
    */
-  _discardSourceBonus(chain, playerState) {
+  _discardSourceBonus(chain, playerState, gameState) {
     let bonus = 0;
 
     for (const play of chain.plays) {
@@ -872,6 +873,22 @@ class StateEvaluator {
           }
         } else {
           bonus += 3; // pile goes from 2 cards to 1 — always an improvement
+        }
+
+        // Source preference: extra bonus when revealed card is playable
+        // on a building pile now or soon (valuable even if not in this chain)
+        if (this.features.sourcePreference && typeof revealed === 'number') {
+          const pileNeeds = gameState.buildingPiles.map((p) => getNextCardValue(p));
+          for (const need of pileNeeds) {
+            if (need == null) continue;
+            if (revealed === need) {
+              bonus += 8; // directly playable
+              break;
+            } else if (revealed === need + 1 || revealed === need + 2) {
+              bonus += 3; // playable soon (1-2 steps away)
+              break;
+            }
+          }
         }
       }
     }
