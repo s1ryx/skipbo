@@ -642,24 +642,36 @@ class StateEvaluator {
         // Only penalize piles that the chain actually advanced
         if (finalNeed === initialNeed) continue;
 
-        const distance = oppStock - finalNeed;
-
-        if (distance === 0) {
-          // Blunder: opponent plays stock directly on their turn
-          oppPenalty -= 50;
-        } else if (distance === 1) {
-          // Danger zone: opponent needs ONE card to reach stock
-          const bridgeVal = finalNeed;
-          const hasBridge = oppDiscardTops.has(bridgeVal) || oppDiscardTops.has('SKIP-BO');
-          oppPenalty -= hasBridge ? 40 : 15;
-        } else if (distance === 2) {
-          let bridgesVisible = 0;
-          for (let v = finalNeed; v < oppStock; v++) {
-            if (oppDiscardTops.has(v) || oppDiscardTops.has('SKIP-BO')) bridgesVisible++;
+        if (this.features.effectiveDangerDistance) {
+          // Expert: scan ALL opponent discard cards for effective gap count
+          const gaps = effectiveDangerDist(finalNeed, oppStock, player);
+          if (gaps === 0) {
+            oppPenalty -= 50; // opponent has everything to reach stockpile
+          } else if (gaps === 1) {
+            oppPenalty -= 40; // one unknown card away
+          } else if (gaps === 2) {
+            oppPenalty -= 30; // two unknowns — still in danger zone
           }
-          oppPenalty -= bridgesVisible >= 2 ? 30 : 10;
+          // gaps >= 3: safe, no penalty
+        } else {
+          // Advanced: raw distance + discard-top bridge check
+          const distance = oppStock - finalNeed;
+
+          if (distance === 0) {
+            oppPenalty -= 50;
+          } else if (distance === 1) {
+            const bridgeVal = finalNeed;
+            const hasBridge = oppDiscardTops.has(bridgeVal) || oppDiscardTops.has('SKIP-BO');
+            oppPenalty -= hasBridge ? 40 : 15;
+          } else if (distance === 2) {
+            let bridgesVisible = 0;
+            for (let v = finalNeed; v < oppStock; v++) {
+              if (oppDiscardTops.has(v) || oppDiscardTops.has('SKIP-BO')) bridgesVisible++;
+            }
+            oppPenalty -= bridgesVisible >= 2 ? 30 : 10;
+          }
         }
-        // distance >= 3 or negative (past opponent stock): safe
+        // distance >= 3 / gaps >= 3 or negative (past opponent stock): safe
       }
 
       if (oppPenalty < worstPenalty) {

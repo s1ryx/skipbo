@@ -19,7 +19,7 @@
 
 const { CardCounter } = require('./CardCounter');
 const { ChainDetector, getNextCardValue } = require('./ChainDetector');
-const { StateEvaluator, detectRunway } = require('./StateEvaluator');
+const { StateEvaluator, detectRunway, effectiveDangerDist } = require('./StateEvaluator');
 const { DIFFICULTY_PRESETS, DEFAULT_DIFFICULTY } = require('./presets');
 
 const noop = () => {};
@@ -320,11 +320,16 @@ class AIPlayer {
         score += reachable.size * 3;
       }
 
-      // Opponent penalty
+      // Opponent penalty for SKIP-BO stockpile pile selection
       for (const player of gameState.players) {
         if (player.stockpileCount === playerState.stockpileCount) continue;
         const oppStock = player.stockpileTop;
-        if (typeof oppStock === 'number' && nextAfter <= oppStock && oppStock - nextAfter <= 2) {
+        if (typeof oppStock !== 'number') continue;
+
+        if (this.features.effectiveDangerDistance) {
+          const gaps = effectiveDangerDist(nextAfter, oppStock, player);
+          if (gaps <= 2) score -= 30;
+        } else if (nextAfter <= oppStock && oppStock - nextAfter <= 2) {
           score -= 30;
         }
       }
