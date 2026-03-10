@@ -11,8 +11,10 @@ function createMockDeps() {
     setRematchVotes: jest.fn(),
     setRematchStockpileSize: jest.fn(),
     setChatMessages: jest.fn(),
+    setLoginState: jest.fn(),
     roomIdRef: { current: null },
     sessionTokenRef: { current: null },
+    transportRef: { current: null },
   };
   return deps;
 }
@@ -131,6 +133,44 @@ describe('createMessageHandlers', () => {
       });
 
       expect(deps.setRematchVotes).toHaveBeenCalledWith(['p1']);
+    });
+
+    it('restores login state when account info is present', () => {
+      const deps = createMockDeps();
+      const handlers = createMessageHandlers(deps);
+      const gameState = { gameOver: false, players: [{ id: 'p1', name: 'Alice' }] };
+
+      handlers.reconnected({
+        roomId: 'XYZ',
+        playerId: 'p1',
+        sessionToken: 'tok',
+        gameState,
+        playerState: {},
+        account: { username: 'Alice', hasPassword: false },
+      });
+
+      expect(deps.setLoginState).toHaveBeenCalledWith({
+        isLoggedIn: true,
+        username: 'Alice',
+        hasPassword: false,
+        error: null,
+      });
+    });
+
+    it('does not touch login state when no account info', () => {
+      const deps = createMockDeps();
+      const handlers = createMessageHandlers(deps);
+      const gameState = { gameOver: false, players: [{ id: 'p1', name: 'Alice' }] };
+
+      handlers.reconnected({
+        roomId: 'XYZ',
+        playerId: 'p1',
+        sessionToken: 'tok',
+        gameState,
+        playerState: {},
+      });
+
+      expect(deps.setLoginState).not.toHaveBeenCalled();
     });
   });
 

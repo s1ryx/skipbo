@@ -399,12 +399,26 @@ class GameCoordinator {
 
     this.transport.addToGroup(connectionId, roomId);
 
+    // Restore login state for accounts that were logged in before the refresh
+    let accountInfo = null;
+    if (player.accountId && this.playerStore) {
+      const account = this.playerStore.findByUsername(player.accountId);
+      if (account) {
+        this.loggedInAccounts.set(connectionId, player.accountId);
+        accountInfo = {
+          username: account.display_name,
+          hasPassword: !!account.password_hash,
+        };
+      }
+    }
+
     this.transport.send(connectionId, 'reconnected', {
       roomId,
       playerId: player.publicId,
       sessionToken: newToken,
       gameState: this._getDecoratedGameState(game),
       playerState: game.getPlayerState(player.internalId),
+      ...(accountInfo && { account: accountInfo }),
     });
 
     this.transport.sendToGroupExcept(roomId, connectionId, 'playerReconnected', {

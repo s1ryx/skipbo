@@ -59,7 +59,7 @@ export function createMessageHandlers({
       setGameState(gameState);
     },
 
-    reconnected({ roomId, playerId, sessionToken, gameState, playerState }) {
+    reconnected({ roomId, playerId, sessionToken, gameState, playerState, account }) {
       roomIdRef.current = roomId;
       sessionTokenRef.current = sessionToken;
       setRoomId(roomId);
@@ -67,6 +67,15 @@ export function createMessageHandlers({
       setGameState(gameState);
       setPlayerState(playerState);
       setInLobby(false);
+
+      if (account) {
+        setLoginState({
+          isLoggedIn: true,
+          username: account.username,
+          hasPassword: account.hasPassword,
+          error: null,
+        });
+      }
 
       if (gameState.gameOver) {
         setRematchVotes(gameState.rematchVotes || []);

@@ -1019,6 +1019,59 @@ describe('GameCoordinator', () => {
       // connectionId must update to the new socket
       expect(player2.connectionId).toBe('player2-new');
     });
+
+    it('includes account info in reconnected payload for logged-in players', () => {
+      const { coordinator, transport } = createCoordinatorWithAuth();
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onMessage('p1', 'login', { username: 'Alice' });
+      handlers.onMessage('p1', 'createRoom', { playerName: 'Alice', maxPlayers: 2 });
+      handlers.onMessage('p2', 'joinRoom', {
+        roomId: coordinator.transport.send.mock.calls.find((c) => c[1] === 'roomCreated')[2].roomId,
+        playerName: 'Bob',
+      });
+      const roomId =
+        coordinator.transport.send.mock.calls.find((c) => c[1] === 'roomCreated')[2].roomId;
+      handlers.onMessage('p1', 'startGame', {});
+
+      const game = coordinator.games.get(roomId);
+      const token = game.players[0].sessionToken;
+
+      handlers.onDisconnect('p1');
+      transport.send.mockClear();
+
+      handlers.onMessage('p1-new', 'reconnect', {
+        roomId,
+        sessionToken: token,
+        playerName: 'Alice',
+      });
+
+      const reconnectedCall = transport.send.mock.calls.find((c) => c[1] === 'reconnected');
+      expect(reconnectedCall[2].account).toEqual({
+        username: 'Alice',
+        hasPassword: false,
+      });
+    });
+
+    it('omits account info in reconnected payload for guests', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const token = game.players[0].sessionToken;
+
+      handlers.onDisconnect('player1');
+      transport.send.mockClear();
+
+      handlers.onMessage('player1-new', 'reconnect', {
+        roomId,
+        sessionToken: token,
+        playerName: 'Alice',
+      });
+
+      const reconnectedCall = transport.send.mock.calls.find((c) => c[1] === 'reconnected');
+      expect(reconnectedCall[2].account).toBeUndefined();
+    });
   });
 
   describe('completedGameCleanup', () => {
