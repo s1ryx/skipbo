@@ -111,6 +111,7 @@
   "error.invalidSource": "Invalid card source",
   "error.onlyHostCanStart": "Only the host can start the game",
   "error.cannotPass": "Cannot pass turn right now",
+  "error.playersDisconnected": "Cannot start game while players are disconnected",
   "error.serverFull": "Server is full",
 
   "connection.disconnected": "Connection lost. Reconnecting...",

@@ -111,6 +111,7 @@
   "error.invalidSource": "Geçersiz kart kaynağı",
   "error.onlyHostCanStart": "Sadece oda sahibi oyunu başlatabilir",
   "error.cannotPass": "Şu anda sıranı pas geçemezsin",
+  "error.playersDisconnected": "Bağlantısı kesilen oyuncular varken oyun başlatılamaz",
   "error.serverFull": "Sunucu dolu",
 
   "connection.disconnected": "Bağlantı kesildi. Yeniden bağlanılıyor...",
