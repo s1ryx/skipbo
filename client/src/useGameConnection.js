@@ -113,8 +113,10 @@ export default function useGameConnection() {
     transportRef.current?.send('leaveLobby');
     localStorage.removeItem('skipBoSession');
     roomIdRef.current = null;
+    sessionTokenRef.current = null;
     setGameState(null);
     setPlayerState(null);
+    setPlayerId(null);
     setRoomId(null);
     setInLobby(true);
   }, []);
