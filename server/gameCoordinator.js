@@ -60,6 +60,9 @@ class GameCoordinator {
     this.gameLoggers = new Map(); // roomId → GameLogger
     this.turnCounters = new Map(); // roomId → { turn, plays, playerName, isBot }
     this.moveAnalyzer = this.logAnalysis ? new MoveAnalyzer() : null;
+
+    // Per-player lobby disconnect grace timers: Map<roomId, Map<internalId, timeoutId>>
+    this.lobbyDisconnectTimers = new Map();
   }
 
   get games() {
@@ -569,6 +572,7 @@ class GameCoordinator {
     if (!player) return;
     this.logger.info('player leaving lobby', { roomId, connectionId });
 
+    this._cancelLobbyDisconnect(roomId, player.internalId);
     game.removePlayer(player.internalId);
     this.transport.removeFromGroup(connectionId, roomId);
     this.sessionManager.removeRoom(connectionId);
@@ -718,20 +722,50 @@ class GameCoordinator {
     const publicId = disconnectedPlayer?.publicId;
 
     if (game.phase === Phase.LOBBY) {
-      if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
       this.transport.removeFromGroup(connectionId, roomId);
-      const humanPlayers = game.players.filter((p) => !p.isBot);
-      if (humanPlayers.length === 0) {
-        // No humans left — clean up bots and schedule deletion
+
+      const humansConnected = game.players.filter(
+        (p) =>
+          !p.isBot && p.connectionId !== connectionId && this.sessionManager.hasRoom(p.connectionId)
+      );
+
+      if (humansConnected.length === 0) {
+        // No connected humans remain — clean up bots and schedule room deletion
+        this._cancelAllLobbyDisconnects(roomId);
         this.botManager.clearAIs(roomId);
         this.scheduleRoomDeletion(roomId);
       } else {
-        if (game.hostPublicId === publicId) {
-          game.setHost(humanPlayers[0].publicId);
-        }
-        this.transport.sendToGroup(roomId, 'playerLeft', {
+        this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
-          gameState: this._getDecoratedGameState(game),
+        });
+      }
+
+      // Schedule deferred removal so the player is cleaned up even if
+      // someone else joins (cancelling room deletion) before the timer fires
+      if (disconnectedPlayer) {
+        this._scheduleLobbyDisconnect(roomId, disconnectedPlayer.internalId, () => {
+          const currentGame = this.gameRepository.getGame(roomId);
+          if (!currentGame) return;
+          const player = currentGame.players.find(
+            (p) => p.internalId === disconnectedPlayer.internalId
+          );
+          if (!player) return;
+
+          currentGame.removePlayer(player.internalId);
+
+          const remainingHumans = currentGame.players.filter((p) => !p.isBot);
+          if (remainingHumans.length === 0) {
+            this.botManager.clearAIs(roomId);
+            this.scheduleRoomDeletion(roomId);
+          } else {
+            if (currentGame.hostPublicId === player.publicId) {
+              currentGame.setHost(remainingHumans[0].publicId);
+            }
+            this.transport.sendToGroup(roomId, 'playerLeft', {
+              playerId: player.publicId,
+              gameState: this._getDecoratedGameState(currentGame),
+            });
+          }
         });
       }
     } else if (game.phase === Phase.FINISHED) {
@@ -810,6 +844,7 @@ class GameCoordinator {
   }
 
   _deleteGameFull(roomId) {
+    this._cancelAllLobbyDisconnects(roomId);
     const game = this.gameRepository.getGame(roomId);
     if (game) {
       this.cancelCompletedGameCleanup(roomId);
@@ -827,6 +862,39 @@ class GameCoordinator {
     if (this.gameRepository.cancelDeletion(roomId)) {
       this.logger.info('cancelled pending deletion', { roomId });
     }
+  }
+
+  _scheduleLobbyDisconnect(roomId, internalId, callback) {
+    if (!this.lobbyDisconnectTimers.has(roomId)) {
+      this.lobbyDisconnectTimers.set(roomId, new Map());
+    }
+    const timeoutId = setTimeout(() => {
+      const roomTimers = this.lobbyDisconnectTimers.get(roomId);
+      if (roomTimers) {
+        roomTimers.delete(internalId);
+        if (roomTimers.size === 0) this.lobbyDisconnectTimers.delete(roomId);
+      }
+      callback();
+    }, LOBBY_GRACE_PERIOD_MS);
+    this.lobbyDisconnectTimers.get(roomId).set(internalId, timeoutId);
+  }
+
+  _cancelLobbyDisconnect(roomId, internalId) {
+    const roomTimers = this.lobbyDisconnectTimers.get(roomId);
+    if (!roomTimers) return false;
+    const timeoutId = roomTimers.get(internalId);
+    if (timeoutId === undefined) return false;
+    clearTimeout(timeoutId);
+    roomTimers.delete(internalId);
+    if (roomTimers.size === 0) this.lobbyDisconnectTimers.delete(roomId);
+    return true;
+  }
+
+  _cancelAllLobbyDisconnects(roomId) {
+    const roomTimers = this.lobbyDisconnectTimers.get(roomId);
+    if (!roomTimers) return;
+    roomTimers.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.lobbyDisconnectTimers.delete(roomId);
   }
 
   scheduleCompletedGameCleanup(roomId) {
