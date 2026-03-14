@@ -836,6 +836,109 @@ describe('GameCoordinator', () => {
     });
   });
 
+  describe('lobby disconnect grace period', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('removes player after grace period expires', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      handlers.onDisconnect('player2');
+      expect(game.players).toHaveLength(2);
+
+      jest.advanceTimersByTime(300000);
+      expect(game.players).toHaveLength(1);
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'playerLeft',
+        expect.objectContaining({ playerId: expect.any(String) })
+      );
+    });
+
+    it('transfers host when disconnected host times out', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const originalHost = game.hostPublicId;
+
+      handlers.onDisconnect('player1');
+      expect(game.hostPublicId).toBe(originalHost);
+
+      jest.advanceTimersByTime(300000);
+      expect(game.players).toHaveLength(1);
+      expect(game.hostPublicId).not.toBe(originalHost);
+    });
+
+    it('cancels grace timer when player reconnects', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player2Token = game.players[1].sessionToken;
+      const player2PublicId = game.players[1].publicId;
+
+      handlers.onDisconnect('player2');
+
+      transport.send.mockClear();
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken: player2Token,
+        playerName: 'Bob',
+      });
+
+      expect(transport.send).toHaveBeenCalledWith(
+        'player2-new',
+        'reconnected',
+        expect.objectContaining({ roomId, playerId: player2PublicId })
+      );
+
+      // Grace timer should be cancelled — player stays after timeout
+      jest.advanceTimersByTime(300000);
+      expect(game.players).toHaveLength(2);
+    });
+
+    it('preserves host status on reconnect', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const hostToken = game.players[0].sessionToken;
+      const hostPublicId = game.hostPublicId;
+
+      handlers.onDisconnect('player1');
+      expect(game.hostPublicId).toBe(hostPublicId);
+
+      handlers.onMessage('player1-new', 'reconnect', {
+        roomId,
+        sessionToken: hostToken,
+        playerName: 'Alice',
+      });
+
+      expect(game.hostPublicId).toBe(hostPublicId);
+    });
+  });
+
+  describe('lobby start with disconnected player', () => {
+    it('rejects start when a player is disconnected', () => {
+      const { coordinator, transport } = createCoordinator();
+      createRoomWithTwoPlayers(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+
+      handlers.onDisconnect('player2');
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'startGame', {});
+
+      expect(transport.send).toHaveBeenCalledWith('player1', 'error', {
+        message: 'error.playersDisconnected',
+      });
+    });
+  });
+
   describe('reconnect', () => {
     it('reconnects a player to an active game using session token', () => {
       const { coordinator, transport } = createCoordinator();
