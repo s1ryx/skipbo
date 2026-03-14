@@ -260,47 +260,13 @@ class GameCoordinator {
     const player = game.players.find((p) => p.sessionToken === sessionToken);
 
     if (!player) {
-      // Player was removed — rejoin if game hasn't started
-      if (game.phase === Phase.LOBBY) {
-        const added = game.addPlayer(connectionId, validName);
-        if (!added) {
-          this.transport.send(connectionId, 'reconnectFailed', { message: ErrorCodes.ROOM_FULL });
-          return;
-        }
-
-        const newPlayer = game.getPlayerByConnectionId(connectionId);
-        const newToken = this.sessionManager.generateToken();
-        game.setSessionToken(newPlayer.internalId, newToken);
-
-        this.sessionManager.setRoom(connectionId, roomId);
-        this.transport.addToGroup(connectionId, roomId);
-
-        this.transport.send(connectionId, 'reconnected', {
-          roomId,
-          playerId: newPlayer.publicId,
-          sessionToken: newToken,
-          gameState: this._getDecoratedGameState(game),
-          playerState: game.getPlayerState(newPlayer.internalId),
-        });
-
-        this.transport.sendToGroupExcept(roomId, connectionId, 'playerJoined', {
-          playerId: newPlayer.publicId,
-          playerName: validName,
-          gameState: this._getDecoratedGameState(game),
-        });
-
-        this.logger.info('player rejoined lobby', {
-          roomId,
-          playerName: sanitizeForLog(validName),
-        });
-        return;
-      }
-
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.PLAYER_NOT_FOUND,
       });
       return;
     }
+
+    this._cancelLobbyDisconnect(roomId, player.internalId);
 
     // Update player's connection ID and issue new session token
     const oldConnectionId = player.connectionId;
