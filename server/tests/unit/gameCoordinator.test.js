@@ -996,7 +996,7 @@ describe('GameCoordinator', () => {
       expect(game.players[1].sessionToken).not.toBe(oldToken);
     });
 
-    it('rejoins lobby when session token not found pre-game', () => {
+    it('fails when session token not found pre-game', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createRoom(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1008,17 +1008,9 @@ describe('GameCoordinator', () => {
         playerName: 'Bob',
       });
 
-      expect(transport.send).toHaveBeenCalledWith(
-        'player2-new',
-        'reconnected',
-        expect.objectContaining({ roomId, playerId: expect.any(String) })
-      );
-      expect(transport.sendToGroupExcept).toHaveBeenCalledWith(
-        roomId,
-        'player2-new',
-        'playerJoined',
-        expect.objectContaining({ playerId: expect.any(String), playerName: 'Bob' })
-      );
+      expect(transport.send).toHaveBeenCalledWith('player2-new', 'reconnectFailed', {
+        message: 'error.playerNotFound',
+      });
     });
 
     it('fails when room does not exist', () => {
@@ -1050,23 +1042,6 @@ describe('GameCoordinator', () => {
 
       expect(transport.send).toHaveBeenCalledWith('unknown-new', 'reconnectFailed', {
         message: 'error.playerNotFound',
-      });
-    });
-
-    it('fails when room is full on lobby rejoin', () => {
-      const { coordinator, transport } = createCoordinator();
-      const roomId = createRoomWithTwoPlayers(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-
-      transport.send.mockClear();
-      handlers.onMessage('player3-new', 'reconnect', {
-        roomId,
-        sessionToken: 'unknown-token',
-        playerName: 'Eve',
-      });
-
-      expect(transport.send).toHaveBeenCalledWith('player3-new', 'reconnectFailed', {
-        message: 'error.roomFull',
       });
     });
 
