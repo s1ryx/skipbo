@@ -318,6 +318,18 @@ class GameCoordinator {
       return;
     }
 
+    const disconnectedHumans = game.players.some(
+      (p) => !p.isBot && !this.sessionManager.hasRoom(p.connectionId)
+    );
+    if (disconnectedHumans) {
+      this.transport.send(connectionId, 'error', {
+        message: ErrorCodes.PLAYERS_DISCONNECTED,
+      });
+      return;
+    }
+
+    this._cancelAllLobbyDisconnects(roomId);
+
     const started = game.startGame();
 
     if (!started) {
