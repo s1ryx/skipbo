@@ -766,21 +766,22 @@ describe('GameCoordinator', () => {
   });
 
   describe('disconnect', () => {
-    it('removes player from lobby and notifies others', () => {
+    it('keeps player in lobby on disconnect and notifies others', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
 
       transport.sendToGroup.mockClear();
       handlers.onDisconnect('player2');
 
       expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
       expect(transport.removeFromGroup).toHaveBeenCalledWith('player2', roomId);
-      expect(transport.sendToGroup).toHaveBeenCalledWith(
-        roomId,
-        'playerLeft',
-        expect.objectContaining({ playerId: expect.any(String) })
-      );
+      // Player stays in the game (non-destructive disconnect)
+      expect(game.players).toHaveLength(2);
+      expect(transport.sendToGroup).toHaveBeenCalledWith(roomId, 'playerDisconnected', {
+        playerId: expect.any(String),
+      });
     });
 
     it('schedules room deletion when last player disconnects from lobby', () => {
