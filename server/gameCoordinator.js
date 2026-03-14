@@ -201,7 +201,25 @@ class GameCoordinator {
       return;
     }
 
-    const added = game.addPlayer(connectionId, validName);
+    let added = game.addPlayer(connectionId, validName);
+
+    if (!added) {
+      // Room is full — evict a disconnected player to make space
+      const disconnected = game.players.find(
+        (p) => !p.isBot && !this.sessionManager.hasRoom(p.connectionId)
+      );
+      if (disconnected) {
+        this._cancelLobbyDisconnect(roomId, disconnected.internalId);
+        game.removePlayer(disconnected.internalId);
+        if (game.hostPublicId === disconnected.publicId) {
+          const remainingHumans = game.players.filter((p) => !p.isBot);
+          if (remainingHumans.length > 0) {
+            game.setHost(remainingHumans[0].publicId);
+          }
+        }
+        added = game.addPlayer(connectionId, validName);
+      }
+    }
 
     if (!added) {
       this.transport.send(connectionId, 'error', { message: ErrorCodes.ROOM_FULL });
