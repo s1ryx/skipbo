@@ -41,7 +41,7 @@ describe('Game abort and leave', () => {
     await c3.close();
   });
 
-  test('disconnect in lobby (non-host) sends playerLeft', async () => {
+  test('disconnect in lobby (non-host) sends playerDisconnected', async () => {
     const c1 = createClient(srv.url);
     const c2 = createClient(srv.url);
     await c1.connect();
@@ -50,12 +50,11 @@ describe('Game abort and leave', () => {
     const room = await c1.createRoom('Alice', 2);
     await c2.joinRoom(room.roomId, 'Bob');
 
-    const leftP = c1.waitFor('playerLeft');
+    const dcP = c1.waitFor('playerDisconnected');
     await c2.close();
-    const left = await leftP;
+    const dc = await dcP;
 
-    expect(left.gameState.players).toHaveLength(1);
-    expect(left.gameState.players[0].name).toBe('Alice');
+    expect(dc.playerId).toBeDefined();
 
     await c1.close();
   });
@@ -77,25 +76,36 @@ describe('Game abort and leave', () => {
     await c2.close();
   });
 
-  test('host disconnect with others transfers host', async () => {
+  test('host disconnect in lobby preserves host on reconnect', async () => {
     const c1 = createClient(srv.url);
     const c2 = createClient(srv.url);
     await c1.connect();
     await c2.connect();
 
     const room = await c1.createRoom('Alice', 2);
-    const bobToken = await c2.joinRoom(room.roomId, 'Bob');
+    await c2.joinRoom(room.roomId, 'Bob');
 
     // Alice (host) disconnects
-    const leftP = c2.waitFor('playerLeft');
+    const dcP = c2.waitFor('playerDisconnected');
     await c1.close();
-    const left = await leftP;
+    await dcP;
 
-    // Bob should now be host
-    expect(left.gameState.hostPlayerId).toBe(bobToken.playerId);
-    expect(left.gameState.players).toHaveLength(1);
-    expect(left.gameState.players[0].name).toBe('Bob');
+    // Alice reconnects — should still be host
+    const c1b = createClient(srv.url);
+    await c1b.connect();
 
+    const reconnectP = c1b.waitFor('reconnected');
+    c1b.emit('reconnect', {
+      roomId: room.roomId,
+      sessionToken: room.sessionToken,
+      playerName: 'Alice',
+    });
+    const result = await reconnectP;
+
+    expect(result.gameState.hostPlayerId).toBe(room.playerId);
+    expect(result.gameState.players).toHaveLength(2);
+
+    await c1b.close();
     await c2.close();
   });
 
