@@ -1121,6 +1121,8 @@ class GameCoordinator {
         ...p,
         isBot: player ? !!player.isBot : false,
         aiType: player ? player.aiType || null : null,
+        disconnected:
+          player && !player.isBot ? !this.sessionManager.hasRoom(player.connectionId) : false,
       };
     });
     return state;
