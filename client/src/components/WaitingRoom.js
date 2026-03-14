@@ -64,11 +64,17 @@ function WaitingRoom({
         </h3>
         <ul>
           {gameState.players.map((player) => (
-            <li key={player.id} className={player.isBot ? 'bot-player' : ''}>
+            <li
+              key={player.id}
+              className={`${player.isBot ? 'bot-player' : ''}${player.disconnected ? ' disconnected-player' : ''}`}
+            >
               <span className="player-name">
                 {player.name}
                 {player.id === playerId ? ` ${t('game.you')}` : ''}
                 {player.isBot && <span className="bot-badge">{t('game.bot')}</span>}
+                {player.disconnected && !player.isBot && (
+                  <span className="disconnected-badge">{t('game.disconnected')}</span>
+                )}
               </span>
               {player.isBot && isHost && (
                 <button

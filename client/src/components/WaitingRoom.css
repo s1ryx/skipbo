@@ -165,6 +165,16 @@
   font-size: 0.85em;
 }
 
+.disconnected-player {
+  opacity: 0.5;
+}
+
+.disconnected-badge {
+  color: var(--color-danger, #e53e3e);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
 .btn-remove-bot {
   background: none;
   border: 1px solid var(--color-danger, #e53e3e);
