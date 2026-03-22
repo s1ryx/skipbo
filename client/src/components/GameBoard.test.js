@@ -196,10 +196,21 @@ describe('GameBoard', () => {
     it('renders quick discard checkbox', () => {
       renderGameBoard();
       fireEvent.click(screen.getByLabelText('Options'));
-      expect(screen.getByRole('checkbox')).toBeInTheDocument();
+      expect(
+        screen.getByRole('checkbox', { name: /Quick Discard/i })
+      ).toBeInTheDocument();
       expect(
         screen.getByText('Quick Discard (click discard pile with selected card)')
       ).toBeInTheDocument();
+    });
+
+    it('renders sort hand checkbox', () => {
+      renderGameBoard();
+      fireEvent.click(screen.getByLabelText('Options'));
+      expect(
+        screen.getByRole('checkbox', { name: /Sort Hand/i })
+      ).toBeInTheDocument();
+      expect(screen.getByText('Sort Hand (ascending, wildcards last)')).toBeInTheDocument();
     });
 
     it('renders stockpile card in player area', () => {

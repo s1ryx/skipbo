@@ -65,6 +65,7 @@
   "game.noCardsToDiscard": "No cards to discard — pass your turn",
   "game.selected": "Selected:",
   "game.quickDiscard": "Quick Discard (click discard pile with selected card)",
+  "game.sortHand": "Sort Hand (ascending, wildcards last)",
   "game.gameOver": "Game Over!",
   "game.winner": "Winner: {{name}}",
   "game.rematch": "Rematch",

@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import './OptionsMenu.css';
 import { useTranslation } from '../i18n';
 
-function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeaveGame }) {
+function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, sortHandEnabled, onToggleSortHand, onLeaveGame }) {
   const { t, language, setLanguage, supportedLanguages } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef(null);
@@ -56,6 +56,16 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
                 onChange={onToggleQuickDiscard}
               />
               {t('game.quickDiscard')}
+            </label>
+          </div>
+          <div className="options-item">
+            <label>
+              <input
+                type="checkbox"
+                checked={sortHandEnabled}
+                onChange={onToggleSortHand}
+              />
+              {t('game.sortHand')}
             </label>
           </div>
           <div className="options-item">

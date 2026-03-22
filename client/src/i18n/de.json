@@ -65,6 +65,7 @@
   "game.noCardsToDiscard": "Keine Karten zum Ablegen — Zug passen",
   "game.selected": "Ausgewählt:",
   "game.quickDiscard": "Schnell ablegen (Hilfsstapel mit gewählter Karte anklicken)",
+  "game.sortHand": "Karten sortieren (aufsteigend, Joker zuletzt)",
   "game.gameOver": "Spiel vorbei!",
   "game.winner": "Gewinner: {{name}}",
   "game.rematch": "Revanche",
