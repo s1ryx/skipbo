@@ -147,6 +147,21 @@ describe('createMessageHandlers', () => {
       jest.advanceTimersByTime(5000);
       expect(deps.setError).toHaveBeenCalledWith(null);
     });
+
+    it.each([
+      ['error.playerNotFound'],
+      ['error.roomFull'],
+      ['error.invalidPlayerName'],
+      ['error.invalidSession'],
+    ])('preserves session on transient failure (%s)', (code) => {
+      const deps = createMockDeps();
+      const handlers = createMessageHandlers(deps);
+
+      handlers.reconnectFailed({ message: code });
+
+      expect(localStorageMock.removeItem).not.toHaveBeenCalled();
+      expect(deps.setError).toHaveBeenCalledWith(code);
+    });
   });
 
   describe('gameStarted', () => {
