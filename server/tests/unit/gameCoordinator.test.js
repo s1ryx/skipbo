@@ -897,6 +897,35 @@ describe('GameCoordinator', () => {
       );
     });
 
+    it('is idempotent when the same socket re-emits reconnect', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const token = game.players[1].sessionToken;
+
+      // Same connectionId (player2 has not disconnected) re-emits reconnect
+      transport.send.mockClear();
+      transport.sendToGroupExcept.mockClear();
+      handlers.onMessage('player2', 'reconnect', {
+        roomId,
+        sessionToken: token,
+        playerName: 'Bob',
+      });
+
+      // The player receives a fresh `reconnected` payload...
+      expect(transport.send).toHaveBeenCalledWith(
+        'player2',
+        'reconnected',
+        expect.objectContaining({ sessionToken: token })
+      );
+      // ...but other clients are NOT told the player reconnected, because
+      // from their perspective the player never went away.
+      expect(transport.sendToGroupExcept).not.toHaveBeenCalled();
+      // Connection mapping is unchanged.
+      expect(game.players[1].connectionId).toBe('player2');
+    });
+
     it('rejoins lobby when session token not found pre-game', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createRoom(coordinator);
