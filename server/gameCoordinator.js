@@ -299,6 +299,20 @@ class GameCoordinator {
       return;
     }
 
+    // Idempotent: if the same socket re-sends `reconnect` (e.g. a client-side
+    // duplicate emit), re-emit the payload without rewiring the player's
+    // connection or broadcasting a fake reconnect to other clients.
+    if (player.connectionId === connectionId) {
+      this.transport.send(connectionId, 'reconnected', {
+        roomId,
+        playerId: player.publicId,
+        sessionToken: player.sessionToken,
+        gameState: this._getDecoratedGameState(game),
+        playerState: game.getPlayerState(player.internalId),
+      });
+      return;
+    }
+
     // Update player's connection ID. The session token is kept stable across
     // reconnects so a client whose persisted token hasn't been updated yet
     // (e.g. due to a fast refresh) can still recover its seat.
