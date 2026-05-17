@@ -135,14 +135,14 @@ describe('createMessageHandlers', () => {
   });
 
   describe('reconnectFailed', () => {
-    it('clears session and sets error with auto-dismiss', () => {
+    it('clears session and sets error with auto-dismiss on permanent failure', () => {
       const deps = createMockDeps();
       const handlers = createMessageHandlers(deps);
 
-      handlers.reconnectFailed({ message: 'Room not found' });
+      handlers.reconnectFailed({ message: 'error.roomNoLongerExists' });
 
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('skipBoSession');
-      expect(deps.setError).toHaveBeenCalledWith('Room not found');
+      expect(deps.setError).toHaveBeenCalledWith('error.roomNoLongerExists');
 
       jest.advanceTimersByTime(5000);
       expect(deps.setError).toHaveBeenCalledWith(null);

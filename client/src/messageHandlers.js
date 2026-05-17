@@ -1,3 +1,9 @@
+// The only reconnect failure that is unrecoverable for sure: the room itself
+// is gone. Every other code may be transient -- room could free up, server
+// could come back, token could become valid again after a retry -- so we
+// keep localStorage and let the user (or a manual leaveLobby) decide.
+const PERMANENT_RECONNECT_FAILURES = new Set(['error.roomNoLongerExists']);
+
 export function createMessageHandlers({
   setGameState,
   setPlayerState,
@@ -77,7 +83,9 @@ export function createMessageHandlers({
     },
 
     reconnectFailed({ message }) {
-      localStorage.removeItem('skipBoSession');
+      if (PERMANENT_RECONNECT_FAILURES.has(message)) {
+        localStorage.removeItem('skipBoSession');
+      }
       setError(message);
       setTimeout(() => setError(null), 5000);
     },
