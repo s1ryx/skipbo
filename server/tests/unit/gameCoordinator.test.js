@@ -1,4 +1,5 @@
 const GameCoordinator = require('../../gameCoordinator');
+const { LOBBY_GRACE_PERIOD_MS } = require('../../config');
 
 function createMockTransport() {
   return {
@@ -701,7 +702,7 @@ describe('GameCoordinator', () => {
       expect(coordinator.pendingDeletions.has(roomId)).toBe(true);
       expect(coordinator.games.has(roomId)).toBe(true);
 
-      jest.advanceTimersByTime(30000);
+      jest.advanceTimersByTime(LOBBY_GRACE_PERIOD_MS);
 
       expect(coordinator.games.has(roomId)).toBe(false);
       expect(coordinator.pendingDeletions.has(roomId)).toBe(false);
@@ -793,7 +794,7 @@ describe('GameCoordinator', () => {
 
       expect(coordinator.pendingDeletions.has(roomId)).toBe(true);
 
-      jest.advanceTimersByTime(30000);
+      jest.advanceTimersByTime(LOBBY_GRACE_PERIOD_MS);
       expect(coordinator.games.has(roomId)).toBe(false);
       jest.useRealTimers();
     });
