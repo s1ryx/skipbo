@@ -299,11 +299,11 @@ class GameCoordinator {
       return;
     }
 
-    // Update player's connection ID and issue new session token
+    // Update player's connection ID. The session token is kept stable across
+    // reconnects so a client whose persisted token hasn't been updated yet
+    // (e.g. due to a fast refresh) can still recover its seat.
     const oldConnectionId = player.connectionId;
     game.updateConnectionId(player.internalId, connectionId);
-    const newToken = this.sessionManager.generateToken();
-    game.setSessionToken(player.internalId, newToken);
 
     game.removeRematchVote(player.internalId);
 
@@ -315,7 +315,7 @@ class GameCoordinator {
     this.transport.send(connectionId, 'reconnected', {
       roomId,
       playerId: player.publicId,
-      sessionToken: newToken,
+      sessionToken: player.sessionToken,
       gameState: this._getDecoratedGameState(game),
       playerState: game.getPlayerState(player.internalId),
     });
