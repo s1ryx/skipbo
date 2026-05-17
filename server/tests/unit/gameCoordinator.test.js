@@ -874,22 +874,27 @@ describe('GameCoordinator', () => {
       );
     });
 
-    it('issues a new session token on reconnect', () => {
+    it('keeps the session token stable across reconnects', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createStartedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
       const game = coordinator.games.get(roomId);
-      const oldToken = game.players[1].sessionToken;
+      const originalToken = game.players[1].sessionToken;
 
       handlers.onDisconnect('player2');
+      transport.send.mockClear();
       handlers.onMessage('player2-new', 'reconnect', {
         roomId,
-        sessionToken: oldToken,
+        sessionToken: originalToken,
         playerName: 'Bob',
       });
 
-      // Token should have been rotated
-      expect(game.players[1].sessionToken).not.toBe(oldToken);
+      expect(game.players[1].sessionToken).toBe(originalToken);
+      expect(transport.send).toHaveBeenCalledWith(
+        'player2-new',
+        'reconnected',
+        expect.objectContaining({ sessionToken: originalToken })
+      );
     });
 
     it('rejoins lobby when session token not found pre-game', () => {

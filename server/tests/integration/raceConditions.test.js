@@ -199,6 +199,55 @@ describe('Race conditions', () => {
     await c2.close();
   });
 
+  test('mid-game session token is stable across reconnects', async () => {
+    // Bug: refresh during a reconnect — client may unload before persisting the
+    // rotated token. localStorage still holds the original. The next refresh
+    // reconnects with that original, but the server has rotated it away, so
+    // the reconnect fails and the client wipes localStorage, ending the game
+    // for that player. The cure is to not rotate on reconnect: an unchanged
+    // token survives any number of refreshes.
+    const c1 = createClient(srv.url);
+    const c2 = createClient(srv.url);
+    await c1.connect();
+    await c2.connect();
+
+    const room = await c1.createRoom('Alice', 2, 5);
+    await c2.joinRoom(room.roomId, 'Bob');
+    await Promise.all([c1.startGame(), c2.waitFor('gameStarted')]);
+
+    const originalToken = room.sessionToken;
+
+    // First "refresh": disconnect, reconnect with the original token
+    await c1.close();
+    const c1b = createClient(srv.url);
+    await c1b.connect();
+    const reconnect1P = c1b.waitFor('reconnected');
+    c1b.emit('reconnect', {
+      roomId: room.roomId,
+      sessionToken: originalToken,
+      playerName: 'Alice',
+    });
+    const result1 = await reconnect1P;
+    expect(result1.sessionToken).toBe(originalToken);
+
+    // Second "refresh" with the original token still in client storage —
+    // simulates a client that refreshed before persisting any rotated token.
+    await c1b.close();
+    const c1c = createClient(srv.url);
+    await c1c.connect();
+    const reconnect2P = c1c.waitFor('reconnected', 3000);
+    c1c.emit('reconnect', {
+      roomId: room.roomId,
+      sessionToken: originalToken,
+      playerName: 'Alice',
+    });
+    const result2 = await reconnect2P;
+    expect(result2.sessionToken).toBe(originalToken);
+
+    await c1c.close();
+    await c2.close();
+  });
+
   test('rapid reconnect/disconnect cycles maintain consistent state', async () => {
     const c1 = createClient(srv.url);
     const c2 = createClient(srv.url);
