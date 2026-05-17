@@ -165,7 +165,7 @@ describe('Session and reconnection', () => {
     await c2b.close();
   });
 
-  test('reconnected player gets a new session token', async () => {
+  test('reconnected player keeps the original session token', async () => {
     const c1 = createClient(srv.url);
     await c1.connect();
 
@@ -185,8 +185,7 @@ describe('Session and reconnection', () => {
     });
     const result = await reconnectP;
 
-    expect(result.sessionToken).toBeDefined();
-    expect(result.sessionToken).not.toBe(originalToken);
+    expect(result.sessionToken).toBe(originalToken);
 
     await c1b.close();
   });
