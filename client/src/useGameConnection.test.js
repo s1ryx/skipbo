@@ -296,7 +296,7 @@ describe('useGameConnection', () => {
   });
 
   describe('gameOver event', () => {
-    it('clears session from localStorage and chat from sessionStorage', () => {
+    it('preserves session and chat so a rematch reconnect works', () => {
       localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
       sessionStorage.setItem('skipBoChat_ROOM01', JSON.stringify([{ message: 'hi' }]));
 
@@ -305,8 +305,8 @@ describe('useGameConnection', () => {
         mockSocket._trigger('gameOver', { gameState: { ...fakeGameState, gameOver: true } });
       });
 
-      expect(localStorage.getItem('skipBoSession')).toBeNull();
-      expect(sessionStorage.getItem('skipBoChat_ROOM01')).toBeNull();
+      expect(localStorage.getItem('skipBoSession')).not.toBeNull();
+      expect(sessionStorage.getItem('skipBoChat_ROOM01')).not.toBeNull();
     });
   });
 

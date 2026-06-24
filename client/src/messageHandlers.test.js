@@ -193,14 +193,14 @@ describe('createMessageHandlers', () => {
   });
 
   describe('gameOver', () => {
-    it('clears session storage', () => {
+    it('preserves the session so a rematch reconnect works', () => {
       const deps = createMockDeps();
       const handlers = createMessageHandlers(deps);
 
       handlers.gameOver({ gameState: { winner: 'p1' } });
 
       expect(deps.setGameState).toHaveBeenCalled();
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('skipBoSession');
+      expect(localStorageMock.removeItem).not.toHaveBeenCalledWith('skipBoSession');
     });
   });
 
