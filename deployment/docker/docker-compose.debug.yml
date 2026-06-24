@@ -1,0 +1,9 @@
+services:
+  server:
+    environment:
+      - LOG_LEVEL=debug
+
+  client:
+    build:
+      args:
+        - REACT_APP_DEBUG=1
