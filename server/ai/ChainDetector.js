@@ -154,7 +154,7 @@ function applyPlay(snap, play) {
 /**
  * Undo a play on a snapshot (restores previous state).
  */
-function undoPlay(snap, play, prevPileNeed, prevPileLength, meta) {
+function undoPlay(snap, play, prevPileNeed, prevPileLength, _meta) {
   // Restore building pile
   snap.pileNeeds[play.pileIndex] = prevPileNeed;
   snap.pileLengths[play.pileIndex] = prevPileLength;
