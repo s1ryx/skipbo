@@ -445,21 +445,22 @@ Session data is cleared on game over and game abort.
 
 ### Client → Server (emitted by client)
 
-| Event                   | Payload                                     | Handler                       |
-| ----------------------- | ------------------------------------------- | ----------------------------- |
-| `createRoom`            | `{ playerName, maxPlayers, stockpileSize }` | `handleCreateRoom`            |
-| `joinRoom`              | `{ roomId, playerName }`                    | `handleJoinRoom`              |
-| `reconnect`             | `{ roomId, sessionToken, playerName }`      | `handleReconnect`             |
-| `startGame`             | _(none)_                                    | `handleStartGame`             |
-| `playCard`              | `{ card, source, buildingPileIndex }`       | `handlePlayCard`              |
-| `discardCard`           | `{ card, discardPileIndex }`                | `handleDiscardCard`           |
-| `sendChatMessage`       | `{ message }`                               | `handleSendChatMessage`       |
-| `leaveLobby`            | _(none)_                                    | `handleLeaveLobby`            |
-| `leaveGame`             | _(none)_                                    | `handleLeaveGame`             |
-| `requestRematch`        | _(none)_                                    | `handleRequestRematch`        |
-| `updateRematchSettings` | `{ stockpileSize }`                         | `handleUpdateRematchSettings` |
-| `addBot`                | `{ aiType }`                                | `handleAddBot`                |
-| `removeBot`             | `{ botPlayerId }`                           | `handleRemoveBot`             |
+| Event                               | Payload                                     | Handler                                   |
+| ----------------------------------- | ------------------------------------------- | ----------------------------------------- |
+| `createRoom`                        | `{ playerName, maxPlayers, stockpileSize }` | `handleCreateRoom`                        |
+| `joinRoom`                          | `{ roomId, playerName }`                    | `handleJoinRoom`                          |
+| `reconnect`                         | `{ roomId, sessionToken, playerName }`      | `handleReconnect`                         |
+| `startGame`                         | _(none)_                                    | `handleStartGame`                         |
+| `playCard`                          | `{ card, source, buildingPileIndex }`       | `handlePlayCard`                          |
+| `discardCard`                       | `{ card, discardPileIndex }`                | `handleDiscardCard`                       |
+| `sendChatMessage`                   | `{ message }`                               | `handleSendChatMessage`                   |
+| `leaveLobby`                        | _(none)_                                    | `handleLeaveLobby`                        |
+| `leaveGame`                         | _(none)_                                    | `handleLeaveGame`                         |
+| `requestRematch`                    | _(none)_                                    | `handleRequestRematch`                    |
+| `requestRematchWithoutDisconnected` | _(none)_                                    | `handleRequestRematchWithoutDisconnected` |
+| `updateRematchSettings`             | `{ stockpileSize }`                         | `handleUpdateRematchSettings`             |
+| `addBot`                            | `{ aiType }`                                | `handleAddBot`                            |
+| `removeBot`                         | `{ botPlayerId }`                           | `handleRemoveBot`                         |
 
 ### Server → Client (emitted by server)
 
@@ -651,6 +652,13 @@ during a rematch) can reconnect with their session token. Only the
 explicit-leave path (`leaveGame` → `gameAborted`) removes a post-game
 player, so `playerLeftPostGame` is strictly the explicit-leave
 broadcast.
+
+Because a disconnected player is no longer auto-evicted, a rage-quit
+(someone who never returns) would otherwise block the rematch vote.
+The remaining players can break this with `requestRematchWithoutDisconnected`
+(`handleRequestRematchWithoutDisconnected`), which evicts every still-
+disconnected human and starts the rematch via the shared
+`_tryStartRematch` path if enough players remain.
 
 ## Data Flow Diagram
 
