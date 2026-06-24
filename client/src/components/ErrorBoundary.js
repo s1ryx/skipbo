@@ -1,4 +1,5 @@
 import React from 'react';
+import debugLog from '../debugLog';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -8,6 +9,19 @@ class ErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Without this, a render error is caught silently and the user only sees
+    // "Something went wrong" with no diagnostic trail. When the reconnect bug
+    // surfaces as a render crash (rather than a server-side error), this is
+    // the only place we can capture it.
+    debugLog('error-boundary', 'render error', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      componentStack: errorInfo?.componentStack,
+    });
   }
 
   handleReset = () => {
