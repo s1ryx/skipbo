@@ -637,10 +637,20 @@ Player disconnects (tab close, network loss)
     → If humans remain: room persists for reconnection
     → If no humans remain: schedules game deletion after
       grace period (GAME_GRACE_PERIOD_MS), pauses bot turns
-  → If post-game: removes rematch vote
+  → If post-game: transient, like mid-game — keeps the player
+    so their session token still resolves on reconnect, sends
+    'playerDisconnected', and drops only that player's rematch vote
+    → If humans remain: room persists for reconnection
     → If no humans remain: schedules game deletion after
       grace period
 ```
+
+A post-game disconnect is treated the same as a mid-game one: the
+player is kept in the game so a tab-out (e.g. a mobile renderer kill
+during a rematch) can reconnect with their session token. Only the
+explicit-leave path (`leaveGame` → `gameAborted`) removes a post-game
+player, so `playerLeftPostGame` is strictly the explicit-leave
+broadcast.
 
 ## Data Flow Diagram
 
