@@ -1491,19 +1491,23 @@ describe('GameCoordinator', () => {
       expect(coordinator.games.has(roomId)).toBe(false);
     });
 
-    it('sends playerLeftPostGame to remaining players on disconnect', () => {
+    it('sends playerDisconnected to remaining players on post-game disconnect', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player2InternalId = game.getPlayerByConnectionId('player2').internalId;
 
       transport.sendToGroup.mockClear();
       handlers.onDisconnect('player2');
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
-        'playerLeftPostGame',
-        expect.objectContaining({ gameState: expect.any(Object) })
+        'playerDisconnected',
+        expect.objectContaining({ playerId: expect.any(String) })
       );
+      // Player is preserved so their session token still resolves on reconnect
+      expect(game.players.find((p) => p.internalId === player2InternalId)).toBeDefined();
     });
   });
 

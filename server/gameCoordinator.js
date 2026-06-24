@@ -887,9 +887,12 @@ class GameCoordinator {
           publicId,
           humansRemaining,
         });
-        if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
-        this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
-          gameState: this._getDecoratedGameState(game),
+        // A post-game disconnect is transient, exactly like a mid-game one:
+        // keep the player in game.players so their session token still
+        // resolves and they can reconnect into the room (e.g. to rematch).
+        // The intentional-leave path (handleLeaveGame) is what removes them.
+        this.transport.sendToGroup(roomId, 'playerDisconnected', {
+          playerId: publicId,
         });
       }
     } else {
