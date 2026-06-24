@@ -17,17 +17,12 @@ const {
   MAX_STOCKPILE_SIZE,
   MAX_PLAYER_NAME_LENGTH,
   MAX_CHAT_MESSAGE_LENGTH,
-  BOT_ID_PREFIX,
   BOT_TURN_START_DELAY_MS,
   BOT_PLAY_DELAY_MS,
   BOT_PLAY_JITTER_MS,
   Phase,
 } = require('./config');
 const { ErrorCodes } = require('./errors');
-
-function isBotId(id) {
-  return typeof id === 'string' && id.startsWith(BOT_ID_PREFIX);
-}
 
 function stripHtml(str) {
   return str.replace(/<[^>]*>/g, '');
