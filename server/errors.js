@@ -21,6 +21,7 @@ const ErrorCodes = Object.freeze({
   // Game start
   ONLY_HOST_CAN_START: 'error.onlyHostCanStart',
   NEED_MORE_PLAYERS: 'error.needMorePlayers',
+  PLAYERS_DISCONNECTED: 'error.playersDisconnected',
 
   // Turn / move validation
   NOT_YOUR_TURN: 'error.notYourTurn',
