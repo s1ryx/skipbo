@@ -1463,7 +1463,7 @@ describe('GameCoordinator', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
-    it('clears rematch votes on post-game disconnect', () => {
+    it('drops the disconnecting player own vote on post-game disconnect', () => {
       const { coordinator } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1475,6 +1475,24 @@ describe('GameCoordinator', () => {
       handlers.onDisconnect('player1');
 
       expect(game.rematchVotes.size).toBe(0);
+    });
+
+    it('keeps a remaining player vote when a peer disconnects post-game', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player1InternalId = game.getPlayerByConnectionId('player1').internalId;
+
+      // Alice (player1) votes; quorum (2 humans) is not yet met
+      handlers.onMessage('player1', 'requestRematch', {});
+      expect(game.rematchVotes.has(player1InternalId)).toBe(true);
+
+      // Bob (player2) disconnects without voting
+      handlers.onDisconnect('player2');
+
+      // Alice's vote must survive a peer's transient disconnect
+      expect(game.rematchVotes.has(player1InternalId)).toBe(true);
     });
 
     it('cleans up game when all players disconnect post-game', () => {
