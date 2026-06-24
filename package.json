@@ -1,4 +1,5 @@
 {
+  "name": "skip-bo-game",
   "private": true,
   "scripts": {
     "prepare": "husky"
