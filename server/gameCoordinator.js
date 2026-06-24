@@ -759,6 +759,11 @@ class GameCoordinator {
     const humanPlayers = game.players.filter((p) => !p.isBot);
     if (!game.canStartRematch(humanPlayers.length)) return false;
 
+    // Don't reset/deal if too few players remain to start (e.g. a 2-player
+    // game whose opponent already left post-game): startGame() would fail
+    // and strand the room in a half-reset lobby state.
+    if (game.players.length < MIN_PLAYERS) return false;
+
     this.cancelCompletedGameCleanup(roomId);
     game.resetForRematch();
     game.startGame();
