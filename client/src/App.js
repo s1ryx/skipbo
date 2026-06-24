@@ -60,6 +60,7 @@ function App() {
     leaveLobby,
     leaveGame,
     requestRematch,
+    requestRematchWithoutDisconnected,
     updateRematchSettings,
     rematchVotes,
     rematchStockpileSize,
@@ -106,6 +107,7 @@ function App() {
             onPassTurn={passTurn}
             onLeaveGame={leaveGame}
             onRequestRematch={requestRematch}
+            onRequestRematchWithoutDisconnected={requestRematchWithoutDisconnected}
             onUpdateRematchSettings={updateRematchSettings}
             rematchVotes={rematchVotes}
             rematchStockpileSize={rematchStockpileSize}

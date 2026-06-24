@@ -155,6 +155,10 @@ export default function useGameConnection() {
     transportRef.current?.send('requestRematch');
   }, []);
 
+  const requestRematchWithoutDisconnected = useCallback(() => {
+    transportRef.current?.send('requestRematchWithoutDisconnected');
+  }, []);
+
   const updateRematchSettings = useCallback((stockpileSize) => {
     transportRef.current?.send('updateRematchSettings', { stockpileSize });
   }, []);
@@ -193,6 +197,7 @@ export default function useGameConnection() {
     leaveLobby,
     leaveGame,
     requestRematch,
+    requestRematchWithoutDisconnected,
     updateRematchSettings,
     rematchVotes,
     rematchStockpileSize,

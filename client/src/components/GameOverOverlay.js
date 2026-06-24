@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../i18n';
 
+// Minimum players Skip-Bo needs to start a game (mirrors server MIN_PLAYERS).
+const MIN_PLAYERS = 2;
+
 function GameOverOverlay({
   gameState,
   playerId,
   rematchVotes,
   rematchStockpileSize,
   onRequestRematch,
+  onRequestRematchWithoutDisconnected,
   onUpdateRematchSettings,
   onLeaveGame,
 }) {
@@ -21,6 +25,12 @@ function GameOverOverlay({
   useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   const displaySize = localStockpileSize ?? rematchStockpileSize ?? gameState.stockpileSize;
+
+  // Offer "rematch without disconnected" only when evicting the disconnected
+  // players still leaves enough players to start a game.
+  const hasDisconnectedPlayers = gameState.players.some((p) => p.disconnected);
+  const remainingIfEvicted = gameState.players.filter((p) => !p.disconnected).length;
+  const canRematchWithoutDisconnected = hasDisconnectedPlayers && remainingIfEvicted >= MIN_PLAYERS;
 
   const handleSliderChange = (e) => {
     const value = parseInt(e.target.value);
@@ -73,7 +83,10 @@ function GameOverOverlay({
 
           <div className="rematch-votes">
             {gameState.players.map((player) => (
-              <div key={player.id} className="rematch-vote-player">
+              <div
+                key={player.id}
+                className={`rematch-vote-player ${player.disconnected ? 'disconnected' : ''}`}
+              >
                 <span
                   className={`vote-indicator ${rematchVotes.includes(player.id) ? 'voted' : ''}`}
                 >
@@ -82,6 +95,7 @@ function GameOverOverlay({
                 <span className="vote-player-name">
                   {player.name}
                   {player.id === playerId ? ` ${t('game.you')}` : ''}
+                  {player.disconnected ? ` ${t('game.disconnectedTag')}` : ''}
                 </span>
               </div>
             ))}
@@ -95,6 +109,14 @@ function GameOverOverlay({
             >
               {rematchVotes.includes(playerId) ? t('game.rematchVoted') : t('game.rematch')}
             </button>
+            {canRematchWithoutDisconnected && (
+              <button
+                onClick={onRequestRematchWithoutDisconnected}
+                className="btn-rematch btn-rematch-without"
+              >
+                {t('game.rematchWithoutDisconnected')}
+              </button>
+            )}
             <button onClick={onLeaveGame} className="btn-leave">
               {t('game.leave')}
             </button>

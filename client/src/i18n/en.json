@@ -69,6 +69,8 @@
   "game.winner": "Winner: {{name}}",
   "game.rematch": "Rematch",
   "game.rematchVoted": "Voted \u2713",
+  "game.rematchWithoutDisconnected": "Rematch without disconnected",
+  "game.disconnectedTag": "(disconnected)",
   "game.leave": "Leave",
   "game.rematchStockpile": "Stockpile: {{count}} cards",
 

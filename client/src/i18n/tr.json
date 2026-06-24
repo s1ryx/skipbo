@@ -69,6 +69,8 @@
   "game.winner": "Kazanan: {{name}}",
   "game.rematch": "Rövanş",
   "game.rematchVoted": "Oy verildi \u2713",
+  "game.rematchWithoutDisconnected": "Bağlantısı kesilenler olmadan rövanş",
+  "game.disconnectedTag": "(bağlantı kesildi)",
   "game.leave": "Ayrıl",
   "game.rematchStockpile": "Kart destesi: {{count}} kart",
 

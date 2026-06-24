@@ -90,6 +90,34 @@ function createCompletedGameWithBot(coordinator) {
   return roomId;
 }
 
+/** Helper: create a completed game with two humans and a bot */
+function createCompletedGameWithTwoHumansAndBot(coordinator) {
+  const handlers = coordinator.getTransportHandlers();
+  handlers.onMessage('player1', 'createRoom', {
+    playerName: 'Alice',
+    maxPlayers: 3,
+    stockpileSize: null,
+  });
+  const call = coordinator.transport.send.mock.calls.find(
+    (c) => c[0] === 'player1' && c[1] === 'roomCreated'
+  );
+  const roomId = call[2].roomId;
+  handlers.onMessage('player2', 'joinRoom', { roomId, playerName: 'Bob' });
+  handlers.onMessage('player1', 'addBot', { aiType: 'improved' });
+  handlers.onMessage('player1', 'startGame', {});
+  const game = coordinator.games.get(roomId);
+
+  // Force Alice to win
+  const player1 = game.players[0];
+  player1.stockpile = [1];
+  player1.hand = [1, 2, 3, 4, 5];
+  coordinator.botManager.clearTimers(roomId);
+  handlers.onMessage('player1', 'playCard', { card: 1, source: 'stockpile', buildingPileIndex: 0 });
+
+  expect(game.gameOver).toBe(true);
+  return roomId;
+}
+
 /** Helper: create a completed game (game over state) */
 function createCompletedGame(coordinator) {
   const roomId = createRoomWithTwoPlayers(coordinator);
@@ -1285,6 +1313,25 @@ describe('GameCoordinator', () => {
       expect(gameStartedCalls.length).toBe(2);
     });
 
+    it('does not start a rematch when too few players remain', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      // player2 leaves post-game, leaving player1 alone
+      handlers.onMessage('player2', 'leaveGame', {});
+      expect(game.players.length).toBe(1);
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'requestRematch', {});
+
+      // No game is dealt and the room stays finished — not stranded in lobby
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
+      expect(gameStartedCalls).toHaveLength(0);
+      expect(game.gameOver).toBe(true);
+    });
+
     it('cancels completed game cleanup timer on unanimous vote', () => {
       const { coordinator } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
@@ -1456,6 +1503,56 @@ describe('GameCoordinator', () => {
 
       expect(coordinator.games.has(roomId)).toBe(false);
       expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
+    });
+  });
+
+  describe('rematch without disconnected', () => {
+    it('starts the rematch after evicting a disconnected human', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGameWithTwoHumansAndBot(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const bobInternalId = game.getPlayerByConnectionId('player2').internalId;
+
+      // Bob (player2) rage-quits; Alice and the bot remain
+      handlers.onDisconnect('player2');
+      expect(game.players.find((p) => p.internalId === bobInternalId)).toBeDefined();
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'requestRematchWithoutDisconnected', {});
+
+      // Bob is evicted and a new game is dealt to the remaining players
+      expect(game.players.find((p) => p.internalId === bobInternalId)).toBeUndefined();
+      expect(game.gameStarted).toBe(true);
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
+      expect(gameStartedCalls).toHaveLength(1); // only the human receives it
+      coordinator.botManager.clearTimers(roomId);
+    });
+
+    it('evicts the disconnected player but does not start with too few left', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const bobInternalId = game.getPlayerByConnectionId('player2').internalId;
+
+      handlers.onDisconnect('player2');
+
+      transport.send.mockClear();
+      transport.sendToGroup.mockClear();
+      handlers.onMessage('player1', 'requestRematchWithoutDisconnected', {});
+
+      // Bob is evicted, but Alice alone cannot start — room stays finished
+      expect(game.players.find((p) => p.internalId === bobInternalId)).toBeUndefined();
+      expect(game.gameOver).toBe(true);
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
+      expect(gameStartedCalls).toHaveLength(0);
+      // The survivor is shown the updated player list
+      expect(transport.sendToGroup).toHaveBeenCalledWith(
+        roomId,
+        'playerLeftPostGame',
+        expect.objectContaining({ gameState: expect.any(Object) })
+      );
     });
   });
 

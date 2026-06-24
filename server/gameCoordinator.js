@@ -124,6 +124,8 @@ class GameCoordinator {
         return this.handleLeaveGame(connectionId);
       case 'requestRematch':
         return this.handleRequestRematch(connectionId);
+      case 'requestRematchWithoutDisconnected':
+        return this.handleRequestRematchWithoutDisconnected(connectionId);
       case 'updateRematchSettings':
         return this.handleUpdateRematchSettings(connectionId, data);
       case 'addBot':
@@ -738,25 +740,87 @@ class GameCoordinator {
 
     game.addRematchVote(voter.internalId);
 
+    if (!this._tryStartRematch(roomId)) {
+      this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
+        rematchVotes: game.getRematchVoterPublicIds(),
+        stockpileSize: game.stockpileSize,
+      });
+    }
+  }
+
+  /**
+   * @private
+   * Start the rematch if the vote is unanimous among the human players.
+   * Returns true when a new game was dealt and broadcast, false otherwise
+   * (the caller is responsible for any vote-state broadcast).
+   */
+  _tryStartRematch(roomId) {
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.FINISHED) return false;
+
     const humanPlayers = game.players.filter((p) => !p.isBot);
-    if (game.canStartRematch(humanPlayers.length)) {
-      this.cancelCompletedGameCleanup(roomId);
-      game.resetForRematch();
-      game.startGame();
+    if (!game.canStartRematch(humanPlayers.length)) return false;
 
-      game.players
-        .filter((p) => !p.isBot)
-        .forEach((player) => {
-          this.transport.send(player.connectionId, 'gameStarted', {
-            gameState: this._getDecoratedGameState(game),
-            playerState: game.getPlayerState(player.internalId),
-          });
+    // Don't reset/deal if too few players remain to start (e.g. a 2-player
+    // game whose opponent already left post-game): startGame() would fail
+    // and strand the room in a half-reset lobby state.
+    if (game.players.length < MIN_PLAYERS) return false;
+
+    this.cancelCompletedGameCleanup(roomId);
+    game.resetForRematch();
+    game.startGame();
+
+    game.players
+      .filter((p) => !p.isBot)
+      .forEach((player) => {
+        this.transport.send(player.connectionId, 'gameStarted', {
+          gameState: this._getDecoratedGameState(game),
+          playerState: game.getPlayerState(player.internalId),
         });
+      });
 
-      this.logger.info('rematch started', { roomId });
+    this.logger.info('rematch started', { roomId });
+    this._scheduleBotTurnIfNeeded(roomId);
+    return true;
+  }
 
-      this._scheduleBotTurnIfNeeded(roomId);
-    } else {
+  handleRequestRematchWithoutDisconnected(connectionId) {
+    const roomId = this.sessionManager.getRoom(connectionId);
+    if (!roomId) return;
+
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.FINISHED) return;
+
+    const requester = game.getPlayerByConnectionId(connectionId);
+    if (!requester) return;
+
+    // Evict every human whose connection is no longer mapped — they tabbed
+    // out and have not returned. Their rematch vote leaves with them. This
+    // is the survivor-driven escape hatch for a rage-quit: the remaining
+    // players should not be blocked waiting on someone who is gone.
+    const disconnectedHumans = game.players.filter(
+      (p) => !p.isBot && !this.sessionManager.hasRoom(p.connectionId)
+    );
+    disconnectedHumans.forEach((p) => {
+      game.removeRematchVote(p.internalId);
+      game.removePlayer(p.internalId);
+    });
+
+    // The requester opts in by taking this action.
+    game.addRematchVote(requester.internalId);
+
+    this.logger.info('rematch without disconnected requested', {
+      roomId,
+      connectionId,
+      removed: disconnectedHumans.map((p) => p.publicId),
+    });
+
+    if (!this._tryStartRematch(roomId)) {
+      // Either another connected human still needs to vote, or too few
+      // players remain to start. Reflect the removals and current votes.
+      this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
+        gameState: this._getDecoratedGameState(game),
+      });
       this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
         rematchVotes: game.getRematchVoterPublicIds(),
         stockpileSize: game.stockpileSize,
