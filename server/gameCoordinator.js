@@ -674,6 +674,13 @@ class GameCoordinator {
       if (leavingPlayer) game.removePlayer(leavingPlayer.internalId);
       this.transport.removeFromGroup(connectionId, roomId);
       this.sessionManager.removeRoom(connectionId);
+      this.logger.info('gameAborted emit', {
+        scope: 'self',
+        cause: 'leave-post-game',
+        connectionId,
+        roomId,
+        publicId: leavingPlayer?.publicId,
+      });
       this.transport.send(connectionId, 'gameAborted');
       game.clearRematchVotes();
 
@@ -693,6 +700,15 @@ class GameCoordinator {
       this.logger.info('player left post-game room', { roomId, connectionId });
     } else {
       // Mid-game: abort entire game
+      this.logger.info('gameAborted emit', {
+        scope: 'room',
+        cause: 'leave-mid-game',
+        connectionId,
+        roomId,
+        publicId: leavingPlayer?.publicId,
+        phase: game.phase,
+        players: game.players.length,
+      });
       this.transport.sendToGroup(roomId, 'gameAborted');
 
       game.players.forEach((p) => {
