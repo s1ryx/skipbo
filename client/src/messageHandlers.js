@@ -1,3 +1,5 @@
+import debugLog from './debugLog';
+
 // The only reconnect failure that is unrecoverable for sure: the room itself
 // is gone. Every other code may be transient -- room could free up, server
 // could come back, token could become valid again after a retry -- so we
@@ -18,14 +20,29 @@ export function createMessageHandlers({
   sessionTokenRef,
 }) {
   function saveSession(roomId, playerId, playerName, sessionToken) {
+    debugLog('session', 'save', {
+      roomId,
+      playerId,
+      playerName,
+      hasToken: !!sessionToken,
+    });
     localStorage.setItem(
       'skipBoSession',
       JSON.stringify({ roomId, playerId, playerName, sessionToken })
     );
   }
 
+  function clearSession(reason) {
+    debugLog('session', 'clear', {
+      reason,
+      hadSession: !!localStorage.getItem('skipBoSession'),
+    });
+    localStorage.removeItem('skipBoSession');
+  }
+
   return {
     roomCreated({ roomId, playerId, sessionToken, gameState }) {
+      debugLog('event', 'roomCreated', { roomId, playerId });
       roomIdRef.current = roomId;
       sessionTokenRef.current = sessionToken;
       setRoomId(roomId);
@@ -40,10 +57,12 @@ export function createMessageHandlers({
     },
 
     playerJoined({ gameState }) {
+      debugLog('event', 'playerJoined', { players: gameState?.players?.length });
       setGameState(gameState);
     },
 
     sessionToken({ playerId, sessionToken }) {
+      debugLog('event', 'sessionToken', { playerId, hasToken: !!sessionToken });
       sessionTokenRef.current = sessionToken;
       setPlayerId(playerId);
       setGameState((prev) => {
@@ -60,10 +79,17 @@ export function createMessageHandlers({
     },
 
     playerLeft({ gameState }) {
+      debugLog('event', 'playerLeft', { players: gameState?.players?.length });
       setGameState(gameState);
     },
 
     reconnected({ roomId, playerId, sessionToken, gameState, playerState }) {
+      debugLog('event', 'reconnected', {
+        roomId,
+        playerId,
+        gameStarted: !!gameState?.gameStarted,
+        gameOver: !!gameState?.gameOver,
+      });
       roomIdRef.current = roomId;
       sessionTokenRef.current = sessionToken;
       setRoomId(roomId);
@@ -83,14 +109,20 @@ export function createMessageHandlers({
     },
 
     reconnectFailed({ message }) {
-      if (PERMANENT_RECONNECT_FAILURES.has(message)) {
-        localStorage.removeItem('skipBoSession');
+      const permanent = PERMANENT_RECONNECT_FAILURES.has(message);
+      debugLog('event', 'reconnectFailed', { message, permanent });
+      if (permanent) {
+        clearSession('reconnectFailed-permanent');
       }
       setError(message);
       setTimeout(() => setError(null), 5000);
     },
 
     gameStarted({ gameState, playerState }) {
+      debugLog('event', 'gameStarted', {
+        players: gameState?.players?.length,
+        hasPlayerState: !!playerState,
+      });
       setGameState(gameState);
       setPlayerState(playerState);
       setRematchVotes([]);
@@ -103,6 +135,7 @@ export function createMessageHandlers({
     },
 
     gameOver({ gameState }) {
+      debugLog('event', 'gameOver', { winner: gameState?.winner });
       setGameState(gameState);
       const savedSession = localStorage.getItem('skipBoSession');
       if (savedSession) {
@@ -113,10 +146,11 @@ export function createMessageHandlers({
           // ignore parse errors
         }
       }
-      localStorage.removeItem('skipBoSession');
+      clearSession('gameOver');
     },
 
     playerDisconnected({ playerId }) {
+      debugLog('event', 'playerDisconnected', { playerId });
       setGameState((prevState) => {
         if (!prevState) return prevState;
         return {
@@ -129,6 +163,7 @@ export function createMessageHandlers({
     },
 
     playerReconnected({ playerId }) {
+      debugLog('event', 'playerReconnected', { playerId });
       setGameState((prevState) => {
         if (!prevState) return prevState;
         return {
@@ -141,6 +176,9 @@ export function createMessageHandlers({
     },
 
     gameAborted() {
+      debugLog('event', 'gameAborted', {
+        roomId: roomIdRef.current,
+      });
       const savedSession = localStorage.getItem('skipBoSession');
       if (savedSession) {
         try {
@@ -150,7 +188,7 @@ export function createMessageHandlers({
           // ignore parse errors
         }
       }
-      localStorage.removeItem('skipBoSession');
+      clearSession('gameAborted');
       roomIdRef.current = null;
       setGameState(null);
       setPlayerState(null);
@@ -177,6 +215,7 @@ export function createMessageHandlers({
     },
 
     error({ message }) {
+      debugLog('event', 'error', { message });
       setError(message);
       setTimeout(() => setError(null), 3000);
     },

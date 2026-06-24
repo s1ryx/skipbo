@@ -129,6 +129,10 @@ export default function useGameConnection() {
   }, []);
 
   const leaveLobby = useCallback(() => {
+    debugLog('session', 'clear', {
+      reason: 'leaveLobby',
+      hadSession: !!localStorage.getItem('skipBoSession'),
+    });
     transportRef.current?.send('leaveLobby');
     localStorage.removeItem('skipBoSession');
     roomIdRef.current = null;
