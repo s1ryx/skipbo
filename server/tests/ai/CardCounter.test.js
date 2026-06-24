@@ -1,4 +1,4 @@
-const { CardCounter, CARD_TOTALS, TOTAL_CARDS } = require('../../ai/CardCounter');
+const { CardCounter, TOTAL_CARDS } = require('../../ai/CardCounter');
 
 // Helper to build minimal game/player states for testing
 function makeState(overrides = {}) {

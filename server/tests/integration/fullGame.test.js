@@ -173,7 +173,7 @@ describe('Full game playthrough', () => {
     const discard = gameAI.chooseDiscard(player.playerState, 0);
 
     const turnChangedP = c1.waitFor('turnChanged');
-    const result = await emitDiscard(player.client, c1, c2, players, discard);
+    await emitDiscard(player.client, c1, c2, players, discard);
 
     const turnData = await turnChangedP;
     expect(turnData.currentPlayerId).not.toBe(firstPlayerId);

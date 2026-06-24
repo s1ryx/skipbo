@@ -1,6 +1,5 @@
 const {
   StateEvaluator,
-  discardQuality,
   discardPlacementScore,
   pileChainQuality,
   isPileFrozen,
@@ -292,7 +291,7 @@ describe('StateEvaluator.scoreDiscard', () => {
     // Bricking frozen pile 0 (4 on top of [7,7])
     const frozenBrick = evaluator.scoreDiscard(4, 0, playerState, gameState);
     // Bricking non-frozen empty pile 1
-    const emptyPile = evaluator.scoreDiscard(4, 1, playerState, gameState);
+    evaluator.scoreDiscard(4, 1, playerState, gameState);
 
     // Frozen pile brick should be less penalized (closer to 0 or even better)
     // compared to just the raw bricking cost. But empty pile is always +5.

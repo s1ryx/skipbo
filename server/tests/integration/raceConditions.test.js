@@ -21,7 +21,7 @@ async function setupStartedGame(stockpileSize = 5) {
   await c2.connect();
 
   const room = await c1.createRoom('Alice', 2, stockpileSize);
-  const bobToken = await c2.joinRoom(room.roomId, 'Bob');
+  await c2.joinRoom(room.roomId, 'Bob');
 
   const [started1, started2] = await Promise.all([c1.startGame(), c2.waitFor('gameStarted')]);
 
@@ -46,11 +46,9 @@ describe('Race conditions', () => {
 
     const currentId = gameState.currentPlayerId;
     const currentClient = currentId === aliceId ? c1 : c2;
-    const playerState =
-      currentId === aliceId
-        ? aliceState
-        : (await c2.waitFor('gameStarted').catch(() => null), aliceState);
-    const state = currentId === aliceId ? aliceState : aliceState;
+    if (currentId !== aliceId) {
+      await c2.waitFor('gameStarted').catch(() => null);
+    }
 
     const move = gameAI.findPlayableCard(
       currentId === aliceId ? aliceState : aliceState,
@@ -84,7 +82,7 @@ describe('Race conditions', () => {
     expect(update.gameState).toBeDefined();
 
     // Give error time to arrive
-    const err = await errorP;
+    await errorP;
     // Either got an error or the second play also succeeded (if hand had duplicates)
     // The key is no crash or inconsistent state
 
@@ -124,7 +122,7 @@ describe('Race conditions', () => {
     await c2.joinRoom(room.roomId, 'Bob');
 
     const startedP = c1.waitFor('gameStarted');
-    const errorP = c1.waitForError(2000).catch(() => null);
+    c1.waitForError(2000).catch(() => null);
 
     c1.emit('startGame');
     c1.emit('startGame');
@@ -190,7 +188,7 @@ describe('Race conditions', () => {
     expect(gs.gameOver).toBe(true);
 
     // Now try to play a card — should error
-    const errP = c1.waitForError(2000).catch(() => null);
+    c1.waitForError(2000).catch(() => null);
     c1.emit('playCard', { card: 1, source: 'hand', buildingPileIndex: 0 });
     // May or may not get an error (depends on whether the game is cleaned up)
     // The important thing is no crash

@@ -362,7 +362,7 @@ function pickDiscardPile(card, discardPiles, log = noop) {
  * Choose discard — competitive strategy.
  * Discards highest non-SKIP-BO card using smart pile placement.
  */
-function chooseDiscard(playerState, turnCount = 0, log = noop) {
+function chooseDiscard(playerState, _turnCount = 0, log = noop) {
   const hand = playerState.hand;
   if (hand.length === 0) return null;
 
@@ -390,7 +390,7 @@ function chooseDiscardCooperative(
   playerState,
   gameState,
   targetPlayerId,
-  turnCount = 0,
+  _turnCount = 0,
   log = noop
 ) {
   const hand = playerState.hand;

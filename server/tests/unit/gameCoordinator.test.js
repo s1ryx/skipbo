@@ -184,7 +184,7 @@ describe('GameCoordinator', () => {
 
   describe('createRoom', () => {
     it('creates a game and tracks the player', () => {
-      const { coordinator, transport } = createCoordinator();
+      const { coordinator } = createCoordinator();
       const roomId = createRoom(coordinator);
 
       expect(coordinator.games.size).toBe(1);
@@ -247,7 +247,7 @@ describe('GameCoordinator', () => {
     });
 
     it('strips control characters from player name', () => {
-      const { coordinator, transport } = createCoordinator();
+      const { coordinator } = createCoordinator();
       const handlers = coordinator.getTransportHandlers();
 
       handlers.onMessage('p1', 'createRoom', { playerName: 'Al\x00ic\x1Fe', maxPlayers: 2 });
@@ -1157,7 +1157,7 @@ describe('GameCoordinator', () => {
     afterEach(() => jest.useRealTimers());
 
     it('cleans up completed game after TTL', () => {
-      const { coordinator, transport } = createCoordinator();
+      const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
 
@@ -1188,7 +1188,7 @@ describe('GameCoordinator', () => {
     });
 
     it('keeps cleanup timer when one player leaves post-game', () => {
-      const { coordinator, transport } = createCoordinator();
+      const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
 
@@ -1216,7 +1216,7 @@ describe('GameCoordinator', () => {
     });
 
     it('cancels cleanup when last player leaves post-game', () => {
-      const { coordinator, transport } = createCoordinator();
+      const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
 

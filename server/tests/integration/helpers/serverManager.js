@@ -2,7 +2,7 @@ const createServer = require('../../../createServer');
 
 function start() {
   return new Promise((resolve, reject) => {
-    const { app, server, coordinator, transport } = createServer();
+    const { server, coordinator, transport } = createServer();
 
     server.listen(0, '127.0.0.1', () => {
       const { port } = server.address();

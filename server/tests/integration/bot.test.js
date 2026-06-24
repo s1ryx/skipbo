@@ -18,7 +18,7 @@ describe('addBot / removeBot', () => {
     const c = createClient(srv.url);
     await c.connect();
 
-    const room = await c.createRoom('Alice', 4);
+    await c.createRoom('Alice', 4);
 
     const joinedPromise = c.waitFor('playerJoined');
     c.emit('addBot', { aiType: 'improved' });
@@ -37,7 +37,7 @@ describe('addBot / removeBot', () => {
     const c = createClient(srv.url);
     await c.connect();
 
-    const room = await c.createRoom('Alice', 4);
+    await c.createRoom('Alice', 4);
 
     const joinedPromise = c.waitFor('playerJoined');
     c.emit('addBot', { aiType: 'baseline' });
