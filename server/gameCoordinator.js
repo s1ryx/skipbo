@@ -932,7 +932,13 @@ class GameCoordinator {
       this.gameRepository.scheduleDeletion(
         roomId,
         () => {
+          const stillExists = this.gameRepository.hasGame(roomId);
           this.gameRepository.deleteGame(roomId);
+          this.logger.info('deletion fired', {
+            kind: 'lobby',
+            roomId,
+            stillExists,
+          });
           this.logger.info('empty lobby deleted after grace period', { roomId });
         },
         LOBBY_GRACE_PERIOD_MS
@@ -952,6 +958,21 @@ class GameCoordinator {
       this.gameRepository.scheduleDeletion(
         roomId,
         () => {
+          const game = this.gameRepository.getGame(roomId);
+          // At fire time the game *should* still exist (otherwise something
+          // else deleted it under us) and all humans *should* be disconnected
+          // (otherwise the timer should have been cancelled). Log enough to
+          // tell us when either invariant is violated.
+          this.logger.info('deletion fired', {
+            kind: 'game',
+            roomId,
+            stillExists: !!game,
+            phase: game?.phase,
+            humansConnected: game
+              ? game.players.filter((p) => !p.isBot && this.sessionManager.hasRoom(p.connectionId))
+                  .length
+              : null,
+          });
           this._deleteGameFull(roomId);
           this.logger.info('game deleted after grace period', { roomId });
         },
@@ -1023,6 +1044,11 @@ class GameCoordinator {
       roomId,
       () => {
         const game = this.gameRepository.getGame(roomId);
+        this.logger.info('deletion fired', {
+          kind: 'completed',
+          roomId,
+          stillExists: !!game,
+        });
         if (game) {
           game.players.forEach((p) => {
             this.sessionManager.removeRoom(p.connectionId);
@@ -1037,7 +1063,9 @@ class GameCoordinator {
   }
 
   cancelCompletedGameCleanup(roomId) {
-    this.gameRepository.cancelCompletedCleanup(roomId);
+    if (this.gameRepository.cancelCompletedCleanup(roomId)) {
+      this.logger.info('cancelled completed cleanup', { roomId });
+    }
   }
 
   _cleanupLogger(roomId) {
