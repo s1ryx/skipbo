@@ -1285,6 +1285,25 @@ describe('GameCoordinator', () => {
       expect(gameStartedCalls.length).toBe(2);
     });
 
+    it('does not start a rematch when too few players remain', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+
+      // player2 leaves post-game, leaving player1 alone
+      handlers.onMessage('player2', 'leaveGame', {});
+      expect(game.players.length).toBe(1);
+
+      transport.send.mockClear();
+      handlers.onMessage('player1', 'requestRematch', {});
+
+      // No game is dealt and the room stays finished — not stranded in lobby
+      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
+      expect(gameStartedCalls).toHaveLength(0);
+      expect(game.gameOver).toBe(true);
+    });
+
     it('cancels completed game cleanup timer on unanimous vote', () => {
       const { coordinator } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
