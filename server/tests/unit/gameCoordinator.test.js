@@ -1509,6 +1509,33 @@ describe('GameCoordinator', () => {
       // Player is preserved so their session token still resolves on reconnect
       expect(game.players.find((p) => p.internalId === player2InternalId)).toBeDefined();
     });
+
+    it('reconnects via sessionToken after a post-game disconnect', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player2 = game.getPlayerByConnectionId('player2');
+      const sessionToken = player2.sessionToken;
+      const playerInternalId = player2.internalId;
+
+      handlers.onDisconnect('player2');
+
+      // Player remains in game.players, just no longer connected
+      expect(game.players.find((p) => p.internalId === playerInternalId)).toBeDefined();
+
+      handlers.onConnect('player2-new');
+      transport.send.mockClear();
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken,
+        playerName: 'Bob',
+      });
+
+      // Server restores the seat with 'reconnected', not 'reconnectFailed'
+      const reconnectedCalls = transport.send.mock.calls.filter((c) => c[1] === 'reconnected');
+      expect(reconnectedCalls).toHaveLength(1);
+    });
   });
 
   describe('reconnect clears stale vote', () => {
