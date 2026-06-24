@@ -7,6 +7,7 @@ import OpponentArea from './OpponentArea';
 import BuildingPiles from './BuildingPiles';
 import PlayerArea from './PlayerArea';
 import OptionsMenu from './OptionsMenu';
+import { showDebugConsole, hideDebugConsole } from '../debugConsole';
 import { useTranslation } from '../i18n';
 
 function GameBoard({
@@ -33,6 +34,10 @@ function GameBoard({
   const [discardMode, setDiscardMode] = useState(false);
   const [quickDiscardEnabled, setQuickDiscardEnabled] = useState(() => {
     const saved = localStorage.getItem('skipBoQuickDiscard');
+    return saved === 'true';
+  });
+  const [debugConsoleEnabled, setDebugConsoleEnabled] = useState(() => {
+    const saved = localStorage.getItem('skipBoDebugConsole');
     return saved === 'true';
   });
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -99,6 +104,14 @@ function GameBoard({
     localStorage.setItem('skipBoQuickDiscard', newValue.toString());
   };
 
+  const toggleDebugConsole = () => {
+    const newValue = !debugConsoleEnabled;
+    setDebugConsoleEnabled(newValue);
+    localStorage.setItem('skipBoDebugConsole', newValue.toString());
+    if (newValue) showDebugConsole();
+    else hideDebugConsole();
+  };
+
   const handleEndTurn = () => {
     if (!isMyTurn) return;
 
@@ -125,6 +138,8 @@ function GameBoard({
         roomId={roomId}
         quickDiscardEnabled={quickDiscardEnabled}
         onToggleQuickDiscard={toggleQuickDiscard}
+        debugConsoleEnabled={debugConsoleEnabled}
+        onToggleDebugConsole={toggleDebugConsole}
         onLeaveGame={() => setShowLeaveConfirm(true)}
       />
 

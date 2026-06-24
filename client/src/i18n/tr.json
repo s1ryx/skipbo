@@ -65,6 +65,7 @@
   "game.noCardsToDiscard": "Iskarta edilecek kart yok — sıranı pas geç",
   "game.selected": "Seçili Kart:",
   "game.quickDiscard": "Hızlı Iskarta (seçili kartla Iskarta destene tıkla)",
+  "game.debugConsole": "Hata Ayıklama Konsolu",
   "game.gameOver": "Oyun Bitti!",
   "game.winner": "Kazanan: {{name}}",
   "game.rematch": "Rövanş",

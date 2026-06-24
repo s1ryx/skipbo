@@ -1,9 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import './OptionsMenu.css';
+import { DEBUG_ENABLED } from '../debugLog';
 import { useTranslation } from '../i18n';
 
-function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeaveGame }) {
+function OptionsMenu({
+  roomId,
+  quickDiscardEnabled,
+  onToggleQuickDiscard,
+  debugConsoleEnabled,
+  onToggleDebugConsole,
+  onLeaveGame,
+}) {
   const { t, language, setLanguage, supportedLanguages } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef(null);
@@ -58,6 +66,18 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
               {t('game.quickDiscard')}
             </label>
           </div>
+          {DEBUG_ENABLED && (
+            <div className="options-item">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={debugConsoleEnabled}
+                  onChange={onToggleDebugConsole}
+                />
+                {t('game.debugConsole')}
+              </label>
+            </div>
+          )}
           <div className="options-item">
             <label>
               {t('game.language')}
