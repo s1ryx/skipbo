@@ -687,7 +687,7 @@ describe('useGameConnection', () => {
     });
 
     it('saves chat messages to sessionStorage when they change', () => {
-      const { result } = renderHook(() => useGameConnection());
+      renderHook(() => useGameConnection());
 
       // Set roomId first
       act(() => {

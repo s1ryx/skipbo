@@ -7,12 +7,13 @@ function BrokenChild() {
 }
 
 describe('ErrorBoundary', () => {
+  let errorSpy;
   beforeEach(() => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    console.error.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it('renders children when no error', () => {
@@ -36,7 +37,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('recovers when Try Again is clicked', () => {
-    const { rerender } = render(
+    render(
       <ErrorBoundary>
         <BrokenChild />
       </ErrorBoundary>
