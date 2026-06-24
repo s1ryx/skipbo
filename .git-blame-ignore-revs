@@ -3,3 +3,6 @@
 
 # Prettier: apply formatting across codebase (41 files)
 c59cdfe5093524b1ea9de0b1faa90c10ca0e5775
+
+# Prettier: clear pre-existing develop drift (GameBoard.css, OptionsMenu.js, ARCHITECTURE.md)
+29d1d9b0b09d3d2e9dec6488bd864639d2b240fa
