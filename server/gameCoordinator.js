@@ -38,6 +38,13 @@ function sanitizeForLog(str) {
   return str.replace(/[\r\n]/g, '').replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
 }
 
+// First 8 hex chars of SHA-256 is enough to correlate a session across log
+// lines without leaking the token itself.
+function hashToken(token) {
+  if (typeof token !== 'string' || token.length === 0) return null;
+  return crypto.createHash('sha256').update(token).digest('hex').slice(0, 8);
+}
+
 function validatePlayerName(name) {
   if (typeof name !== 'string') return null;
   // eslint-disable-next-line no-control-regex
@@ -249,8 +256,15 @@ class GameCoordinator {
   }
 
   handleReconnect(connectionId, { roomId, sessionToken, playerName }) {
+    const tokenHash = hashToken(sessionToken);
     const validName = validatePlayerName(playerName);
     if (!validName) {
+      this.logger.info('reconnect', {
+        branch: 'invalid-name',
+        connectionId,
+        roomId,
+        tokenHash,
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.INVALID_PLAYER_NAME,
       });
@@ -258,6 +272,12 @@ class GameCoordinator {
     }
 
     if (!sessionToken || typeof sessionToken !== 'string') {
+      this.logger.info('reconnect', {
+        branch: 'invalid-session',
+        connectionId,
+        roomId,
+        tokenHash,
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.INVALID_SESSION,
       });
@@ -267,6 +287,13 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
+      this.logger.info('reconnect', {
+        branch: 'no-game',
+        connectionId,
+        roomId,
+        tokenHash,
+        knownRooms: this.gameRepository.size,
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.ROOM_NO_LONGER_EXISTS,
       });
@@ -278,6 +305,15 @@ class GameCoordinator {
     const player = game.players.find((p) => p.sessionToken === sessionToken);
 
     if (!player) {
+      this.logger.info('reconnect', {
+        branch: 'no-player',
+        connectionId,
+        roomId,
+        tokenHash,
+        phase: game.phase,
+        players: game.players.length,
+        knownTokenHashes: game.players.map((p) => hashToken(p.sessionToken)),
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.PLAYER_NOT_FOUND,
       });
@@ -288,6 +324,14 @@ class GameCoordinator {
     // duplicate emit), re-emit the payload without rewiring the player's
     // connection or broadcasting a fake reconnect to other clients.
     if (player.connectionId === connectionId) {
+      this.logger.info('reconnect', {
+        branch: 'idempotent',
+        connectionId,
+        roomId,
+        tokenHash,
+        publicId: player.publicId,
+        phase: game.phase,
+      });
       this.transport.send(connectionId, 'reconnected', {
         roomId,
         playerId: player.publicId,
@@ -326,6 +370,15 @@ class GameCoordinator {
       playerName: player.name,
     });
 
+    this.logger.info('reconnect', {
+      branch: 'success',
+      connectionId,
+      oldConnectionId,
+      roomId,
+      tokenHash,
+      publicId: player.publicId,
+      phase: game.phase,
+    });
     this.logger.info('player reconnected', { roomId, playerName: sanitizeForLog(validName) });
 
     if (game.phase === Phase.PLAYING) {
@@ -621,6 +674,13 @@ class GameCoordinator {
       if (leavingPlayer) game.removePlayer(leavingPlayer.internalId);
       this.transport.removeFromGroup(connectionId, roomId);
       this.sessionManager.removeRoom(connectionId);
+      this.logger.info('gameAborted emit', {
+        scope: 'self',
+        cause: 'leave-post-game',
+        connectionId,
+        roomId,
+        publicId: leavingPlayer?.publicId,
+      });
       this.transport.send(connectionId, 'gameAborted');
       game.clearRematchVotes();
 
@@ -640,6 +700,15 @@ class GameCoordinator {
       this.logger.info('player left post-game room', { roomId, connectionId });
     } else {
       // Mid-game: abort entire game
+      this.logger.info('gameAborted emit', {
+        scope: 'room',
+        cause: 'leave-mid-game',
+        connectionId,
+        roomId,
+        publicId: leavingPlayer?.publicId,
+        phase: game.phase,
+        players: game.players.length,
+      });
       this.transport.sendToGroup(roomId, 'gameAborted');
 
       game.players.forEach((p) => {
@@ -720,16 +789,23 @@ class GameCoordinator {
     this.logger.info('player disconnected', { connectionId });
 
     const roomId = this.sessionManager.getRoom(connectionId);
-    if (!roomId) return;
+    if (!roomId) {
+      this.logger.info('disconnect', { branch: 'no-room', connectionId });
+      return;
+    }
 
     const game = this.gameRepository.getGame(roomId);
     if (!game) {
+      this.logger.info('disconnect', { branch: 'no-game', connectionId, roomId });
       this.sessionManager.removeRoom(connectionId);
       return;
     }
 
     const disconnectedPlayer = game.getPlayerByConnectionId(connectionId);
     const publicId = disconnectedPlayer?.publicId;
+    // Counted before removeRoom() below so the survivor count reflects the
+    // state at the moment we decided what to do.
+    const humansRemaining = this._countConnectedHumans(game, connectionId);
 
     if (game.phase === Phase.LOBBY) {
       this.transport.removeFromGroup(connectionId, roomId);
@@ -740,11 +816,24 @@ class GameCoordinator {
       );
 
       if (humansConnected.length === 0) {
+        this.logger.info('disconnect', {
+          branch: 'lobby-no-survivors',
+          connectionId,
+          roomId,
+          publicId,
+        });
         // No connected humans remain — clean up bots and schedule room deletion
         this._cancelAllLobbyDisconnects(roomId);
         this.botManager.clearAIs(roomId);
         this.scheduleRoomDeletion(roomId);
       } else {
+        this.logger.info('disconnect', {
+          branch: 'lobby-survivors',
+          connectionId,
+          roomId,
+          publicId,
+          humansConnected: humansConnected.length,
+        });
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
         });
@@ -781,29 +870,56 @@ class GameCoordinator {
     } else if (game.phase === Phase.FINISHED) {
       game.clearRematchVotes();
 
-      const humansRemaining = game.players.some(
-        (p) =>
-          !p.isBot && p.connectionId !== connectionId && this.sessionManager.hasRoom(p.connectionId)
-      );
-      if (!humansRemaining) {
+      if (humansRemaining === 0) {
+        this.logger.info('disconnect', {
+          branch: 'post-game-empty',
+          connectionId,
+          roomId,
+          publicId,
+        });
         this.cancelCompletedGameCleanup(roomId);
         this.scheduleGameDeletion(roomId);
       } else {
+        this.logger.info('disconnect', {
+          branch: 'post-game-remaining',
+          connectionId,
+          roomId,
+          publicId,
+          humansRemaining,
+        });
         if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
         this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
           gameState: this._getDecoratedGameState(game),
         });
       }
     } else {
-      // Check if any human players remain connected
-      const humansRemaining = game.players.some(
-        (p) =>
-          !p.isBot && p.connectionId !== connectionId && this.sessionManager.hasRoom(p.connectionId)
-      );
-      if (!humansRemaining) {
+      if (humansRemaining === 0) {
+        this.logger.info('disconnect', {
+          branch: 'in-game-empty',
+          connectionId,
+          roomId,
+          publicId,
+          players: game.players.length,
+          // Per-player diagnostics: shows whether each player.connectionId
+          // is still mapped in sessionManager. Anything false here is the
+          // reason humansRemaining hit zero.
+          playerSessions: game.players.map((p) => ({
+            publicId: p.publicId,
+            isBot: !!p.isBot,
+            hasRoom: this.sessionManager.hasRoom(p.connectionId),
+            isSelf: p.connectionId === connectionId,
+          })),
+        });
         this.botManager.clearTimers(roomId);
         this.scheduleGameDeletion(roomId);
       } else {
+        this.logger.info('disconnect', {
+          branch: 'in-game-remaining',
+          connectionId,
+          roomId,
+          publicId,
+          humansRemaining,
+        });
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
         });
@@ -811,6 +927,17 @@ class GameCoordinator {
     }
 
     this.sessionManager.removeRoom(connectionId);
+  }
+
+  /** @private Count humans whose session is still mapped, excluding `selfId`. */
+  _countConnectedHumans(game, selfId) {
+    let n = 0;
+    for (const p of game.players) {
+      if (p.isBot) continue;
+      if (p.connectionId === selfId) continue;
+      if (this.sessionManager.hasRoom(p.connectionId)) n++;
+    }
+    return n;
   }
 
   scheduleRoomDeletion(roomId) {
@@ -821,7 +948,13 @@ class GameCoordinator {
       this.gameRepository.scheduleDeletion(
         roomId,
         () => {
+          const stillExists = this.gameRepository.hasGame(roomId);
           this.gameRepository.deleteGame(roomId);
+          this.logger.info('deletion fired', {
+            kind: 'lobby',
+            roomId,
+            stillExists,
+          });
           this.logger.info('empty lobby deleted after grace period', { roomId });
         },
         LOBBY_GRACE_PERIOD_MS
@@ -841,6 +974,21 @@ class GameCoordinator {
       this.gameRepository.scheduleDeletion(
         roomId,
         () => {
+          const game = this.gameRepository.getGame(roomId);
+          // At fire time the game *should* still exist (otherwise something
+          // else deleted it under us) and all humans *should* be disconnected
+          // (otherwise the timer should have been cancelled). Log enough to
+          // tell us when either invariant is violated.
+          this.logger.info('deletion fired', {
+            kind: 'game',
+            roomId,
+            stillExists: !!game,
+            phase: game?.phase,
+            humansConnected: game
+              ? game.players.filter((p) => !p.isBot && this.sessionManager.hasRoom(p.connectionId))
+                  .length
+              : null,
+          });
           this._deleteGameFull(roomId);
           this.logger.info('game deleted after grace period', { roomId });
         },
@@ -912,6 +1060,11 @@ class GameCoordinator {
       roomId,
       () => {
         const game = this.gameRepository.getGame(roomId);
+        this.logger.info('deletion fired', {
+          kind: 'completed',
+          roomId,
+          stillExists: !!game,
+        });
         if (game) {
           game.players.forEach((p) => {
             this.sessionManager.removeRoom(p.connectionId);
@@ -926,7 +1079,9 @@ class GameCoordinator {
   }
 
   cancelCompletedGameCleanup(roomId) {
-    this.gameRepository.cancelCompletedCleanup(roomId);
+    if (this.gameRepository.cancelCompletedCleanup(roomId)) {
+      this.logger.info('cancelled completed cleanup', { roomId });
+    }
   }
 
   _cleanupLogger(roomId) {

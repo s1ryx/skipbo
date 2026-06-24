@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import SocketIOClientTransport from './transport/SocketIOClientTransport';
+import debugLog from './debugLog';
 import { createMessageHandlers } from './messageHandlers';
 
 export default function useGameConnection() {
@@ -61,16 +62,34 @@ export default function useGameConnection() {
         setIsConnected(true);
 
         const savedSession = localStorage.getItem('skipBoSession');
+        debugLog('transport', 'connect', {
+          connectionId,
+          hasSession: !!savedSession,
+        });
         if (savedSession) {
           try {
             const { roomId, playerName, sessionToken } = JSON.parse(savedSession);
+            debugLog('transport', 'reconnect emit', {
+              connectionId,
+              roomId,
+              hasToken: !!sessionToken,
+              tokenLen: sessionToken ? sessionToken.length : 0,
+              playerName,
+            });
             transport.send('reconnect', { roomId, sessionToken, playerName });
-          } catch {
+          } catch (err) {
+            debugLog('transport', 'session parse failed; clearing', {
+              error: err.message,
+            });
             localStorage.removeItem('skipBoSession');
           }
         }
       },
       onDisconnect: () => {
+        debugLog('transport', 'disconnect', {
+          connectionId: connectionIdRef.current,
+          roomId: roomIdRef.current,
+        });
         setIsConnected(false);
       },
       onMessage: (event, data) => {
@@ -110,6 +129,10 @@ export default function useGameConnection() {
   }, []);
 
   const leaveLobby = useCallback(() => {
+    debugLog('session', 'clear', {
+      reason: 'leaveLobby',
+      hadSession: !!localStorage.getItem('skipBoSession'),
+    });
     transportRef.current?.send('leaveLobby');
     localStorage.removeItem('skipBoSession');
     roomIdRef.current = null;
