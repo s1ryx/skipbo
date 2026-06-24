@@ -868,7 +868,10 @@ class GameCoordinator {
         });
       }
     } else if (game.phase === Phase.FINISHED) {
-      game.clearRematchVotes();
+      // Only drop the disconnecting player's own vote — a transient peer
+      // disconnect must not wipe everyone's votes (e.g. Alice voted, Bob's
+      // screen locks for a moment; Alice's vote should survive).
+      if (disconnectedPlayer) game.removeRematchVote(disconnectedPlayer.internalId);
 
       if (humansRemaining === 0) {
         this.logger.info('disconnect', {
@@ -887,9 +890,12 @@ class GameCoordinator {
           publicId,
           humansRemaining,
         });
-        if (disconnectedPlayer) game.removePlayer(disconnectedPlayer.internalId);
-        this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
-          gameState: this._getDecoratedGameState(game),
+        // A post-game disconnect is transient, exactly like a mid-game one:
+        // keep the player in game.players so their session token still
+        // resolves and they can reconnect into the room (e.g. to rematch).
+        // The intentional-leave path (handleLeaveGame) is what removes them.
+        this.transport.sendToGroup(roomId, 'playerDisconnected', {
+          playerId: publicId,
         });
       }
     } else {

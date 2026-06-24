@@ -137,16 +137,10 @@ export function createMessageHandlers({
     gameOver({ gameState }) {
       debugLog('event', 'gameOver', { winner: gameState?.winner });
       setGameState(gameState);
-      const savedSession = localStorage.getItem('skipBoSession');
-      if (savedSession) {
-        try {
-          const { roomId } = JSON.parse(savedSession);
-          sessionStorage.removeItem(`skipBoChat_${roomId}`);
-        } catch {
-          // ignore parse errors
-        }
-      }
-      clearSession('gameOver');
+      // Keep the session token and chat: the game stays in memory and the
+      // same players continue into a rematch. Clearing here broke reconnect
+      // after a post-game tab-out. Explicit-leave paths (gameAborted,
+      // leaveGame) are what clear the session.
     },
 
     playerDisconnected({ playerId }) {

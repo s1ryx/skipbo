@@ -1463,7 +1463,7 @@ describe('GameCoordinator', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
-    it('clears rematch votes on post-game disconnect', () => {
+    it('drops the disconnecting player own vote on post-game disconnect', () => {
       const { coordinator } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1475,6 +1475,24 @@ describe('GameCoordinator', () => {
       handlers.onDisconnect('player1');
 
       expect(game.rematchVotes.size).toBe(0);
+    });
+
+    it('keeps a remaining player vote when a peer disconnects post-game', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player1InternalId = game.getPlayerByConnectionId('player1').internalId;
+
+      // Alice (player1) votes; quorum (2 humans) is not yet met
+      handlers.onMessage('player1', 'requestRematch', {});
+      expect(game.rematchVotes.has(player1InternalId)).toBe(true);
+
+      // Bob (player2) disconnects without voting
+      handlers.onDisconnect('player2');
+
+      // Alice's vote must survive a peer's transient disconnect
+      expect(game.rematchVotes.has(player1InternalId)).toBe(true);
     });
 
     it('cleans up game when all players disconnect post-game', () => {
@@ -1491,19 +1509,50 @@ describe('GameCoordinator', () => {
       expect(coordinator.games.has(roomId)).toBe(false);
     });
 
-    it('sends playerLeftPostGame to remaining players on disconnect', () => {
+    it('sends playerDisconnected to remaining players on post-game disconnect', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
       const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player2InternalId = game.getPlayerByConnectionId('player2').internalId;
 
       transport.sendToGroup.mockClear();
       handlers.onDisconnect('player2');
 
       expect(transport.sendToGroup).toHaveBeenCalledWith(
         roomId,
-        'playerLeftPostGame',
-        expect.objectContaining({ gameState: expect.any(Object) })
+        'playerDisconnected',
+        expect.objectContaining({ playerId: expect.any(String) })
       );
+      // Player is preserved so their session token still resolves on reconnect
+      expect(game.players.find((p) => p.internalId === player2InternalId)).toBeDefined();
+    });
+
+    it('reconnects via sessionToken after a post-game disconnect', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const handlers = coordinator.getTransportHandlers();
+      const game = coordinator.games.get(roomId);
+      const player2 = game.getPlayerByConnectionId('player2');
+      const sessionToken = player2.sessionToken;
+      const playerInternalId = player2.internalId;
+
+      handlers.onDisconnect('player2');
+
+      // Player remains in game.players, just no longer connected
+      expect(game.players.find((p) => p.internalId === playerInternalId)).toBeDefined();
+
+      handlers.onConnect('player2-new');
+      transport.send.mockClear();
+      handlers.onMessage('player2-new', 'reconnect', {
+        roomId,
+        sessionToken,
+        playerName: 'Bob',
+      });
+
+      // Server restores the seat with 'reconnected', not 'reconnectFailed'
+      const reconnectedCalls = transport.send.mock.calls.filter((c) => c[1] === 'reconnected');
+      expect(reconnectedCalls).toHaveLength(1);
     });
   });
 
