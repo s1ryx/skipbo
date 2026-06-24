@@ -738,30 +738,43 @@ class GameCoordinator {
 
     game.addRematchVote(voter.internalId);
 
-    const humanPlayers = game.players.filter((p) => !p.isBot);
-    if (game.canStartRematch(humanPlayers.length)) {
-      this.cancelCompletedGameCleanup(roomId);
-      game.resetForRematch();
-      game.startGame();
-
-      game.players
-        .filter((p) => !p.isBot)
-        .forEach((player) => {
-          this.transport.send(player.connectionId, 'gameStarted', {
-            gameState: this._getDecoratedGameState(game),
-            playerState: game.getPlayerState(player.internalId),
-          });
-        });
-
-      this.logger.info('rematch started', { roomId });
-
-      this._scheduleBotTurnIfNeeded(roomId);
-    } else {
+    if (!this._tryStartRematch(roomId)) {
       this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
         rematchVotes: game.getRematchVoterPublicIds(),
         stockpileSize: game.stockpileSize,
       });
     }
+  }
+
+  /**
+   * @private
+   * Start the rematch if the vote is unanimous among the human players.
+   * Returns true when a new game was dealt and broadcast, false otherwise
+   * (the caller is responsible for any vote-state broadcast).
+   */
+  _tryStartRematch(roomId) {
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.FINISHED) return false;
+
+    const humanPlayers = game.players.filter((p) => !p.isBot);
+    if (!game.canStartRematch(humanPlayers.length)) return false;
+
+    this.cancelCompletedGameCleanup(roomId);
+    game.resetForRematch();
+    game.startGame();
+
+    game.players
+      .filter((p) => !p.isBot)
+      .forEach((player) => {
+        this.transport.send(player.connectionId, 'gameStarted', {
+          gameState: this._getDecoratedGameState(game),
+          playerState: game.getPlayerState(player.internalId),
+        });
+      });
+
+    this.logger.info('rematch started', { roomId });
+    this._scheduleBotTurnIfNeeded(roomId);
+    return true;
   }
 
   handleUpdateRematchSettings(connectionId, { stockpileSize }) {
