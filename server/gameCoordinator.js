@@ -38,6 +38,13 @@ function sanitizeForLog(str) {
   return str.replace(/[\r\n]/g, '').replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
 }
 
+// First 8 hex chars of SHA-256 is enough to correlate a session across log
+// lines without leaking the token itself.
+function hashToken(token) {
+  if (typeof token !== 'string' || token.length === 0) return null;
+  return crypto.createHash('sha256').update(token).digest('hex').slice(0, 8);
+}
+
 function validatePlayerName(name) {
   if (typeof name !== 'string') return null;
   // eslint-disable-next-line no-control-regex
@@ -249,8 +256,15 @@ class GameCoordinator {
   }
 
   handleReconnect(connectionId, { roomId, sessionToken, playerName }) {
+    const tokenHash = hashToken(sessionToken);
     const validName = validatePlayerName(playerName);
     if (!validName) {
+      this.logger.info('reconnect', {
+        branch: 'invalid-name',
+        connectionId,
+        roomId,
+        tokenHash,
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.INVALID_PLAYER_NAME,
       });
@@ -258,6 +272,12 @@ class GameCoordinator {
     }
 
     if (!sessionToken || typeof sessionToken !== 'string') {
+      this.logger.info('reconnect', {
+        branch: 'invalid-session',
+        connectionId,
+        roomId,
+        tokenHash,
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.INVALID_SESSION,
       });
@@ -267,6 +287,13 @@ class GameCoordinator {
     const game = this.gameRepository.getGame(roomId);
 
     if (!game) {
+      this.logger.info('reconnect', {
+        branch: 'no-game',
+        connectionId,
+        roomId,
+        tokenHash,
+        knownRooms: this.gameRepository.size,
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.ROOM_NO_LONGER_EXISTS,
       });
@@ -278,6 +305,15 @@ class GameCoordinator {
     const player = game.players.find((p) => p.sessionToken === sessionToken);
 
     if (!player) {
+      this.logger.info('reconnect', {
+        branch: 'no-player',
+        connectionId,
+        roomId,
+        tokenHash,
+        phase: game.phase,
+        players: game.players.length,
+        knownTokenHashes: game.players.map((p) => hashToken(p.sessionToken)),
+      });
       this.transport.send(connectionId, 'reconnectFailed', {
         message: ErrorCodes.PLAYER_NOT_FOUND,
       });
@@ -288,6 +324,14 @@ class GameCoordinator {
     // duplicate emit), re-emit the payload without rewiring the player's
     // connection or broadcasting a fake reconnect to other clients.
     if (player.connectionId === connectionId) {
+      this.logger.info('reconnect', {
+        branch: 'idempotent',
+        connectionId,
+        roomId,
+        tokenHash,
+        publicId: player.publicId,
+        phase: game.phase,
+      });
       this.transport.send(connectionId, 'reconnected', {
         roomId,
         playerId: player.publicId,
@@ -326,6 +370,15 @@ class GameCoordinator {
       playerName: player.name,
     });
 
+    this.logger.info('reconnect', {
+      branch: 'success',
+      connectionId,
+      oldConnectionId,
+      roomId,
+      tokenHash,
+      publicId: player.publicId,
+      phase: game.phase,
+    });
     this.logger.info('player reconnected', { roomId, playerName: sanitizeForLog(validName) });
 
     if (game.phase === Phase.PLAYING) {
