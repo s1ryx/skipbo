@@ -70,6 +70,83 @@ config package. Low priority — limits rarely change.
 
 ---
 
+### 4. Create React App (react-scripts) is unmaintained
+
+**Severity: Medium** | **Files:** `client/` (build tooling)
+
+The client builds with Create React App (`react-scripts`), which is no
+longer maintained. Consequences observed: webpack cannot statically
+drop a gated `import()` (the debug-console `eruda` chunk ships in
+production builds despite a runtime gate), `caniuse-lite`/browserslist
+data goes stale and needs manual refresh, and build/test times are slow.
+
+**Why it matters:** No upstream patches for the build toolchain; the
+dynamic-import limitation forces awkward workarounds (e.g. CDN loading)
+to keep a dev-only dependency out of the production bundle.
+
+**Possible fix:** Migrate to Vite — proper tree-shaking / conditional
+chunk elimination, maintained tooling, faster builds. Sizeable but
+mostly mechanical; isolate behind its own branch.
+
+---
+
+### 5. Duplicated and dead code in rematch / disconnect handling
+
+**Severity: Low** | **Files:** `server/gameCoordinator.js`,
+`server/gameLogic.js`
+
+- `SkipBoGame.resetForRematch(stockpileSize)` declares a `stockpileSize`
+  parameter the coordinator never passes (size is applied earlier via
+  `updateStockpileSize`) — a dead parameter.
+- The "human whose connection is no longer mapped" predicate
+  (`!sessionManager.hasRoom(p.connectionId)`) is duplicated in
+  `handleStartGame` and `handleRequestRematchWithoutDisconnected`.
+
+**Why it matters:** Minor, but the dead parameter misleads readers and
+the duplicated predicate can drift between the two call sites.
+
+**Possible fix:** Drop the unused parameter; extract a
+`_disconnectedHumans(game)` helper (coordinator or `SessionManager`) and
+use it in both places.
+
+---
+
+### 6. Only error translations have a parity test
+
+**Severity: Low** | **Files:** `client/src/i18n/`,
+`client/src/i18n/translations.test.js`
+
+`translations.test.js` asserts every `ErrorCode` has en/de/tr
+translations, but does not check parity for the much larger set of
+`game.*` / `lobby.*` / etc. keys. A new UI key can be added to one
+locale and silently missing from the others.
+
+**Why it matters:** Untranslated UI strings reach users in non-English
+locales with no test catching the omission.
+
+**Possible fix:** Extend `translations.test.js` to assert all three
+locale files share an identical key set.
+
+---
+
+### 7. ARCHITECTURE.md permalink and line-number drift
+
+**Severity: Low** | **File:** `docs/ARCHITECTURE.md`
+
+Several permalinks cite stale commit SHAs / line ranges (e.g.
+`_executePlay` / `_executeDiscard` referenced near L868/L907 but now
+past L1240) and line counts are out of date; recent merges (notably the
+debug-logging branch) did not refresh references.
+
+**Why it matters:** The doc's value depends on permalinks resolving to
+the right code; drift erodes trust in it.
+
+**Possible fix:** One refresh pass per the pre-merge checklist (blame
+each referenced block, update SHA + the line range _at that commit_ +
+counts). A small drift-detection script would make this repeatable.
+
+---
+
 ## Resolved Issues
 
 These issues were identified during the initial analysis and have
