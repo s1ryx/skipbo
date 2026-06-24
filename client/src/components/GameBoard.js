@@ -19,6 +19,7 @@ function GameBoard({
   onPassTurn,
   onLeaveGame,
   onRequestRematch,
+  onRequestRematchWithoutDisconnected,
   onUpdateRematchSettings,
   rematchVotes,
   rematchStockpileSize,
@@ -171,6 +172,7 @@ function GameBoard({
           rematchVotes={rematchVotes}
           rematchStockpileSize={rematchStockpileSize}
           onRequestRematch={onRequestRematch}
+          onRequestRematchWithoutDisconnected={onRequestRematchWithoutDisconnected}
           onUpdateRematchSettings={onUpdateRematchSettings}
           onLeaveGame={onLeaveGame}
         />

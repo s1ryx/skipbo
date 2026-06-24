@@ -69,6 +69,8 @@
   "game.winner": "Gewinner: {{name}}",
   "game.rematch": "Revanche",
   "game.rematchVoted": "Abgestimmt \u2713",
+  "game.rematchWithoutDisconnected": "Revanche ohne getrennte Spieler",
+  "game.disconnectedTag": "(getrennt)",
   "game.leave": "Verlassen",
   "game.rematchStockpile": "Kartenstapel: {{count}} Karten",
 
