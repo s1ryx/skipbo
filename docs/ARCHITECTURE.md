@@ -137,7 +137,7 @@ transport.attach(server);
 
 [`GameCoordinator`](https://github.com/s1ryx/skipbo/blob/1a2880a/server/gameCoordinator.js)
 owns all game coordination logic. It receives events from the transport
-through [`handleMessage()`](https://github.com/s1ryx/skipbo/blob/50a590e7/server/gameCoordinator.js#L89-L120)
+through [`handleMessage()`](https://github.com/s1ryx/skipbo/blob/203e2543/server/gameCoordinator.js#L103-L138)
 and calls `this.transport.send()` / `sendToGroup()` / etc. for outbound
 communication. It delegates to:
 
