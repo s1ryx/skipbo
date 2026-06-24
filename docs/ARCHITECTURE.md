@@ -122,16 +122,16 @@ transport.attach(server);
 
 ### Module Overview
 
-| Module                                                                                          | Lines | Responsibility                              |
-| ----------------------------------------------------------------------------------------------- | ----- | ------------------------------------------- |
+| Module                                                                                         | Lines | Responsibility                              |
+| ---------------------------------------------------------------------------------------------- | ----- | ------------------------------------------- |
 | [`gameCoordinator.js`](https://github.com/s1ryx/skipbo/blob/1a2880a/server/gameCoordinator.js) | ~1114 | Event handling, orchestration, broadcasting |
-| [`gameLogic.js`](https://github.com/s1ryx/skipbo/blob/75c49393/server/gameLogic.js)             | ~437  | Game rules engine (SkipBoGame class)        |
-| [`config.js`](https://github.com/s1ryx/skipbo/blob/1a2880a/server/config.js)                    | ~68   | Constants, Phase enum, BOT_ID_PREFIX        |
-| [`errors.js`](https://github.com/s1ryx/skipbo/blob/833f1737/server/errors.js)                   | ~42   | GameError class and ErrorCodes              |
-| [`logger.js`](https://github.com/s1ryx/skipbo/blob/c1a03c5/server/logger.js)                    | ~30   | Structured JSON logger factory              |
-| [`SessionManager.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/SessionManager.js)   | ~44   | Connection-to-room mapping                  |
-| [`BotManager.js`](https://github.com/s1ryx/skipbo/blob/5074075/server/BotManager.js)            | ~75   | Bot AI instances, timer scheduling          |
-| [`GameRepository.js`](https://github.com/s1ryx/skipbo/blob/6873a30c/server/GameRepository.js)   | ~70   | Game storage, cleanup timers                |
+| [`gameLogic.js`](https://github.com/s1ryx/skipbo/blob/75c49393/server/gameLogic.js)            | ~437  | Game rules engine (SkipBoGame class)        |
+| [`config.js`](https://github.com/s1ryx/skipbo/blob/1a2880a/server/config.js)                   | ~68   | Constants, Phase enum, BOT_ID_PREFIX        |
+| [`errors.js`](https://github.com/s1ryx/skipbo/blob/833f1737/server/errors.js)                  | ~42   | GameError class and ErrorCodes              |
+| [`logger.js`](https://github.com/s1ryx/skipbo/blob/c1a03c5/server/logger.js)                   | ~30   | Structured JSON logger factory              |
+| [`SessionManager.js`](https://github.com/s1ryx/skipbo/blob/2af34157/server/SessionManager.js)  | ~44   | Connection-to-room mapping                  |
+| [`BotManager.js`](https://github.com/s1ryx/skipbo/blob/5074075/server/BotManager.js)           | ~75   | Bot AI instances, timer scheduling          |
+| [`GameRepository.js`](https://github.com/s1ryx/skipbo/blob/6873a30c/server/GameRepository.js)  | ~70   | Game storage, cleanup timers                |
 
 ### Game Coordinator
 
@@ -707,8 +707,8 @@ disconnected human and starts the rematch via the shared
 | -------------------- | ------------------------------------------------ | ----------------------------- |
 | `skipBoSession`      | `{ roomId, playerId, playerName, sessionToken }` | Reconnection on reload        |
 | `skipBoPlayerName`   | `"Alice"`                                        | Remember player name in Lobby |
-| `skipBoLanguage`     | `"en"`, `"de"`, `"tr"`                           | Language preference            |
-| `skipBoQuickDiscard` | `"true"` or `"false"`                            | Quick discard setting          |
+| `skipBoLanguage`     | `"en"`, `"de"`, `"tr"`                           | Language preference           |
+| `skipBoQuickDiscard` | `"true"` or `"false"`                            | Quick discard setting         |
 
 **sessionStorage** (cleared when tab closes):
 

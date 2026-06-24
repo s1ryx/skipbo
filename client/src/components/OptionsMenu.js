@@ -22,8 +22,10 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
     updatePosition();
     const handleClickOutside = (e) => {
       if (
-        buttonRef.current && !buttonRef.current.contains(e.target) &&
-        dropdownRef.current && !dropdownRef.current.contains(e.target)
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
       ) {
         setIsOpen(false);
       }
@@ -40,11 +42,7 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
 
   const dropdown = isOpen
     ? ReactDOM.createPortal(
-        <div
-          className="options-dropdown"
-          ref={dropdownRef}
-          style={{ top: dropdownTop }}
-        >
+        <div className="options-dropdown" ref={dropdownRef} style={{ top: dropdownTop }}>
           <div className="options-item options-room">
             <span className="room-label">{roomId}</span>
           </div>
@@ -61,10 +59,7 @@ function OptionsMenu({ roomId, quickDiscardEnabled, onToggleQuickDiscard, onLeav
           <div className="options-item">
             <label>
               {t('game.language')}
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
+              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
                 {supportedLanguages.map((lang) => (
                   <option key={lang} value={lang}>
                     {t(`language.${lang}`)}
