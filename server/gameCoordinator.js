@@ -868,7 +868,10 @@ class GameCoordinator {
         });
       }
     } else if (game.phase === Phase.FINISHED) {
-      game.clearRematchVotes();
+      // Only drop the disconnecting player's own vote — a transient peer
+      // disconnect must not wipe everyone's votes (e.g. Alice voted, Bob's
+      // screen locks for a moment; Alice's vote should survive).
+      if (disconnectedPlayer) game.removeRematchVote(disconnectedPlayer.internalId);
 
       if (humansRemaining === 0) {
         this.logger.info('disconnect', {
