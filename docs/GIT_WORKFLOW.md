@@ -49,8 +49,8 @@ Supporting branches are temporary and serve specific purposes. They always have 
 git checkout -b feature/new-game-mode develop
 
 # Develop with atomic commits
-git commit -m "feat: add game mode selection UI"
-git commit -m "feat: implement new game mode logic"
+git commit -m "ui: add game mode selection"
+git commit -m "game: implement new game mode logic"
 
 # Push to origin for code review
 git push -u origin feature/new-game-mode
@@ -78,7 +78,7 @@ Most bug fixes are simple enough to be committed directly without a dedicated br
 ```bash
 # Fix directly on develop
 git checkout develop
-git commit -m "fix: correct score display rounding"
+git commit -m "ui: correct score display rounding"
 git push origin develop
 ```
 
@@ -99,9 +99,9 @@ git push origin develop
 git checkout -b fix/reconnection-logic develop
 
 # Fix with atomic commits
-git commit -m "fix: add connection state tracking"
-git commit -m "fix: implement reconnection retry logic"
-git commit -m "fix: restore game state after reconnect"
+git commit -m "client: add connection state tracking"
+git commit -m "client: implement reconnection retry logic"
+git commit -m "client: restore game state after reconnect"
 
 # Push for code review
 git push -u origin fix/reconnection-logic
@@ -136,20 +136,26 @@ git push origin --delete fix/reconnection-logic
 git checkout -b hotfix-1.2.1 master
 
 # Fix the critical bug first
-git commit -m "fix: prevent game state corruption on disconnect"
+git commit -m "coordinator: prevent state corruption on disconnect"
 
 # Push for visibility
 git push -u origin hotfix-1.2.1
 
 # Bump patch version (last commit before merging)
-git commit -m "chore: bump version to 1.2.1"
+git commit -m "build: bump version to 1.2.1"
 git push origin hotfix-1.2.1
 
-# Merge to master with --no-ff and create tag with generated changelog
+# Merge to master with --no-ff and tag with a hand-written changelog
 git checkout master
 git merge --no-ff hotfix-1.2.1 \
   -m "merge: hotfix-1.2.1 into master"
-git tag -s v1.2.1 -m "$(git log --format='- %s' v1.2.0..hotfix-1.2.1)"
+git tag -s v1.2.1 -m "$(cat <<'EOF'
+v1.2.1
+
+## Bug Fixes
+- <user-facing summary of the fix>
+EOF
+)"
 git push origin master --tags
 
 # Merge to develop with --no-ff
@@ -217,8 +223,8 @@ During this phase, `develop` continues to receive new features for the next rele
 
 ```bash
 # On release-1.2 branch: fix bugs found during testing
-git commit -m "fix: correct score display rounding"
-git commit -m "fix: adjust card animation timing"
+git commit -m "ui: correct score display rounding"
+git commit -m "ui: adjust card animation timing"
 git push origin release-1.2
 ```
 
@@ -231,7 +237,7 @@ When all bug fixes are complete and you're ready to release:
 ```bash
 # On release-1.2 branch: bump version as the LAST commit
 # Edit package.json, version files, etc.
-git commit -m "chore: bump version to 1.2.0"
+git commit -m "build: bump version to 1.2.0"
 git push origin release-1.2
 ```
 
@@ -244,18 +250,15 @@ git pull origin master
 git merge --no-ff release-1.2 \
   -m "merge: release-1.2 into master"
 
-# Create signed tag with generated changelog from commits
+# Create a signed, annotated tag with a hand-written, user-facing changelog
 git tag -s v1.2.0 -m "$(cat <<'EOF'
 v1.2.0 - Release Title
 
 ## Features
-$(git log --format='- %s' v1.1.0..release-1.2 | grep '^- feat:')
+- <user-facing summary of each notable feature>
 
 ## Bug Fixes
-$(git log --format='- %s' v1.1.0..release-1.2 | grep '^- fix:')
-
-## Documentation
-$(git log --format='- %s' v1.1.0..release-1.2 | grep '^- docs:')
+- <user-facing summary of each notable fix>
 EOF
 )"
 
@@ -264,23 +267,13 @@ git push origin master
 git push origin v1.2.0
 ```
 
-**Alternative: Simplified automated tag**:
+**Writing the changelog in a file** (handy for longer notes):
 
 ```bash
-# Simple one-liner for tag with all commits
-git tag -s v1.2.0 -m "$(git log --format='- %s' v1.1.0..release-1.2)"
-```
+# Compose the notes by hand, grouped and written for end users
+$EDITOR release-notes.txt
 
-**Alternative: Manual changelog** (if you need to edit):
-
-```bash
-# Generate changelog template
-git log --format="- %s" v1.1.0..release-1.2 > release-notes.txt
-
-# Edit manually
-nano release-notes.txt
-
-# Create tag from edited file
+# Create the tag from the file
 git tag -s v1.2.0 -F release-notes.txt
 ```
 
@@ -331,7 +324,7 @@ M2 = Merge to develop (brings all fixes + version bump, keeps ancestry clean)
 - Always use **--no-ff** when merging branches to preserve history and enable easy rollback
 - Simple bug fixes (single commits) go directly on release branch, no dedicated fix branch needed
 - Complex bugs requiring multiple commits use dedicated `fix/*` branches
-- Always use **signed, annotated tags** (`git tag -s`) with changelogs generated from commit messages
+- Always use **signed, annotated tags** (`git tag -s`) with a hand-written, user-facing changelog
 - Tags are not pushed automatically - use `git push origin v1.2.0` or `git push origin --tags`
 
 **Keep branches focused**:
