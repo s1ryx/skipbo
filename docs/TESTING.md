@@ -241,6 +241,8 @@ const renderComponent = (props = {}) => {
    effects, not internal state
 5. **Cover the happy path first**, then add edge cases and error
    conditions
-6. **Commit tests atomically** — each `describe` block (or `it` when
-   covering unrelated behavior) is its own commit, following the
-   project's [commit guidelines](COMMIT_GUIDELINES.md)
+6. **Ship tests with their change** — include the tests in the same
+   commit as the code they cover, so every commit builds and passes.
+   When backfilling tests for already-shipped code, scope the commit to
+   the area under test. See the project's
+   [commit guidelines](COMMIT_GUIDELINES.md)
