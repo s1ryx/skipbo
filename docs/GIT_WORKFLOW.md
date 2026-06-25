@@ -2,7 +2,7 @@
 
 > Part of the [project documentation](../README.md#documentation).
 
-This project follows the [git-flow branching model](https://nvie.com/posts/a-successful-git-branching-model/) for managing development and releases. Understanding this workflow is essential for contributing effectively.
+This project uses a branching model based on [git-flow](https://nvie.com/posts/a-successful-git-branching-model/), with one deliberate refinement: after a release or hotfix is tagged on `master`, `master` is merged **back into `develop`** — rather than merging the supporting branch into `develop` a second time. This keeps `master` a true ancestor of `develop`, so the next release merges into `master` without phantom conflicts. Understanding this workflow is essential for contributing effectively.
 
 ![Git-Flow Branching Model](images/git-flow-model.png)
 _Figure: Git-Flow branching model by Vincent Driessen, licensed under CC BY-SA. [Original source](https://nvie.com/posts/a-successful-git-branching-model/)_
@@ -122,7 +122,7 @@ git push origin --delete fix/reconnection-logic
 **Hotfix branches** (`hotfix/*`):
 
 - **Branch from**: `master` (production code)
-- **Merge back to**: Both `master` AND `develop` (or active release branch if one exists)
+- **Merge back to**: `master` (tagged), then `master` → `develop`; if a release branch is open, also merge `master` into it
 - **Naming**: `hotfix/critical-bug` or `hotfix-X.Y.Z` (e.g., `hotfix-1.2.1`)
 - **Purpose**: Emergency fixes for critical production bugs that halt business operation or block progress
 - **Lifetime**: Very short - only until the fix is complete
@@ -132,18 +132,16 @@ git push origin --delete fix/reconnection-logic
 **Workflow**:
 
 ```bash
-# Create hotfix branch from master
+# Create the hotfix branch from master and bump the patch version first
 git checkout -b hotfix-1.2.1 master
+# Edit package.json, version files, etc.
+git commit -m "build: bump version to 1.2.1"
 
-# Fix the critical bug first
+# Fix the critical bug
 git commit -m "coordinator: prevent state corruption on disconnect"
 
 # Push for visibility
 git push -u origin hotfix-1.2.1
-
-# Bump patch version (last commit before merging)
-git commit -m "build: bump version to 1.2.1"
-git push origin hotfix-1.2.1
 
 # Merge to master with --no-ff and tag with a hand-written changelog
 git checkout master
@@ -158,10 +156,11 @@ EOF
 )"
 git push origin master --tags
 
-# Merge to develop with --no-ff
+# Merge master back into develop so develop gets the fix and stays
+# a descendant of master
 git checkout develop
-git merge --no-ff hotfix-1.2.1 \
-  -m "Merge branch 'hotfix-1.2.1' into develop"
+git merge --no-ff master \
+  -m "Merge branch 'master' into develop"
 git push origin develop
 
 # Delete local and remote branch
@@ -169,7 +168,7 @@ git branch -d hotfix-1.2.1
 git push origin --delete hotfix-1.2.1
 ```
 
-**Special consideration**: If a release branch exists when creating a hotfix, merge the hotfix to the release branch instead of `develop`. The changes will propagate to `develop` when the release branch is merged back.
+**Special consideration**: If a release branch is open when the hotfix lands, also merge `master` into that release branch (`git checkout release-X.Y && git merge --no-ff master`) so the in-flight release ships the fix. Both branches bumped the version (bump-first), so this merge conflicts on the version line — resolve it in favour of the release's version; the resolution lives in the merge commit, no extra commit needed. `develop` already has the fix from the `master` → `develop` merge above, and when the release later merges into `master` the hotfix commits are shared history, so only the new release work comes over — no duplication.
 
 ## Release Management
 
@@ -178,9 +177,9 @@ Release branches coordinate the transition from development to production. They 
 **Release branches** (`release-*`):
 
 - **Branch from**: `develop` (when ready for release)
-- **Merge back to**: Both `master` AND `develop` (at completion)
+- **Merge back to**: `master` (tagged), then `master` → `develop`
 - **Naming**: `release-X.Y` (e.g., `release-1.2`, `release-2.0`)
-- **Purpose**: Prepare production releases (bug fixes, final polishing, then version bumping)
+- **Purpose**: Prepare production releases (version bump, then bug fixes and final polishing)
 - **Allowed changes**: Only minor bug fixes and release metadata (no new features)
 - **Lifetime**: From release preparation start until merged to master and tagged
 
@@ -201,17 +200,21 @@ Examples:
 
 **Complete Release Workflow**:
 
-**Step 1: Create release branch from develop (WITHOUT version bump)**
+**Step 1: Create release branch from develop and bump the version**
 
-**Important**: Do NOT bump the version yet. The version bump will be the last commit before merging to master.
+Assign the release its version number as the first commit on the branch, so the branch — and anything deployed from it to staging — reports the version you are about to ship.
 
 ```bash
 # Ensure develop is up to date
 git checkout develop
 git pull origin develop
 
-# Create release branch (version in branch name, but don't bump code yet)
+# Create the release branch
 git checkout -b release-1.2 develop
+
+# Bump the version as the first commit
+# Edit package.json, version files, etc.
+git commit -m "build: bump version to 1.2.0"
 
 # Push for review and tracking
 git push -u origin release-1.2
@@ -228,20 +231,9 @@ git commit -m "ui: adjust card animation timing"
 git push origin release-1.2
 ```
 
-Bug fixes stay on the release branch until the final merge to `develop` in Step 5. They will reach `develop` together with the version bump in a single merge commit.
+Bug fixes stay on the release branch until the release is merged and tagged on `master`. They reach `develop` when `master` is merged into `develop` in Step 4.
 
-**Step 3: Version bump as final commit**
-
-When all bug fixes are complete and you're ready to release:
-
-```bash
-# On release-1.2 branch: bump version as the LAST commit
-# Edit package.json, version files, etc.
-git commit -m "build: bump version to 1.2.0"
-git push origin release-1.2
-```
-
-**Step 4: Merge to master and create tag**
+**Step 3: Merge to master and create tag**
 
 ```bash
 # Merge to master with --no-ff (preserves branch history)
@@ -277,19 +269,19 @@ $EDITOR release-notes.txt
 git tag -s v1.2.0 -F release-notes.txt
 ```
 
-**Step 5: Merge release branch back to develop**
+**Step 4: Merge master back into develop**
 
-The release branch must be merged back into `develop` so that future releases also contain the bug fixes. This single merge brings all fixes and the version bump into `develop` and keeps `master` a direct ancestor of `develop`, ensuring clean merges for subsequent releases.
+Merge `master` — which now holds the tagged release — back into `develop`. This brings the bug fixes and the version bump into `develop` and keeps `master` a direct ancestor of `develop`, so the next release merges into `master` without conflicts.
 
 ```bash
-# Merge release to develop with --no-ff
+# Merge master into develop with --no-ff
 git checkout develop
-git merge --no-ff release-1.2 \
-  -m "Merge branch 'release-1.2' into develop"
+git merge --no-ff master \
+  -m "Merge branch 'master' into develop"
 git push origin develop
 ```
 
-**Step 6: Clean up release branch**
+**Step 5: Clean up release branch**
 
 ```bash
 # Delete local and remote branch
@@ -303,23 +295,23 @@ git push origin --delete release-1.2
 Time →
 
 develop:  ---F1---F2-------------------------------M2---F3---
-                   \                               /
-release-1.2:        \---B1---B2---V (version bump)
-                                   \
-master:   --------------------------M1---v1.2.0 (tag)
+                   \                              /
+release-1.2:        \---V---B1---B2              /
+                                   \            /
+master:   --------------------------M1--v1.2.0-/
 
-F1, F2, F3 = Features (continue on develop during release)
-B1, B2 = Bug fixes on release branch
-V = Version bump (last commit on release branch)
-M1 = Merge to master (creates production release)
-M2 = Merge to develop (brings all fixes + version bump, keeps ancestry clean)
+F1, F2, F3 = Features continuing on develop during the release
+V          = Version bump (the first commit on the release branch)
+B1, B2     = Bug fixes on the release branch
+M1         = Merge release-1.2 -> master  (the production release, tagged v1.2.0)
+M2         = Merge master -> develop       (carries the fixes + bump; keeps master an ancestor of develop)
 ```
 
 **Key Points**:
 
-- **Version bump LAST**: Bump version as the final commit on the release branch
-- **Single merge to develop**: All bug fixes reach `develop` in one merge at the end, keeping history clean
-- **Always merge back**: The release branch must be merged to both `master` and `develop` — this keeps master as a direct ancestor of develop, ensuring clean merges for future releases
+- **Version bump FIRST**: Bump version as the first commit on the release branch, so staging reports the version you're shipping
+- **Single merge to develop**: The fixes and version bump reach `develop` in one `master` → `develop` merge, keeping history clean
+- **Merge master back**: After tagging the release on `master`, merge `master` into `develop` — this keeps master a direct ancestor of develop, ensuring conflict-free merges for future releases
 - Features continue being added to `develop` while release is being prepared
 - Always use **--no-ff** when merging branches to preserve history and enable easy rollback
 - Simple bug fixes (single commits) go directly on release branch, no dedicated fix branch needed
@@ -348,9 +340,9 @@ M2 = Merge to develop (brings all fixes + version bump, keeps ancestry clean)
 - **Easy rollback**: Features can be reverted as a unit using merge commits
 - **Hotfix capability**: Critical fixes can bypass normal development cycle
 - **Release preparation**: Releases can be polished while development continues
-- **Clean ancestry**: Merging release to both master and develop keeps master as ancestor of develop
-- **Minimal merge noise**: One merge commit per release on develop, not one per bug fix
+- **Clean ancestry**: Merging `master` back into `develop` keeps master an ancestor of develop
+- **Minimal merge noise**: One `master` → `develop` merge per release on develop, not one per bug fix
 - **Code review**: Pushing branches enables collaboration and early bug detection
 - **Clean history**: Single-commit bug fixes don't clutter history with unnecessary merge commits
 
-For complete details on the original model, see the [git-flow article](https://nvie.com/posts/a-successful-git-branching-model/).
+For the base model this builds on, see Vincent Driessen's [git-flow article](https://nvie.com/posts/a-successful-git-branching-model/).
