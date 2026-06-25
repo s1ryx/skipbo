@@ -59,7 +59,7 @@ git push -u origin feature/new-game-mode
 # (--no-ff preserves branch history and groups related commits)
 git checkout develop
 git merge --no-ff feature/new-game-mode \
-  -m "merge: feature/new-game-mode into develop
+  -m "Merge branch 'feature/new-game-mode' into develop
 
 <description of what the branch adds>"
 git push origin develop
@@ -109,7 +109,7 @@ git push -u origin fix/reconnection-logic
 # After review, merge with --no-ff (multiple commits benefit from grouping)
 git checkout develop
 git merge --no-ff fix/reconnection-logic \
-  -m "merge: fix/reconnection-logic into develop
+  -m "Merge branch 'fix/reconnection-logic' into develop
 
 <description of what the branch fixes>"
 git push origin develop
@@ -148,7 +148,7 @@ git push origin hotfix-1.2.1
 # Merge to master with --no-ff and tag with a hand-written changelog
 git checkout master
 git merge --no-ff hotfix-1.2.1 \
-  -m "merge: hotfix-1.2.1 into master"
+  -m "Merge branch 'hotfix-1.2.1' into master"
 git tag -s v1.2.1 -m "$(cat <<'EOF'
 v1.2.1
 
@@ -161,7 +161,7 @@ git push origin master --tags
 # Merge to develop with --no-ff
 git checkout develop
 git merge --no-ff hotfix-1.2.1 \
-  -m "merge: hotfix-1.2.1 into develop"
+  -m "Merge branch 'hotfix-1.2.1' into develop"
 git push origin develop
 
 # Delete local and remote branch
@@ -248,7 +248,7 @@ git push origin release-1.2
 git checkout master
 git pull origin master
 git merge --no-ff release-1.2 \
-  -m "merge: release-1.2 into master"
+  -m "Merge branch 'release-1.2' into master"
 
 # Create a signed, annotated tag with a hand-written, user-facing changelog
 git tag -s v1.2.0 -m "$(cat <<'EOF'
@@ -285,7 +285,7 @@ The release branch must be merged back into `develop` so that future releases al
 # Merge release to develop with --no-ff
 git checkout develop
 git merge --no-ff release-1.2 \
-  -m "merge: release-1.2 into develop"
+  -m "Merge branch 'release-1.2' into develop"
 git push origin develop
 ```
 
