@@ -12,6 +12,7 @@ const CLIENT_EVENTS = [
   'sendChatMessage',
   'leaveLobby',
   'leaveGame',
+  'returnToLobby',
   'requestRematch',
   'updateRematchSettings',
   'addBot',

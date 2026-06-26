@@ -11,6 +11,7 @@ const {
   MAX_PENDING_ROOMS,
   MAX_TOTAL_ROOMS,
   COMPLETED_GAME_TTL_MS,
+  POST_GAME_MIN_SAVOR_MS,
   MIN_PLAYERS,
   MAX_PLAYERS,
   MIN_STOCKPILE_SIZE,
@@ -117,6 +118,8 @@ class GameCoordinator {
         return this.handleLeaveLobby(connectionId);
       case 'leaveGame':
         return this.handleLeaveGame(connectionId);
+      case 'returnToLobby':
+        return this.handleReturnToLobby(connectionId);
       case 'requestRematch':
         return this.handleRequestRematch(connectionId);
       case 'requestRematchWithoutDisconnected':
@@ -721,6 +724,22 @@ class GameCoordinator {
 
       this.logger.info('game aborted', { roomId });
     }
+  }
+
+  handleReturnToLobby(connectionId) {
+    const roomId = this.sessionManager.getRoom(connectionId);
+    if (!roomId) return;
+
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.FINISHED) return;
+
+    // Enforce a minimum savor window so one eager player cannot cut the
+    // post-game results screen short for the rest of the room.
+    if (Date.now() - game.finishedAt < POST_GAME_MIN_SAVOR_MS) return;
+
+    this.cancelCompletedGameCleanup(roomId);
+    game.resetToLobby();
+    this._broadcastToHumans(roomId, game);
   }
 
   handleRequestRematch(connectionId) {
