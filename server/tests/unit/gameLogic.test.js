@@ -353,6 +353,19 @@ describe('SkipBoGame', () => {
       expect(game.winner).toBe(player);
     });
 
+    it('stamps finishedAt when the game ends', () => {
+      const player = game.players[0];
+      player.stockpile = [1];
+      player.hand = [2, 3, 4, 5, 6];
+
+      expect(game.finishedAt).toBeNull();
+      const before = Date.now();
+      game.playCard(p1, 1, 'stockpile', 0);
+
+      expect(typeof game.finishedAt).toBe('number');
+      expect(game.finishedAt).toBeGreaterThanOrEqual(before);
+    });
+
     it('returns error for card not found in hand', () => {
       const player = game.players[0];
       player.hand = [2, 3, 4, 5, 6];
@@ -573,6 +586,7 @@ describe('SkipBoGame', () => {
           gameStarted: true,
           gameOver: false,
           winner: null,
+          finishedAt: null,
         })
       );
       expect(state.players).toHaveLength(2);
