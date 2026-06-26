@@ -72,7 +72,7 @@ The adapter accepts three handler callbacks on construction
 `onConnect(connectionId)`, `onDisconnect(connectionId)`,
 `onMessage(connectionId, event, data)`.
 
-All 12 known client events are forwarded through the single `onMessage`
+All 13 known client events are forwarded through the single `onMessage`
 dispatcher
 ([CLIENT_EVENTS:5-19](https://github.com/s1ryx/skipbo/blob/895cfa34/server/transport/SocketIOTransport.js#L5-L19)).
 Rate limiting is applied per connection.
@@ -326,11 +326,11 @@ server-related state themselves — they receive data and call callbacks.
 - Creates a `SocketIOClientTransport` and connects on mount
   ([useGameConnection.js:43-87](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L43-L87))
 - Wires message handlers from `messageHandlers.js`
-- Defines 11 action functions that send events through the transport
+- Defines 12 action functions that send events through the transport
   ([useGameConnection.js:89-152](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L89-L152)):
   `createRoom`, `joinRoom`, `startGame`, `playCard`, `discardCard`,
-  `leaveLobby`, `leaveGame`, `returnToLobby`, `sendChatMessage`,
-  `addBot`, `removeBot`
+  `leaveLobby`, `leaveGame`, `returnToLobby`, `updateStockpileSize`,
+  `sendChatMessage`, `addBot`, `removeBot`
 - Session persistence to localStorage, chat persistence to sessionStorage
   ([useGameConnection.js:37-41](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L37-L41))
 
@@ -356,6 +356,8 @@ server-related state themselves — they receive data and call callbacks.
 - Pre-game lobby view shown after room creation/join
 - Displays room ID, shareable link with copy button, and player list
 - Bot management: add/remove AI bots with type selection
+- Stockpile size: a host-only slider (read-only display for others)
+  retunes the next game's stockpile via `onUpdateStockpileSize`
 - Shows "Start Game" button when 2+ players present
 - Renders the collapsible `Chat` panel so players can talk before the
   game starts
@@ -445,20 +447,21 @@ over — the room stays alive so players return to the waiting room.
 
 ### Client → Server (emitted by client)
 
-| Event             | Payload                                     | Handler                 |
-| ----------------- | ------------------------------------------- | ----------------------- |
-| `createRoom`      | `{ playerName, maxPlayers, stockpileSize }` | `handleCreateRoom`      |
-| `joinRoom`        | `{ roomId, playerName }`                    | `handleJoinRoom`        |
-| `reconnect`       | `{ roomId, sessionToken, playerName }`      | `handleReconnect`       |
-| `startGame`       | _(none)_                                    | `handleStartGame`       |
-| `playCard`        | `{ card, source, buildingPileIndex }`       | `handlePlayCard`        |
-| `discardCard`     | `{ card, discardPileIndex }`                | `handleDiscardCard`     |
-| `sendChatMessage` | `{ message }`                               | `handleSendChatMessage` |
-| `leaveLobby`      | _(none)_                                    | `handleLeaveLobby`      |
-| `leaveGame`       | _(none)_                                    | `handleLeaveGame`       |
-| `returnToLobby`   | _(none)_                                    | `handleReturnToLobby`   |
-| `addBot`          | `{ aiType }`                                | `handleAddBot`          |
-| `removeBot`       | `{ botPlayerId }`                           | `handleRemoveBot`       |
+| Event                 | Payload                                     | Handler                     |
+| --------------------- | ------------------------------------------- | --------------------------- |
+| `createRoom`          | `{ playerName, maxPlayers, stockpileSize }` | `handleCreateRoom`          |
+| `joinRoom`            | `{ roomId, playerName }`                    | `handleJoinRoom`            |
+| `reconnect`           | `{ roomId, sessionToken, playerName }`      | `handleReconnect`           |
+| `startGame`           | _(none)_                                    | `handleStartGame`           |
+| `playCard`            | `{ card, source, buildingPileIndex }`       | `handlePlayCard`            |
+| `discardCard`         | `{ card, discardPileIndex }`                | `handleDiscardCard`         |
+| `sendChatMessage`     | `{ message }`                               | `handleSendChatMessage`     |
+| `leaveLobby`          | _(none)_                                    | `handleLeaveLobby`          |
+| `leaveGame`           | _(none)_                                    | `handleLeaveGame`           |
+| `returnToLobby`       | _(none)_                                    | `handleReturnToLobby`       |
+| `updateStockpileSize` | `{ stockpileSize }`                         | `handleUpdateStockpileSize` |
+| `addBot`              | `{ aiType }`                                | `handleAddBot`              |
+| `removeBot`           | `{ botPlayerId }`                           | `handleRemoveBot`           |
 
 ### Server → Client (emitted by server)
 
