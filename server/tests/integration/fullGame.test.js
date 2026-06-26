@@ -85,6 +85,10 @@ async function playGame(c1, c2, players, initialGameState) {
   const MAX_TURNS = 500;
 
   while (!gameState.gameOver && turns < MAX_TURNS) {
+    // Count the turn up front: a player can empty their stockpile and win
+    // during the play phase, before ever discarding, and that still counts
+    // as a turn taken.
+    turns++;
     const currentId = gameState.currentPlayerId;
     const player = players.get(currentId);
     if (!player) throw new Error(`No player found for id ${currentId}`);
@@ -105,7 +109,6 @@ async function playGame(c1, c2, players, initialGameState) {
 
     const result = await emitDiscard(player.client, c1, c2, players, discard);
     gameState = result.gameState;
-    turns++;
   }
 
   return { winner: gameState.winner, turns, gameState };
