@@ -37,7 +37,6 @@ class SkipBoGame {
     this.phase = Phase.LOBBY;
     this.winner = null;
     this.finishedAt = null;
-    this.rematchVotes = new Set();
   }
 
   get gameStarted() {
@@ -363,28 +362,6 @@ class SkipBoGame {
     return player.hand.length === 0 && this.deck.length === 0;
   }
 
-  addRematchVote(playerId) {
-    if (this.rematchVotes.has(playerId)) return false;
-    this.rematchVotes.add(playerId);
-    return true;
-  }
-
-  removeRematchVote(playerId) {
-    this.rematchVotes.delete(playerId);
-  }
-
-  clearRematchVotes() {
-    this.rematchVotes.clear();
-  }
-
-  canStartRematch(humanPlayerCount) {
-    return this.rematchVotes.size >= humanPlayerCount;
-  }
-
-  getRematchVoterPublicIds() {
-    return this.players.filter((p) => this.rematchVotes.has(p.internalId)).map((p) => p.publicId);
-  }
-
   resetToLobby() {
     this.phase = Phase.LOBBY;
     this.winner = null;
@@ -392,7 +369,6 @@ class SkipBoGame {
     this.deck = [];
     this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
     this.currentPlayerIndex = 0;
-    this.rematchVotes = new Set();
 
     this.players.forEach((player) => {
       player.stockpile = [];
@@ -424,7 +400,6 @@ class SkipBoGame {
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
       finishedAt: this.finishedAt,
       stockpileSize: this.stockpileSize || this.getMaxStockpileSize(),
-      rematchVotes: this.getRematchVoterPublicIds(),
     };
   }
 
