@@ -121,7 +121,7 @@ Every public method on `SkipBoGame` should have test coverage:
 - Invalid move rejection (wrong turn, illegal card placement)
 - Edge cases (empty deck recycling, mid-turn hand refill)
 - Phase transitions (lobby → playing → finished)
-- Rematch vote methods (`addRematchVote`, `canStartRematch`, etc.)
+- Post-game reset (`resetToLobby`)
 - Player mutators (`updateConnectionId`, `setSessionToken`, `setHost`)
 
 ### Coordinator (`gameCoordinator.js`)

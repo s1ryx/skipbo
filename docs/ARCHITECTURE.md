@@ -72,7 +72,7 @@ The adapter accepts three handler callbacks on construction
 `onConnect(connectionId)`, `onDisconnect(connectionId)`,
 `onMessage(connectionId, event, data)`.
 
-All 13 known client events are forwarded through the single `onMessage`
+All 12 known client events are forwarded through the single `onMessage`
 dispatcher
 ([CLIENT_EVENTS:5-19](https://github.com/s1ryx/skipbo/blob/895cfa34/server/transport/SocketIOTransport.js#L5-L19)).
 Rate limiting is applied per connection.
@@ -88,7 +88,7 @@ implements:
 | `send(event, data)` | `socket.emit(event, data)` | [56-60](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L56-L60) |
 | `disconnect()`      | `socket.close()`           | [63-68](https://github.com/s1ryx/skipbo/blob/625289d5/client/src/transport/SocketIOClientTransport.js#L63-L68) |
 
-All 16 known server events are forwarded through `onMessage(event, data)`
+All 15 known server events are forwarded through `onMessage(event, data)`
 ([SERVER_EVENTS:4-21](https://github.com/s1ryx/skipbo/blob/68c9542b/client/src/transport/SocketIOClientTransport.js#L4-L21)).
 
 ### How a Future Transport Would Slot In
@@ -181,10 +181,9 @@ stockpile[], hand[], discardPiles[4][] }`](https://github.com/s1ryx/skipbo/blob/
 - **Turn flow** — [`endTurn()`](https://github.com/s1ryx/skipbo/blob/75c49393/server/gameLogic.js#L338-L353)
   advances `currentPlayerIndex` and draws cards for the next player
 - **Win condition** — a player's [stockpile reaches length 0](https://github.com/s1ryx/skipbo/blob/2e7e0d9e/server/gameLogic.js#L289-L292)
-- **Rematch** — [`addRematchVote()`](https://github.com/s1ryx/skipbo/blob/d580802c/server/gameLogic.js#L355-L359),
-  [`removeRematchVote()`](https://github.com/s1ryx/skipbo/blob/d580802c/server/gameLogic.js#L361-L363),
-  [`clearRematchVotes()`](https://github.com/s1ryx/skipbo/blob/d580802c/server/gameLogic.js#L365-L367),
-  [`canStartRematch()`](https://github.com/s1ryx/skipbo/blob/d580802c/server/gameLogic.js#L369-L371)
+- **Post-game reset** — [`resetToLobby()`](https://github.com/s1ryx/skipbo/blob/6c2f420/server/gameLogic.js#L365-L378)
+  returns a finished game to the lobby (clears the board, deck and
+  winner; keeps the players) so the room can host the next game
 - **Player mutators** — [`updateConnectionId()`](https://github.com/s1ryx/skipbo/blob/37ceeb5a/server/gameLogic.js#L107-L112),
   [`setSessionToken()`](https://github.com/s1ryx/skipbo/blob/cf76c4b9/server/gameLogic.js#L114-L119),
   [`setHost()`](https://github.com/s1ryx/skipbo/blob/dd6ec8a9/server/gameLogic.js#L121-L123)
@@ -271,7 +270,7 @@ index.js
                 │  └─ <PlayerHand>   ← current player's hand cards
                 │      └─ <Card>     ← individual card rendering
                 ├─ actions bar       ← end turn, cancel discard
-                ├─ <GameOverOverlay> ← winner display, rematch controls
+                ├─ <GameOverOverlay> ← winner + return-to-room control
                 ├─ <LeaveConfirmDialog> ← confirmation modal
                 └─ <Chat>            ← collapsible chat panel
 ```
@@ -282,18 +281,16 @@ Server-related state lives in the [`useGameConnection`](https://github.com/s1ryx
 custom hook (180 lines,
 [state declarations:6-35](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L6-L35)):
 
-| State                  | Type    | Purpose                                    |
-| ---------------------- | ------- | ------------------------------------------ |
-| `gameState`            | object  | Public game state from server              |
-| `playerState`          | object  | Private player state (hand, stockpile)     |
-| `playerId`             | string  | Current connection ID                      |
-| `roomId`               | string  | Current room code                          |
-| `inLobby`              | boolean | Controls Lobby vs game rendering           |
-| `error`                | string  | Temporary error message (auto-clears)      |
-| `isConnected`          | boolean | Transport connection status                |
-| `chatMessages`         | array   | Chat history (persisted to sessionStorage) |
-| `rematchVotes`         | array   | Current rematch votes                      |
-| `rematchStockpileSize` | number  | Rematch stockpile setting                  |
+| State          | Type    | Purpose                                    |
+| -------------- | ------- | ------------------------------------------ |
+| `gameState`    | object  | Public game state from server              |
+| `playerState`  | object  | Private player state (hand, stockpile)     |
+| `playerId`     | string  | Current connection ID                      |
+| `roomId`       | string  | Current room code                          |
+| `inLobby`      | boolean | Controls Lobby vs game rendering           |
+| `error`        | string  | Temporary error message (auto-clears)      |
+| `isConnected`  | boolean | Transport connection status                |
+| `chatMessages` | array   | Chat history (persisted to sessionStorage) |
 
 Message handlers are defined in [`messageHandlers.js`](https://github.com/s1ryx/skipbo/blob/aa958d98/client/src/messageHandlers.js)
 (176 lines of pure functions). The hook calls
@@ -332,8 +329,8 @@ server-related state themselves — they receive data and call callbacks.
 - Defines 11 action functions that send events through the transport
   ([useGameConnection.js:89-152](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L89-L152)):
   `createRoom`, `joinRoom`, `startGame`, `playCard`, `discardCard`,
-  `leaveLobby`, `leaveGame`, `requestRematch`, `updateRematchSettings`,
-  `sendChatMessage`, `addBot`, `removeBot`
+  `leaveLobby`, `leaveGame`, `returnToLobby`, `sendChatMessage`,
+  `addBot`, `removeBot`
 - Session persistence to localStorage, chat persistence to sessionStorage
   ([useGameConnection.js:37-41](https://github.com/s1ryx/skipbo/blob/2f493bf/client/src/useGameConnection.js#L37-L41))
 
@@ -360,6 +357,8 @@ server-related state themselves — they receive data and call callbacks.
 - Displays room ID, shareable link with copy button, and player list
 - Bot management: add/remove AI bots with type selection
 - Shows "Start Game" button when 2+ players present
+- Renders the collapsible `Chat` panel so players can talk before the
+  game starts
 - Calls `onStartGame`, `onLeaveLobby`, `onAddBot`, `onRemoveBot`
 
 **`GameBoard`** ([GameBoard.js](https://github.com/s1ryx/skipbo/blob/6006d61/client/src/components/GameBoard.js), 189 lines)
@@ -379,7 +378,7 @@ server-related state themselves — they receive data and call callbacks.
   - [`OpponentArea`](https://github.com/s1ryx/skipbo/blob/1b02ddbe/client/src/components/OpponentArea.js) (75 lines) — opponent info and visible state
   - [`BuildingPiles`](https://github.com/s1ryx/skipbo/blob/acbc9cc/client/src/components/BuildingPiles.js) (54 lines) — turn indicator + center piles with click handling
   - [`PlayerArea`](https://github.com/s1ryx/skipbo/blob/6ea856b/client/src/components/PlayerArea.js) (131 lines) — stockpile and hand (side by side), discard piles (below)
-  - [`GameOverOverlay`](https://github.com/s1ryx/skipbo/blob/4c4174cb/client/src/components/GameOverOverlay.js) (81 lines) — winner display, rematch voting
+  - [`GameOverOverlay`](https://github.com/s1ryx/skipbo/blob/b6cda0d/client/src/components/GameOverOverlay.js) (52 lines) — winner + a countdown-gated return-to-room button
   - [`LeaveConfirmDialog`](https://github.com/s1ryx/skipbo/blob/84a51994/client/src/components/LeaveConfirmDialog.js) (24 lines) — confirmation modal
 - Quick discard setting persisted to localStorage
   ([GameBoard.js:31-34](https://github.com/s1ryx/skipbo/blob/f03e48d7/client/src/components/GameBoard.js#L31-L34))
@@ -439,28 +438,27 @@ sends `reconnect` to rejoin the room. The server updates the player's
 connection ID to the new one via
 [`game.updateConnectionId()`](https://github.com/s1ryx/skipbo/blob/37ceeb5a/server/gameLogic.js#L107-L112).
 
-Session data is cleared on game over and game abort.
+Session data is cleared on game abort and explicit leave, not on game
+over — the room stays alive so players return to the waiting room.
 
 ## Event Reference
 
 ### Client → Server (emitted by client)
 
-| Event                               | Payload                                     | Handler                                   |
-| ----------------------------------- | ------------------------------------------- | ----------------------------------------- |
-| `createRoom`                        | `{ playerName, maxPlayers, stockpileSize }` | `handleCreateRoom`                        |
-| `joinRoom`                          | `{ roomId, playerName }`                    | `handleJoinRoom`                          |
-| `reconnect`                         | `{ roomId, sessionToken, playerName }`      | `handleReconnect`                         |
-| `startGame`                         | _(none)_                                    | `handleStartGame`                         |
-| `playCard`                          | `{ card, source, buildingPileIndex }`       | `handlePlayCard`                          |
-| `discardCard`                       | `{ card, discardPileIndex }`                | `handleDiscardCard`                       |
-| `sendChatMessage`                   | `{ message }`                               | `handleSendChatMessage`                   |
-| `leaveLobby`                        | _(none)_                                    | `handleLeaveLobby`                        |
-| `leaveGame`                         | _(none)_                                    | `handleLeaveGame`                         |
-| `requestRematch`                    | _(none)_                                    | `handleRequestRematch`                    |
-| `requestRematchWithoutDisconnected` | _(none)_                                    | `handleRequestRematchWithoutDisconnected` |
-| `updateRematchSettings`             | `{ stockpileSize }`                         | `handleUpdateRematchSettings`             |
-| `addBot`                            | `{ aiType }`                                | `handleAddBot`                            |
-| `removeBot`                         | `{ botPlayerId }`                           | `handleRemoveBot`                         |
+| Event             | Payload                                     | Handler                 |
+| ----------------- | ------------------------------------------- | ----------------------- |
+| `createRoom`      | `{ playerName, maxPlayers, stockpileSize }` | `handleCreateRoom`      |
+| `joinRoom`        | `{ roomId, playerName }`                    | `handleJoinRoom`        |
+| `reconnect`       | `{ roomId, sessionToken, playerName }`      | `handleReconnect`       |
+| `startGame`       | _(none)_                                    | `handleStartGame`       |
+| `playCard`        | `{ card, source, buildingPileIndex }`       | `handlePlayCard`        |
+| `discardCard`     | `{ card, discardPileIndex }`                | `handleDiscardCard`     |
+| `sendChatMessage` | `{ message }`                               | `handleSendChatMessage` |
+| `leaveLobby`      | _(none)_                                    | `handleLeaveLobby`      |
+| `leaveGame`       | _(none)_                                    | `handleLeaveGame`       |
+| `returnToLobby`   | _(none)_                                    | `handleReturnToLobby`   |
+| `addBot`          | `{ aiType }`                                | `handleAddBot`          |
+| `removeBot`       | `{ botPlayerId }`                           | `handleRemoveBot`       |
 
 ### Server → Client (emitted by server)
 
@@ -478,7 +476,6 @@ Session data is cleared on game over and game abort.
 | `gameOver`           | `{ winner, gameState }`                                        | `messageHandlers.gameOver`           |
 | `playerDisconnected` | `{ playerId }`                                                 | `messageHandlers.playerDisconnected` |
 | `gameAborted`        | _(none)_                                                       | `messageHandlers.gameAborted`        |
-| `rematchVoteUpdate`  | `{ rematchVotes, stockpileSize }`                              | `messageHandlers.rematchVoteUpdate`  |
 | `playerLeftPostGame` | `{ gameState }`                                                | `messageHandlers.playerLeftPostGame` |
 | `chatMessage`        | `{ playerId, playerName, stablePlayerId, message, timestamp }` | `messageHandlers.chatMessage`        |
 | `error`              | `{ message }` or `{ code, message }`                           | `messageHandlers.error`              |
@@ -638,27 +635,25 @@ Player disconnects (tab close, network loss)
     → If humans remain: room persists for reconnection
     → If no humans remain: schedules game deletion after
       grace period (GAME_GRACE_PERIOD_MS), pauses bot turns
-  → If post-game: transient, like mid-game — keeps the player
-    so their session token still resolves on reconnect, sends
-    'playerDisconnected', and drops only that player's rematch vote
+  → If post-game (FINISHED results screen): transient, like mid-game —
+    keeps the player so their session token still resolves on reconnect,
+    sends 'playerDisconnected'
     → If humans remain: room persists for reconnection
-    → If no humans remain: schedules game deletion after
-      grace period
+    → If no humans remain: cancels the auto-return and schedules game
+      deletion after the grace period
 ```
 
-A post-game disconnect is treated the same as a mid-game one: the
-player is kept in the game so a tab-out (e.g. a mobile renderer kill
-during a rematch) can reconnect with their session token. Only the
-explicit-leave path (`leaveGame` → `gameAborted`) removes a post-game
-player, so `playerLeftPostGame` is strictly the explicit-leave
-broadcast.
+A post-game disconnect is treated like a mid-game one: the player is
+kept in the game so a tab-out on the results screen can reconnect with
+their session token. The explicit-leave path (`leaveGame`) removes the
+leaving player and broadcasts `playerLeftPostGame` to the rest.
 
-Because a disconnected player is no longer auto-evicted, a rage-quit
-(someone who never returns) would otherwise block the rematch vote.
-The remaining players can break this with `requestRematchWithoutDisconnected`
-(`handleRequestRematchWithoutDisconnected`), which evicts every still-
-disconnected human and starts the rematch via the shared
-`_tryStartRematch` path if enough players remain.
+The room leaves the FINISHED results screen via `returnToLobby` — sent
+by any player once a minimum savor window (`POST_GAME_MIN_SAVOR_MS`) has
+passed, or fired automatically after `POST_GAME_AUTO_RETURN_MS`. Either
+way the game is reset to the lobby and re-broadcast, dropping everyone
+back into the waiting room where new players can join and the host
+starts the next game.
 
 ## Data Flow Diagram
 
@@ -695,7 +690,7 @@ disconnected human and starts the rematch via the shared
                                                                    └──────────────────┘
                   ┌──────────────────┐   ┌──────┐
                   │ GameOverOverlay  │   │ Chat │
-                  │ rematch controls │   │      │
+                  │ return-to-room   │   │      │
                   └──────────────────┘   └──────┘
 ```
 
