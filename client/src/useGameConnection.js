@@ -151,6 +151,10 @@ export default function useGameConnection() {
     transportRef.current?.send('leaveGame');
   }, []);
 
+  const returnToLobby = useCallback(() => {
+    transportRef.current?.send('returnToLobby');
+  }, []);
+
   const requestRematch = useCallback(() => {
     transportRef.current?.send('requestRematch');
   }, []);
@@ -196,6 +200,7 @@ export default function useGameConnection() {
     passTurn,
     leaveLobby,
     leaveGame,
+    returnToLobby,
     requestRematch,
     requestRematchWithoutDisconnected,
     updateRematchSettings,

@@ -67,6 +67,8 @@
   "game.quickDiscard": "Quick Discard (click discard pile with selected card)",
   "game.gameOver": "Game Over!",
   "game.winner": "Winner: {{name}}",
+  "game.backToRoom": "Back to room",
+  "game.backToRoomIn": "Back to room ({{seconds}})",
   "game.rematch": "Rematch",
   "game.rematchVoted": "Voted \u2713",
   "game.rematchWithoutDisconnected": "Rematch without disconnected",

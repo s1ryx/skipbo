@@ -18,11 +18,7 @@ function GameBoard({
   onDiscardCard,
   onPassTurn,
   onLeaveGame,
-  onRequestRematch,
-  onRequestRematchWithoutDisconnected,
-  onUpdateRematchSettings,
-  rematchVotes,
-  rematchStockpileSize,
+  onReturnToLobby,
   chatMessages,
   onSendChatMessage,
   onMarkMessagesRead,
@@ -168,12 +164,7 @@ function GameBoard({
       {gameState.gameOver && (
         <GameOverOverlay
           gameState={gameState}
-          playerId={playerId}
-          rematchVotes={rematchVotes}
-          rematchStockpileSize={rematchStockpileSize}
-          onRequestRematch={onRequestRematch}
-          onRequestRematchWithoutDisconnected={onRequestRematchWithoutDisconnected}
-          onUpdateRematchSettings={onUpdateRematchSettings}
+          onReturnToLobby={onReturnToLobby}
           onLeaveGame={onLeaveGame}
         />
       )}
