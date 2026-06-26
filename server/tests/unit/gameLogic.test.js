@@ -199,6 +199,31 @@ describe('SkipBoGame', () => {
     });
   });
 
+  describe('resetToLobby', () => {
+    it('returns a finished game to the lobby', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+      const p1 = game.players[0].internalId;
+      game.players[0].stockpile = [1];
+      game.players[0].hand = [2, 3, 4, 5, 6];
+      game.playCard(p1, 1, 'stockpile', 0);
+      expect(game.gameOver).toBe(true);
+
+      game.resetToLobby();
+
+      expect(game.gameStarted).toBe(false);
+      expect(game.gameOver).toBe(false);
+      expect(game.winner).toBeNull();
+      expect(game.finishedAt).toBeNull();
+      expect(game.buildingPiles.every((pile) => pile.length === 0)).toBe(true);
+      game.players.forEach((player) => {
+        expect(player.stockpile).toHaveLength(0);
+        expect(player.hand).toHaveLength(0);
+      });
+    });
+  });
+
   describe('getCurrentPlayer', () => {
     it('returns the player at currentPlayerIndex', () => {
       game.addPlayer('p1', 'Alice');
