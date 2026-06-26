@@ -32,9 +32,9 @@ function GameOverOverlay({ gameState, onReturnToLobby, onLeaveGame }) {
         <h2 id="game-over-title">{t('game.gameOver')}</h2>
         <p className="winner-text">{t('game.winner', { name: gameState.winner?.name })}</p>
 
-        <div className="rematch-section">
-          <div className="rematch-buttons">
-            <button onClick={onReturnToLobby} className="btn-rematch" disabled={!canReturn}>
+        <div className="game-over-actions">
+          <div className="game-over-buttons">
+            <button onClick={onReturnToLobby} className="btn-back-to-room" disabled={!canReturn}>
               {canReturn
                 ? t('game.backToRoom')
                 : t('game.backToRoomIn', { seconds: remainingSeconds })}

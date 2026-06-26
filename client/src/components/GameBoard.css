@@ -609,65 +609,19 @@
   font-weight: 600;
 }
 
-.rematch-section {
+.game-over-actions {
   border-top: 1px solid var(--color-border, #e0e0e0);
   padding-top: 20px;
   margin-top: 10px;
 }
 
-.rematch-settings {
-  margin-bottom: 15px;
-}
-
-.rematch-stockpile-label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.95rem;
-  color: var(--color-text-secondary);
-}
-
-.rematch-stockpile-display {
-  font-size: 0.95rem;
-  color: var(--color-text-secondary);
-}
-
-.rematch-votes {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.rematch-vote-player {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.95rem;
-}
-
-.vote-indicator {
-  font-size: 1.1rem;
-  color: var(--color-text-muted);
-  transition: color var(--transition-fast);
-}
-
-.vote-indicator.voted {
-  color: var(--color-success, #4caf50);
-}
-
-.vote-player-name {
-  color: var(--color-text-primary);
-}
-
-.rematch-buttons {
+.game-over-buttons {
   display: flex;
   justify-content: center;
   gap: 12px;
 }
 
-.btn-rematch {
+.btn-back-to-room {
   padding: 10px 24px;
   border: none;
   border-radius: var(--radius-base);
@@ -681,11 +635,11 @@
     opacity var(--transition-fast);
 }
 
-.btn-rematch:hover:not(:disabled) {
+.btn-back-to-room:hover:not(:disabled) {
   background: var(--color-primary-hover, #1976d2);
 }
 
-.btn-rematch.voted {
+.btn-back-to-room:disabled {
   opacity: 0.6;
   cursor: default;
 }
