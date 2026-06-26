@@ -69,12 +69,7 @@
   "game.winner": "Winner: {{name}}",
   "game.backToRoom": "Back to room",
   "game.backToRoomIn": "Back to room ({{seconds}})",
-  "game.rematch": "Rematch",
-  "game.rematchVoted": "Voted \u2713",
-  "game.rematchWithoutDisconnected": "Rematch without disconnected",
-  "game.disconnectedTag": "(disconnected)",
   "game.leave": "Leave",
-  "game.rematchStockpile": "Stockpile: {{count}} cards",
 
   "game.bot": "(Bot)",
   "game.addBot": "Add Bot",
