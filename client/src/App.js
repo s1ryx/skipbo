@@ -91,6 +91,9 @@ function App() {
             onLeaveLobby={leaveLobby}
             onAddBot={addBot}
             onRemoveBot={removeBot}
+            chatMessages={chatMessages}
+            onSendChatMessage={sendChatMessage}
+            onMarkMessagesRead={markMessagesAsRead}
           />
         ) : (
           <GameBoard

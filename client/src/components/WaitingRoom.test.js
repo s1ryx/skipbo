@@ -38,6 +38,9 @@ const defaultProps = {
   roomId: 'TESTROOM',
   onStartGame: jest.fn(),
   onLeaveLobby: jest.fn(),
+  chatMessages: [],
+  onSendChatMessage: jest.fn(),
+  onMarkMessagesRead: jest.fn(),
 };
 
 const renderWaitingRoom = (props = {}) => {
@@ -49,6 +52,11 @@ const renderWaitingRoom = (props = {}) => {
 };
 
 describe('WaitingRoom', () => {
+  it('renders the chat panel', () => {
+    renderWaitingRoom();
+    expect(screen.getByText('Chat')).toBeInTheDocument();
+  });
+
   it('shows loading when gameState is null', () => {
     renderWaitingRoom({ gameState: null });
     expect(screen.getByText('Loading game...')).toBeInTheDocument();
