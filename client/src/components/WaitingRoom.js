@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './WaitingRoom.css';
 import Chat from './Chat';
 import { useTranslation } from '../i18n';
@@ -11,6 +11,7 @@ function WaitingRoom({
   onLeaveLobby,
   onAddBot,
   onRemoveBot,
+  onUpdateStockpileSize,
   chatMessages,
   onSendChatMessage,
   onMarkMessagesRead,
@@ -18,6 +19,12 @@ function WaitingRoom({
   const { t } = useTranslation();
   const [copySuccess, setCopySuccess] = useState(false);
   const [aiType, setAiType] = useState('improved');
+  const [localStockpileSize, setLocalStockpileSize] = useState(null);
+  const stockpileDebounce = useRef(null);
+
+  useEffect(() => () => clearTimeout(stockpileDebounce.current), []);
+  // Follow the server's confirmed value once a change round-trips.
+  useEffect(() => setLocalStockpileSize(null), [gameState?.stockpileSize]);
 
   if (!gameState) {
     return <div className="loading">{t('game.loadingGame')}</div>;
@@ -35,6 +42,17 @@ function WaitingRoom({
     } catch (err) {
       console.error('Failed to copy link:', err); // eslint-disable-line no-console
     }
+  };
+
+  // Mirrors the server's getMaxStockpileSize (by current player count).
+  const maxStockpile = gameState.players.length <= 4 ? 30 : 20;
+  const displayStockpile = localStockpileSize ?? gameState.stockpileSize;
+
+  const handleStockpileChange = (e) => {
+    const value = parseInt(e.target.value);
+    setLocalStockpileSize(value);
+    clearTimeout(stockpileDebounce.current);
+    stockpileDebounce.current = setTimeout(() => onUpdateStockpileSize(value), 300);
   };
 
   return (
@@ -110,6 +128,27 @@ function WaitingRoom({
           </button>
         </div>
       )}
+
+      <div className="stockpile-config">
+        {isHost ? (
+          <label className="stockpile-label">
+            {t('lobby.stockpileSize', { count: displayStockpile })}
+            <input
+              type="range"
+              min="5"
+              max={maxStockpile}
+              step="5"
+              value={displayStockpile}
+              onChange={handleStockpileChange}
+              className="stockpile-slider"
+            />
+          </label>
+        ) : (
+          <span className="stockpile-display">
+            {t('lobby.stockpileSize', { count: displayStockpile })}
+          </span>
+        )}
+      </div>
 
       {gameState.players.length < 2 && <p>{t('game.waitingForPlayers')}</p>}
 

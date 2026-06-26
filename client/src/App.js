@@ -60,6 +60,7 @@ function App() {
     leaveLobby,
     leaveGame,
     returnToLobby,
+    updateStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
     addBot,
@@ -91,6 +92,7 @@ function App() {
             onLeaveLobby={leaveLobby}
             onAddBot={addBot}
             onRemoveBot={removeBot}
+            onUpdateStockpileSize={updateStockpileSize}
             chatMessages={chatMessages}
             onSendChatMessage={sendChatMessage}
             onMarkMessagesRead={markMessagesAsRead}

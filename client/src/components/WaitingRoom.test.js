@@ -26,6 +26,7 @@ const makeGameState = (overrides = {}) => ({
   currentPlayerId: 'p1',
   hostPlayerId: 'p1',
   deckCount: 100,
+  stockpileSize: 20,
   gameStarted: false,
   gameOver: false,
   winner: null,
@@ -38,6 +39,7 @@ const defaultProps = {
   roomId: 'TESTROOM',
   onStartGame: jest.fn(),
   onLeaveLobby: jest.fn(),
+  onUpdateStockpileSize: jest.fn(),
   chatMessages: [],
   onSendChatMessage: jest.fn(),
   onMarkMessagesRead: jest.fn(),
@@ -55,6 +57,30 @@ describe('WaitingRoom', () => {
   it('renders the chat panel', () => {
     renderWaitingRoom();
     expect(screen.getByText('Chat')).toBeInTheDocument();
+  });
+
+  it('shows a stockpile slider to the host', () => {
+    renderWaitingRoom({ playerId: 'p1' });
+    expect(screen.getByRole('slider')).toBeInTheDocument();
+    expect(screen.getByText('Stockpile Size: 20 cards')).toBeInTheDocument();
+  });
+
+  it('shows a read-only stockpile value to non-hosts', () => {
+    renderWaitingRoom({ playerId: 'p2' });
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+    expect(screen.getByText('Stockpile Size: 20 cards')).toBeInTheDocument();
+  });
+
+  it('sends the new stockpile size after the host adjusts it', () => {
+    jest.useFakeTimers();
+    const onUpdateStockpileSize = jest.fn();
+    renderWaitingRoom({ playerId: 'p1', onUpdateStockpileSize });
+
+    fireEvent.change(screen.getByRole('slider'), { target: { value: '15' } });
+    jest.advanceTimersByTime(300);
+
+    expect(onUpdateStockpileSize).toHaveBeenCalledWith(15);
+    jest.useRealTimers();
   });
 
   it('shows loading when gameState is null', () => {
