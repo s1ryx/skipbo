@@ -199,6 +199,31 @@ describe('SkipBoGame', () => {
     });
   });
 
+  describe('resetToLobby', () => {
+    it('returns a finished game to the lobby', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+      const p1 = game.players[0].internalId;
+      game.players[0].stockpile = [1];
+      game.players[0].hand = [2, 3, 4, 5, 6];
+      game.playCard(p1, 1, 'stockpile', 0);
+      expect(game.gameOver).toBe(true);
+
+      game.resetToLobby();
+
+      expect(game.gameStarted).toBe(false);
+      expect(game.gameOver).toBe(false);
+      expect(game.winner).toBeNull();
+      expect(game.finishedAt).toBeNull();
+      expect(game.buildingPiles.every((pile) => pile.length === 0)).toBe(true);
+      game.players.forEach((player) => {
+        expect(player.stockpile).toHaveLength(0);
+        expect(player.hand).toHaveLength(0);
+      });
+    });
+  });
+
   describe('getCurrentPlayer', () => {
     it('returns the player at currentPlayerIndex', () => {
       game.addPlayer('p1', 'Alice');
@@ -351,6 +376,19 @@ describe('SkipBoGame', () => {
       game.playCard(p1, 1, 'stockpile', 0);
       expect(game.gameOver).toBe(true);
       expect(game.winner).toBe(player);
+    });
+
+    it('stamps finishedAt when the game ends', () => {
+      const player = game.players[0];
+      player.stockpile = [1];
+      player.hand = [2, 3, 4, 5, 6];
+
+      expect(game.finishedAt).toBeNull();
+      const before = Date.now();
+      game.playCard(p1, 1, 'stockpile', 0);
+
+      expect(typeof game.finishedAt).toBe('number');
+      expect(game.finishedAt).toBeGreaterThanOrEqual(before);
     });
 
     it('returns error for card not found in hand', () => {
@@ -573,6 +611,7 @@ describe('SkipBoGame', () => {
           gameStarted: true,
           gameOver: false,
           winner: null,
+          finishedAt: null,
         })
       );
       expect(state.players).toHaveLength(2);

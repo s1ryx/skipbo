@@ -1,5 +1,5 @@
 const GameCoordinator = require('../../gameCoordinator');
-const { LOBBY_GRACE_PERIOD_MS } = require('../../config');
+const { LOBBY_GRACE_PERIOD_MS, POST_GAME_MIN_SAVOR_MS } = require('../../config');
 
 function createMockTransport() {
   return {
@@ -1269,6 +1269,50 @@ describe('GameCoordinator', () => {
       for (const [, timeoutId] of coordinator.pendingDeletions) {
         clearTimeout(timeoutId);
       }
+    });
+  });
+
+  describe('returnToLobby', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('returns a finished game to the waiting room and broadcasts state', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      // Simulate the savor window having elapsed.
+      game.finishedAt = Date.now() - POST_GAME_MIN_SAVOR_MS - 1;
+      transport.send.mockClear();
+
+      coordinator.getTransportHandlers().onMessage('player1', 'returnToLobby', {});
+
+      expect(game.gameStarted).toBe(false);
+      expect(game.gameOver).toBe(false);
+      const update = transport.send.mock.calls.find((c) => c[1] === 'gameStateUpdate');
+      expect(update).toBeDefined();
+      expect(update[2].gameState.gameStarted).toBe(false);
+    });
+
+    it('ignores the request before the savor window elapses', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      game.finishedAt = Date.now();
+
+      coordinator.getTransportHandlers().onMessage('player1', 'returnToLobby', {});
+
+      expect(game.gameOver).toBe(true);
+    });
+
+    it('ignores the request when the game is still in progress', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+
+      coordinator.getTransportHandlers().onMessage('player1', 'returnToLobby', {});
+
+      expect(game.gameStarted).toBe(true);
+      expect(game.gameOver).toBe(false);
     });
   });
 

@@ -36,6 +36,7 @@ class SkipBoGame {
     this.currentPlayerIndex = 0;
     this.phase = Phase.LOBBY;
     this.winner = null;
+    this.finishedAt = null;
     this.rematchVotes = new Set();
   }
 
@@ -161,6 +162,7 @@ class SkipBoGame {
 
     this.phase = Phase.PLAYING;
     this.currentPlayerIndex = 0;
+    this.finishedAt = null;
     return true;
   }
 
@@ -289,6 +291,7 @@ class SkipBoGame {
     if (player.stockpile.length === 0) {
       this.phase = Phase.FINISHED;
       this.winner = player;
+      this.finishedAt = Date.now();
     }
 
     return { success: true };
@@ -385,6 +388,7 @@ class SkipBoGame {
   resetToLobby() {
     this.phase = Phase.LOBBY;
     this.winner = null;
+    this.finishedAt = null;
     this.deck = [];
     this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
     this.currentPlayerIndex = 0;
@@ -418,6 +422,7 @@ class SkipBoGame {
       gameStarted: this.gameStarted,
       gameOver: this.gameOver,
       winner: this.winner ? { id: this.winner.publicId, name: this.winner.name } : null,
+      finishedAt: this.finishedAt,
       stockpileSize: this.stockpileSize || this.getMaxStockpileSize(),
       rematchVotes: this.getRematchVoterPublicIds(),
     };
