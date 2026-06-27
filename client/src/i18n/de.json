@@ -69,12 +69,7 @@
   "game.winner": "Gewinner: {{name}}",
   "game.backToRoom": "Zurück zum Raum",
   "game.backToRoomIn": "Zurück zum Raum ({{seconds}})",
-  "game.rematch": "Revanche",
-  "game.rematchVoted": "Abgestimmt \u2713",
-  "game.rematchWithoutDisconnected": "Revanche ohne getrennte Spieler",
-  "game.disconnectedTag": "(getrennt)",
   "game.leave": "Verlassen",
-  "game.rematchStockpile": "Kartenstapel: {{count}} Karten",
 
   "game.bot": "(Bot)",
   "game.addBot": "Bot hinzufügen",

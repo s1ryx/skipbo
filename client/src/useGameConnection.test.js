@@ -296,7 +296,7 @@ describe('useGameConnection', () => {
   });
 
   describe('gameOver event', () => {
-    it('preserves session and chat so a rematch reconnect works', () => {
+    it('preserves session and chat so a post-game reconnect works', () => {
       localStorage.setItem('skipBoSession', JSON.stringify({ roomId: 'ROOM01' }));
       sessionStorage.setItem('skipBoChat_ROOM01', JSON.stringify([{ message: 'hi' }]));
 
@@ -559,118 +559,24 @@ describe('useGameConnection', () => {
     });
   });
 
-  describe('rematch events', () => {
-    it('rematchVoteUpdate sets votes and stockpile size', () => {
+  describe('returnToLobby', () => {
+    it('emits the returnToLobby event', () => {
       const { result } = renderHook(() => useGameConnection());
       act(() => {
-        mockSocket._trigger('rematchVoteUpdate', {
-          rematchVotes: ['p1'],
-          stockpileSize: 20,
-        });
+        result.current.returnToLobby();
       });
-      expect(result.current.rematchVotes).toEqual(['p1']);
-      expect(result.current.rematchStockpileSize).toBe(20);
+      expect(mockSocket.emit).toHaveBeenCalledWith('returnToLobby', undefined);
     });
+  });
 
-    it('playerLeftPostGame updates gameState and clears rematch state', () => {
+  describe('playerLeftPostGame', () => {
+    it('updates gameState', () => {
       const { result } = renderHook(() => useGameConnection());
-      // Set rematch state first
-      act(() => {
-        mockSocket._trigger('rematchVoteUpdate', {
-          rematchVotes: ['p1'],
-          stockpileSize: 15,
-        });
-      });
-      expect(result.current.rematchVotes).toEqual(['p1']);
-
       const updatedGameState = { ...fakeGameState, players: [] };
       act(() => {
         mockSocket._trigger('playerLeftPostGame', { gameState: updatedGameState });
       });
       expect(result.current.gameState).toEqual(updatedGameState);
-      expect(result.current.rematchVotes).toEqual([]);
-      expect(result.current.rematchStockpileSize).toBeNull();
-    });
-
-    it('gameStarted clears rematch state', () => {
-      const { result } = renderHook(() => useGameConnection());
-      act(() => {
-        mockSocket._trigger('rematchVoteUpdate', {
-          rematchVotes: ['p1'],
-          stockpileSize: 10,
-        });
-      });
-      expect(result.current.rematchVotes).toEqual(['p1']);
-
-      act(() => {
-        mockSocket._trigger('gameStarted', {
-          gameState: { ...fakeGameState, gameStarted: true },
-          playerState: fakePlayerState,
-        });
-      });
-      expect(result.current.rematchVotes).toEqual([]);
-      expect(result.current.rematchStockpileSize).toBeNull();
-    });
-
-    it('gameAborted clears rematch state', () => {
-      const { result } = renderHook(() => useGameConnection());
-      // Enter a room first
-      act(() => {
-        mockSocket._trigger('roomCreated', {
-          roomId: 'ROOM01',
-          playerId: 'p1',
-          sessionToken: 'tok-1',
-          gameState: fakeGameState,
-        });
-      });
-      act(() => {
-        mockSocket._trigger('rematchVoteUpdate', {
-          rematchVotes: ['p1'],
-          stockpileSize: 10,
-        });
-      });
-
-      act(() => {
-        mockSocket._trigger('gameAborted');
-      });
-      expect(result.current.rematchVotes).toEqual([]);
-      expect(result.current.rematchStockpileSize).toBeNull();
-    });
-
-    it('reconnected loads rematchVotes when game is over', () => {
-      const { result } = renderHook(() => useGameConnection());
-      act(() => {
-        mockSocket._trigger('reconnected', {
-          roomId: 'ROOM01',
-          playerId: 'p1',
-          sessionToken: 'tok-1',
-          gameState: {
-            ...fakeGameState,
-            gameOver: true,
-            rematchVotes: ['p1'],
-          },
-          playerState: fakePlayerState,
-        });
-      });
-      expect(result.current.rematchVotes).toEqual(['p1']);
-    });
-
-    it('requestRematch emits event', () => {
-      const { result } = renderHook(() => useGameConnection());
-      act(() => {
-        result.current.requestRematch();
-      });
-      expect(mockSocket.emit).toHaveBeenCalledWith('requestRematch', undefined);
-    });
-
-    it('updateRematchSettings emits event with stockpile size', () => {
-      const { result } = renderHook(() => useGameConnection());
-      act(() => {
-        result.current.updateRematchSettings(15);
-      });
-      expect(mockSocket.emit).toHaveBeenCalledWith('updateRematchSettings', {
-        stockpileSize: 15,
-      });
     });
   });
 

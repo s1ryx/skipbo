@@ -13,8 +13,6 @@ const CLIENT_EVENTS = [
   'leaveLobby',
   'leaveGame',
   'returnToLobby',
-  'requestRematch',
-  'updateRematchSettings',
   'addBot',
   'removeBot',
 ];
