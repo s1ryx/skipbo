@@ -1,5 +1,9 @@
 const GameCoordinator = require('../../gameCoordinator');
-const { LOBBY_GRACE_PERIOD_MS, POST_GAME_MIN_SAVOR_MS } = require('../../config');
+const {
+  LOBBY_GRACE_PERIOD_MS,
+  POST_GAME_MIN_SAVOR_MS,
+  POST_GAME_AUTO_RETURN_MS,
+} = require('../../config');
 
 function createMockTransport() {
   return {
@@ -1152,11 +1156,11 @@ describe('GameCoordinator', () => {
     });
   });
 
-  describe('completedGameCleanup', () => {
+  describe('post-game auto-return', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
-    it('cleans up completed game after TTL', () => {
+    it('returns a completed game to the lobby after the window', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1179,15 +1183,15 @@ describe('GameCoordinator', () => {
       expect(game.gameOver).toBe(true);
       expect(coordinator.games.has(roomId)).toBe(true);
 
-      // Advance past TTL
-      jest.advanceTimersByTime(300001);
+      jest.advanceTimersByTime(POST_GAME_AUTO_RETURN_MS);
 
-      expect(coordinator.games.has(roomId)).toBe(false);
-      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
-      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
+      // The room returns to the waiting room, not deleted; players stay.
+      expect(coordinator.games.has(roomId)).toBe(true);
+      expect(game.gameStarted).toBe(false);
+      expect(game.gameOver).toBe(false);
     });
 
-    it('keeps cleanup timer when one player leaves post-game', () => {
+    it('keeps the auto-return timer when one player leaves post-game', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1215,7 +1219,7 @@ describe('GameCoordinator', () => {
       expect(coordinator.games.has(roomId)).toBe(true);
     });
 
-    it('cancels cleanup when last player leaves post-game', () => {
+    it('cancels the auto-return when the last player leaves post-game', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();

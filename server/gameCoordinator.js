@@ -10,8 +10,8 @@ const {
   GAME_GRACE_PERIOD_MS,
   MAX_PENDING_ROOMS,
   MAX_TOTAL_ROOMS,
-  COMPLETED_GAME_TTL_MS,
   POST_GAME_MIN_SAVOR_MS,
+  POST_GAME_AUTO_RETURN_MS,
   MIN_PLAYERS,
   MAX_PLAYERS,
   MIN_STOCKPILE_SIZE,
@@ -384,7 +384,7 @@ class GameCoordinator {
     if (game.phase === Phase.PLAYING) {
       this._scheduleBotTurnIfNeeded(roomId);
     } else if (game.phase === Phase.FINISHED) {
-      this.scheduleCompletedGameCleanup(roomId);
+      this.scheduleAutoReturnToLobby(roomId);
     }
   }
 
@@ -686,7 +686,7 @@ class GameCoordinator {
 
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
-        this.cancelCompletedGameCleanup(roomId);
+        this.cancelAutoReturnToLobby(roomId);
         this._cleanupLogger(roomId);
         this.botManager.cleanup(roomId);
         this.sessionManager.removeAllForPlayers(game.players);
@@ -717,7 +717,7 @@ class GameCoordinator {
       });
 
       this.cancelPendingDeletion(roomId);
-      this.cancelCompletedGameCleanup(roomId);
+      this.cancelAutoReturnToLobby(roomId);
       this._cleanupLogger(roomId);
       this.botManager.cleanup(roomId);
       this.gameRepository.deleteGame(roomId);
@@ -737,7 +737,7 @@ class GameCoordinator {
     // post-game results screen short for the rest of the room.
     if (Date.now() - game.finishedAt < POST_GAME_MIN_SAVOR_MS) return;
 
-    this.cancelCompletedGameCleanup(roomId);
+    this.cancelAutoReturnToLobby(roomId);
     game.resetToLobby();
     this._broadcastToHumans(roomId, game);
   }
@@ -780,7 +780,7 @@ class GameCoordinator {
     // and strand the room in a half-reset lobby state.
     if (game.players.length < MIN_PLAYERS) return false;
 
-    this.cancelCompletedGameCleanup(roomId);
+    this.cancelAutoReturnToLobby(roomId);
     game.resetToLobby();
     game.startGame();
 
@@ -958,7 +958,7 @@ class GameCoordinator {
           roomId,
           publicId,
         });
-        this.cancelCompletedGameCleanup(roomId);
+        this.cancelAutoReturnToLobby(roomId);
         this.scheduleGameDeletion(roomId);
       } else {
         this.logger.info('disconnect', {
@@ -1089,7 +1089,7 @@ class GameCoordinator {
     this._cancelAllLobbyDisconnects(roomId);
     const game = this.gameRepository.getGame(roomId);
     if (game) {
-      this.cancelCompletedGameCleanup(roomId);
+      this.cancelAutoReturnToLobby(roomId);
       this._cleanupLogger(roomId);
       this.botManager.cleanup(roomId);
       game.players.forEach((p) => {
@@ -1139,32 +1139,23 @@ class GameCoordinator {
     this.lobbyDisconnectTimers.delete(roomId);
   }
 
-  scheduleCompletedGameCleanup(roomId) {
+  scheduleAutoReturnToLobby(roomId) {
     this.gameRepository.scheduleCompletedCleanup(
       roomId,
       () => {
         const game = this.gameRepository.getGame(roomId);
-        this.logger.info('deletion fired', {
-          kind: 'completed',
-          roomId,
-          stillExists: !!game,
-        });
-        if (game) {
-          game.players.forEach((p) => {
-            this.sessionManager.removeRoom(p.connectionId);
-          });
-        }
-        this.botManager.clearAIs(roomId);
-        this.gameRepository.deleteGame(roomId);
-        this.logger.info('completed game cleaned up after TTL', { roomId });
+        if (!game || game.phase !== Phase.FINISHED) return;
+        game.resetToLobby();
+        this._broadcastToHumans(roomId, game);
+        this.logger.info('auto-returned to lobby after savor window', { roomId });
       },
-      COMPLETED_GAME_TTL_MS
+      POST_GAME_AUTO_RETURN_MS
     );
   }
 
-  cancelCompletedGameCleanup(roomId) {
+  cancelAutoReturnToLobby(roomId) {
     if (this.gameRepository.cancelCompletedCleanup(roomId)) {
-      this.logger.info('cancelled completed cleanup', { roomId });
+      this.logger.info('cancelled auto-return', { roomId });
     }
   }
 
@@ -1393,7 +1384,7 @@ class GameCoordinator {
     });
 
     this.botManager.clearTimers(roomId);
-    this.scheduleCompletedGameCleanup(roomId);
+    this.scheduleAutoReturnToLobby(roomId);
   }
 
   _getDecoratedGameState(game) {
