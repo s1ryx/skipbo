@@ -67,6 +67,8 @@
   "game.quickDiscard": "Hızlı Iskarta (seçili kartla Iskarta destene tıkla)",
   "game.gameOver": "Oyun Bitti!",
   "game.winner": "Kazanan: {{name}}",
+  "game.backToRoom": "Odaya dön",
+  "game.backToRoomIn": "Odaya dön ({{seconds}})",
   "game.rematch": "Rövanş",
   "game.rematchVoted": "Oy verildi \u2713",
   "game.rematchWithoutDisconnected": "Bağlantısı kesilenler olmadan rövanş",

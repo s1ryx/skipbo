@@ -67,6 +67,8 @@
   "game.quickDiscard": "Schnell ablegen (Hilfsstapel mit gewählter Karte anklicken)",
   "game.gameOver": "Spiel vorbei!",
   "game.winner": "Gewinner: {{name}}",
+  "game.backToRoom": "Zurück zum Raum",
+  "game.backToRoomIn": "Zurück zum Raum ({{seconds}})",
   "game.rematch": "Revanche",
   "game.rematchVoted": "Abgestimmt \u2713",
   "game.rematchWithoutDisconnected": "Revanche ohne getrennte Spieler",

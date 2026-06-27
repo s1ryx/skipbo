@@ -49,10 +49,7 @@ const defaultProps = {
   onPlayCard: jest.fn(),
   onDiscardCard: jest.fn(),
   onLeaveGame: jest.fn(),
-  onRequestRematch: jest.fn(),
-  onUpdateRematchSettings: jest.fn(),
-  rematchVotes: [],
-  rematchStockpileSize: 30,
+  onReturnToLobby: jest.fn(),
   chatMessages: [],
   onSendChatMessage: jest.fn(),
   onMarkMessagesRead: jest.fn(),
@@ -223,57 +220,24 @@ describe('GameBoard', () => {
     });
   });
 
-  describe('rematch section', () => {
+  describe('return to room', () => {
     const gameOverState = makeGameState({
       gameOver: true,
       winner: { name: 'Alice' },
-      hostPlayerId: 'p1',
-      stockpileSize: 30,
+      finishedAt: Date.now() - 11000, // savor window already elapsed
     });
 
-    it('shows rematch section when game is over', () => {
+    it('shows the return-to-room control when the game is over', () => {
       renderGameBoard({ gameState: gameOverState });
-      expect(screen.getByText('Rematch')).toBeInTheDocument();
+      expect(screen.getByText('Back to room')).toBeInTheDocument();
       expect(screen.getByText('Leave')).toBeInTheDocument();
     });
 
-    it('shows stockpile slider for host', () => {
-      renderGameBoard({ gameState: gameOverState, playerId: 'p1' });
-      const slider = screen.getByRole('slider');
-      expect(slider).toBeInTheDocument();
-      expect(slider).toHaveAttribute('min', '5');
-      expect(slider).toHaveAttribute('max', '30');
-    });
-
-    it('shows stockpile display for non-host', () => {
-      renderGameBoard({ gameState: gameOverState, playerId: 'p2' });
-      expect(screen.queryByRole('slider')).not.toBeInTheDocument();
-      expect(screen.getByText('Stockpile: 30 cards')).toBeInTheDocument();
-    });
-
-    it('shows checkmark for voted and circle for unvoted', () => {
-      renderGameBoard({
-        gameState: gameOverState,
-        rematchVotes: ['p1'],
-      });
-      expect(screen.getByText('\u2713')).toBeInTheDocument();
-      expect(screen.getByText('\u25CB')).toBeInTheDocument();
-    });
-
-    it('disables rematch button after voting', () => {
-      renderGameBoard({
-        gameState: gameOverState,
-        rematchVotes: ['p1'],
-      });
-      const votedButton = screen.getByText('Voted \u2713');
-      expect(votedButton).toBeDisabled();
-    });
-
-    it('calls onRequestRematch on click', () => {
-      const onRequestRematch = jest.fn();
-      renderGameBoard({ gameState: gameOverState, onRequestRematch });
-      fireEvent.click(screen.getByText('Rematch'));
-      expect(onRequestRematch).toHaveBeenCalledTimes(1);
+    it('calls onReturnToLobby when Back to room is clicked', () => {
+      const onReturnToLobby = jest.fn();
+      renderGameBoard({ gameState: gameOverState, onReturnToLobby });
+      fireEvent.click(screen.getByText('Back to room'));
+      expect(onReturnToLobby).toHaveBeenCalledTimes(1);
     });
 
     it('calls onLeaveGame on leave click', () => {

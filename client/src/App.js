@@ -59,11 +59,7 @@ function App() {
     passTurn,
     leaveLobby,
     leaveGame,
-    requestRematch,
-    requestRematchWithoutDisconnected,
-    updateRematchSettings,
-    rematchVotes,
-    rematchStockpileSize,
+    returnToLobby,
     sendChatMessage,
     markMessagesAsRead,
     addBot,
@@ -106,11 +102,7 @@ function App() {
             onDiscardCard={discardCard}
             onPassTurn={passTurn}
             onLeaveGame={leaveGame}
-            onRequestRematch={requestRematch}
-            onRequestRematchWithoutDisconnected={requestRematchWithoutDisconnected}
-            onUpdateRematchSettings={updateRematchSettings}
-            rematchVotes={rematchVotes}
-            rematchStockpileSize={rematchStockpileSize}
+            onReturnToLobby={returnToLobby}
             chatMessages={chatMessages}
             onSendChatMessage={sendChatMessage}
             onMarkMessagesRead={markMessagesAsRead}
