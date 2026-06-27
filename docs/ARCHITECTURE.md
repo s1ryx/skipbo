@@ -715,3 +715,35 @@ disconnected human and starts the rematch via the shared
 | Key                   | Value                            | Used by                  |
 | --------------------- | -------------------------------- | ------------------------ |
 | `skipBoChat_{roomId}` | `[{ message, playerName, ... }]` | Chat message persistence |
+
+## Maintaining This Document
+
+This document cites code through GitHub permalinks pinned to a commit SHA, so a
+reference keeps pointing at the code it describes even as files change:
+
+```
+https://github.com/s1ryx/skipbo/blob/<sha>/<path>#L<start>-L<end>
+```
+
+When you change code this document references, repoint its links:
+
+- **Which SHA** — the commit that last changed _that specific block_
+  (`git blame -s <file>`), not the branch tip and not merely the last commit to
+  touch the file. Different blocks in the same file therefore carry different
+  SHAs. The commit need not be pushed; the link resolves once it reaches a
+  pushed branch.
+- **Line numbers are as of that SHA, not HEAD** — GitHub renders the file at
+  `<sha>`, so `#L<start>-L<end>` must match the lines _in that commit_. Don't
+  paste working-tree line numbers unless nothing has moved them since:
+  `git log <sha>..HEAD -- <path>` being empty confirms they're still current;
+  otherwise read the block at the commit with `git show <sha>:<path>`.
+- **`--no-ff` merges keep SHAs valid** — a merge doesn't rewrite the merged
+  commits, so a blame SHA and its line range survive it. Update the doc in the
+  last commit before merging, or in a follow-up `docs:` commit on `develop`;
+  the merge changes neither.
+- **Also refresh** the non-permalink parts when they drift: approximate line
+  counts (`wc -l`), the component tree, the Event Reference table (events are
+  listed by name, without permalinks), and the data-flow diagram.
+
+Do this only after any history rewrite (rebase/amend) is finished — rewriting
+invalidates the SHAs.
