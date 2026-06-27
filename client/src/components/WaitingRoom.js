@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './WaitingRoom.css';
+import Chat from './Chat';
 import { useTranslation } from '../i18n';
 
 function WaitingRoom({
@@ -10,6 +11,9 @@ function WaitingRoom({
   onLeaveLobby,
   onAddBot,
   onRemoveBot,
+  chatMessages,
+  onSendChatMessage,
+  onMarkMessagesRead,
 }) {
   const { t } = useTranslation();
   const [copySuccess, setCopySuccess] = useState(false);
@@ -119,6 +123,13 @@ function WaitingRoom({
           </button>
         )}
       </div>
+
+      <Chat
+        messages={chatMessages}
+        onSendMessage={onSendChatMessage}
+        onMarkMessagesRead={onMarkMessagesRead}
+        playerId={playerId}
+      />
     </div>
   );
 }
