@@ -38,7 +38,7 @@ The scope is the **subsystem** touched — an area of the project, not a single 
 
 This is the canonical list of areas, not an exhaustive file map — scope a change to the subsystem it serves. Small foundation files (`errors.js`, `logger.js`, server bootstrap) take the scope of whatever change touches them. **There is no `tests` scope:** test files take the scope of the code they exercise and ship in the same commit (see [Atomic Commits](#atomic-commits)).
 
-**One scope per commit.** If a change spans two areas, that is usually a sign it should be two commits (see [Atomic Commits](#atomic-commits)). When a change genuinely belongs to two scopes, list both: `coordinator, game: …`.
+**Prefer one scope per commit, but the unit is the _concern_, not the scope.** If a change spans two areas because it is two concerns, split it. If it is **one** concern that happens to span areas — a feature added or removed across client and server, a rename across files — keep it one commit and list both scopes: `coordinator, game: …`. See [Atomic Commits](#atomic-commits).
 
 ## Subject Line
 
@@ -63,13 +63,17 @@ This is the canonical list of areas, not an exhaustive file map — scope a chan
 
 ## Body
 
-- **Wrap at 72 characters per line**
-- Leave a blank line after the subject
-- Explain **why** the change was made and **how** it addresses the issue
-- Use bullet points for multiple items
-- Provide context that isn't obvious from the code
+The body explains **why** the change was made and **how** it addresses the
+problem. The _what_ is already in the diff — a body that only restates the diff
+has failed its job. This is the most important rule here: respect it on every
+non-trivial commit.
 
-**Example:**
+- Lead with the **why**: what was wrong, or what goal the change serves
+- Then the **how**: the approach, and context not obvious from the code
+- Leave a blank line after the subject; wrap at 72 characters per line
+- Use bullet points for multiple items
+
+**Good** — gives the why and the how:
 
 ```
 coordinator: preserve player on post-game disconnect
@@ -79,6 +83,18 @@ player's session token no longer resolved and reconnect failed. Treat it
 like a mid-game disconnect: keep the player in the game and broadcast
 'playerDisconnected' so they can reconnect into the room.
 ```
+
+**Bad** — just narrates the diff:
+
+```
+coordinator: preserve player on post-game disconnect
+
+Stop calling removePlayer in handleDisconnect; emit playerDisconnected
+instead.
+```
+
+_The diff already shows that line change. The body has to add what it can't:
+why the old behaviour was wrong and what the new one restores._
 
 ## Footer (Optional)
 
@@ -105,20 +121,26 @@ Closes #56
 
 ## Atomic Commits
 
-**Philosophy: Make commits as small as possible while keeping them atomic.**
+**A commit is one complete, self-contained logical change** — the smallest change a reviewer can fully understand from its own diff, leaving the tree building and passing. Two gates dominate, and "smallest" is bounded by them:
 
-Each commit should represent **one logical change** - the smallest possible change that:
+1. **Self-contained** — the diff makes sense on its own. It never leans on code a sibling commit adds or removes, so a reviewer never has to open an adjacent commit to understand this one.
+2. **Complete** — nothing is left dangling: no client event whose handler lives in another commit, no handler with no caller, no config constant or i18n key with no use, no behaviour without its tests.
 
-- Makes sense on its own
-- Could be understood in isolation
-- Would compile and run successfully if checked out
-- Addresses exactly one concern
+Commits are written for reviewers — optimise for "understandable in isolation," not for line count. "When in doubt" is **not** a licence to split further; it asks "is each side still self-contained and complete?" If not, it is one commit.
 
-**When in doubt, split it!** If you can split a commit into smaller pieces where each piece still works independently, you should.
+### One concern, even across layers
+
+A single logical change stays one commit even when it spans the stack:
+
+- **Adding** a feature that needs a client emit, a server handler, and new state is **one commit** — the pieces are meaningless apart.
+- **Removing** a feature removes **all** of it — client, server, game logic, translations, and its tests — in **one commit**. Splitting "remove the client events" from "remove the server handlers" yields two diffs that each look broken alone. That is over-splitting.
+- A rename or an API-contract change touches caller and callee together, in one commit.
+
+One commit may therefore span several scopes (list them: `game, client: remove rematch voting`), and several commits may share one scope. Atomicity is by **concern**, not by file, layer, or scope.
 
 ### Guidelines
 
-- ✅ **Prefer many small commits over fewer large commits**
+- ✅ **Prefer the smallest commit that is still self-contained and complete**
 - ✅ One bug fix per commit (split if fixing multiple issues)
 - ✅ One feature per commit (split into sub-features if possible)
 - ✅ Each commit should compile and run successfully
@@ -182,41 +204,23 @@ _Each commit is minimal, focused, and independently functional. Several commits 
 - If one fix causes issues, can revert just that commit
 - Clear git history shows exactly what changed when
 
-### How to Split Commits
+### How to decide
 
-**By Concern:**
+Split a commit **only** along boundaries where each resulting piece is still self-contained and complete. Good boundaries are **independent concerns**:
 
-- Separate validation from logic changes
-- Separate cleanup from new functionality
-- Separate guards from state resets
+- Separate validation from an unrelated logic change
+- Separate a cleanup from new functionality it does not depend on
+- A server concern and a client concern — **only when they work independently**, never the two halves of one feature
 
-**By Scope (when independent):**
+Bad boundaries split a single concern: by file, by layer (the data model / API / UI of one feature), or by side (the client / server of one feature). Those leave pieces that look broken alone — and force a reviewer to read neighbouring commits to make sense of the one in front of them.
 
-- The server change under one scope (e.g. `game`)
-- The client change under another (e.g. `ui`)
-- Only if they can work independently
+Before splitting, ask:
 
-**By Layer:**
+1. Could a reviewer understand each piece from its diff alone?
+2. Is each piece complete — nothing dangling, tests included?
+3. Does each piece address a genuinely different concern?
 
-- Data model changes first
-- API changes second
-- UI changes last
-
-**Ask yourself:**
-
-1. Can this commit be split further?
-2. Does each piece make sense alone?
-3. Would each piece pass tests independently?
-
-If yes to all three, split it!
-
-**Remember:** There's no such thing as "too many commits" as long as each one is meaningful and atomic. Small commits are easier to:
-
-- Review
-- Understand
-- Revert if needed
-- Cherry-pick
-- Debug (with `git bisect`)
+Split only when all three are yes. There is no virtue in commit count — only in commits that each tell one complete, reviewable story.
 
 ## Changelog & Versioning
 
