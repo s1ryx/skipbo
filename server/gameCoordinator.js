@@ -762,7 +762,7 @@ class GameCoordinator {
     if (game.players.length < MIN_PLAYERS) return false;
 
     this.cancelCompletedGameCleanup(roomId);
-    game.resetForRematch();
+    game.resetToLobby();
     game.startGame();
 
     game.players

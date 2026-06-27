@@ -382,17 +382,13 @@ class SkipBoGame {
     return this.players.filter((p) => this.rematchVotes.has(p.internalId)).map((p) => p.publicId);
   }
 
-  resetForRematch(stockpileSize) {
+  resetToLobby() {
     this.phase = Phase.LOBBY;
     this.winner = null;
     this.deck = [];
     this.buildingPiles = Array.from({ length: BUILDING_PILES }, () => []);
     this.currentPlayerIndex = 0;
     this.rematchVotes = new Set();
-
-    if (stockpileSize) {
-      this.stockpileSize = stockpileSize;
-    }
 
     this.players.forEach((player) => {
       player.stockpile = [];
