@@ -13,6 +13,7 @@ const CLIENT_EVENTS = [
   'leaveLobby',
   'leaveGame',
   'returnToLobby',
+  'updateStockpileSize',
   'addBot',
   'removeBot',
 ];

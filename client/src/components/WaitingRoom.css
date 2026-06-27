@@ -232,3 +232,27 @@
   cursor: not-allowed;
   transform: none;
 }
+
+.stockpile-config {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+}
+
+.stockpile-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary, #555);
+}
+
+.stockpile-display {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary, #555);
+}
+
+.stockpile-slider {
+  width: 200px;
+}

@@ -1266,6 +1266,50 @@ describe('GameCoordinator', () => {
     });
   });
 
+  describe('updateStockpileSize', () => {
+    it('lets the host retune the stockpile size in the lobby', () => {
+      const { coordinator, transport } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const game = coordinator.games.get(roomId);
+      transport.send.mockClear();
+
+      coordinator
+        .getTransportHandlers()
+        .onMessage('player1', 'updateStockpileSize', { stockpileSize: 12 });
+
+      expect(game.stockpileSize).toBe(12);
+      const update = transport.send.mock.calls.find((c) => c[1] === 'gameStateUpdate');
+      expect(update).toBeDefined();
+      expect(update[2].gameState.stockpileSize).toBe(12);
+    });
+
+    it('ignores a non-host request', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createRoomWithTwoPlayers(coordinator);
+      const game = coordinator.games.get(roomId);
+      const before = game.stockpileSize;
+
+      coordinator
+        .getTransportHandlers()
+        .onMessage('player2', 'updateStockpileSize', { stockpileSize: 12 });
+
+      expect(game.stockpileSize).toBe(before);
+    });
+
+    it('ignores the request once the game has started', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      const before = game.stockpileSize;
+
+      coordinator
+        .getTransportHandlers()
+        .onMessage('player1', 'updateStockpileSize', { stockpileSize: 7 });
+
+      expect(game.stockpileSize).toBe(before);
+    });
+  });
+
   describe('post-game leave', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());

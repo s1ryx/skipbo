@@ -151,6 +151,10 @@ export default function useGameConnection() {
     transportRef.current?.send('returnToLobby');
   }, []);
 
+  const updateStockpileSize = useCallback((stockpileSize) => {
+    transportRef.current?.send('updateStockpileSize', { stockpileSize });
+  }, []);
+
   const sendChatMessage = useCallback((message) => {
     transportRef.current?.send('sendChatMessage', { message });
   }, []);
@@ -185,6 +189,7 @@ export default function useGameConnection() {
     leaveLobby,
     leaveGame,
     returnToLobby,
+    updateStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
     addBot,

@@ -120,6 +120,8 @@ class GameCoordinator {
         return this.handleLeaveGame(connectionId);
       case 'returnToLobby':
         return this.handleReturnToLobby(connectionId);
+      case 'updateStockpileSize':
+        return this.handleUpdateStockpileSize(connectionId, data);
       case 'addBot':
         return this.handleAddBot(connectionId, data);
       case 'removeBot':
@@ -730,6 +732,23 @@ class GameCoordinator {
 
     this.cancelAutoReturnToLobby(roomId);
     game.resetToLobby();
+    this._broadcastToHumans(roomId, game);
+  }
+
+  handleUpdateStockpileSize(connectionId, { stockpileSize }) {
+    const roomId = this.sessionManager.getRoom(connectionId);
+    if (!roomId) return;
+
+    const game = this.gameRepository.getGame(roomId);
+    if (!game || game.phase !== Phase.LOBBY) return;
+
+    // Only the host configures the next game's stockpile, and only before
+    // it starts. game.updateStockpileSize clamps to the legal range.
+    const sender = game.getPlayerByConnectionId(connectionId);
+    if (!sender || sender.publicId !== game.hostPublicId) return;
+    if (!Number.isInteger(stockpileSize)) return;
+
+    game.updateStockpileSize(stockpileSize);
     this._broadcastToHumans(roomId, game);
   }
 
