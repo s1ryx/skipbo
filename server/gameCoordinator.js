@@ -10,7 +10,8 @@ const {
   GAME_GRACE_PERIOD_MS,
   MAX_PENDING_ROOMS,
   MAX_TOTAL_ROOMS,
-  COMPLETED_GAME_TTL_MS,
+  POST_GAME_MIN_SAVOR_MS,
+  POST_GAME_AUTO_RETURN_MS,
   MIN_PLAYERS,
   MAX_PLAYERS,
   MIN_STOCKPILE_SIZE,
@@ -117,12 +118,10 @@ class GameCoordinator {
         return this.handleLeaveLobby(connectionId);
       case 'leaveGame':
         return this.handleLeaveGame(connectionId);
-      case 'requestRematch':
-        return this.handleRequestRematch(connectionId);
-      case 'requestRematchWithoutDisconnected':
-        return this.handleRequestRematchWithoutDisconnected(connectionId);
-      case 'updateRematchSettings':
-        return this.handleUpdateRematchSettings(connectionId, data);
+      case 'returnToLobby':
+        return this.handleReturnToLobby(connectionId);
+      case 'updateStockpileSize':
+        return this.handleUpdateStockpileSize(connectionId, data);
       case 'addBot':
         return this.handleAddBot(connectionId, data);
       case 'removeBot':
@@ -347,8 +346,6 @@ class GameCoordinator {
     const oldConnectionId = player.connectionId;
     game.updateConnectionId(player.internalId, connectionId);
 
-    game.removeRematchVote(player.internalId);
-
     this.sessionManager.removeRoom(oldConnectionId);
     this.sessionManager.setRoom(connectionId, roomId);
 
@@ -381,7 +378,7 @@ class GameCoordinator {
     if (game.phase === Phase.PLAYING) {
       this._scheduleBotTurnIfNeeded(roomId);
     } else if (game.phase === Phase.FINISHED) {
-      this.scheduleCompletedGameCleanup(roomId);
+      this.scheduleAutoReturnToLobby(roomId);
     }
   }
 
@@ -679,11 +676,10 @@ class GameCoordinator {
         publicId: leavingPlayer?.publicId,
       });
       this.transport.send(connectionId, 'gameAborted');
-      game.clearRematchVotes();
 
       const humanPlayers = game.players.filter((p) => !p.isBot);
       if (humanPlayers.length === 0) {
-        this.cancelCompletedGameCleanup(roomId);
+        this.cancelAutoReturnToLobby(roomId);
         this._cleanupLogger(roomId);
         this.botManager.cleanup(roomId);
         this.sessionManager.removeAllForPlayers(game.players);
@@ -714,7 +710,7 @@ class GameCoordinator {
       });
 
       this.cancelPendingDeletion(roomId);
-      this.cancelCompletedGameCleanup(roomId);
+      this.cancelAutoReturnToLobby(roomId);
       this._cleanupLogger(roomId);
       this.botManager.cleanup(roomId);
       this.gameRepository.deleteGame(roomId);
@@ -723,125 +719,37 @@ class GameCoordinator {
     }
   }
 
-  handleRequestRematch(connectionId) {
+  handleReturnToLobby(connectionId) {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.gameRepository.getGame(roomId);
     if (!game || game.phase !== Phase.FINISHED) return;
 
-    const voter = game.getPlayerByConnectionId(connectionId);
-    if (!voter) return;
+    // Enforce a minimum savor window so one eager player cannot cut the
+    // post-game results screen short for the rest of the room.
+    if (Date.now() - game.finishedAt < POST_GAME_MIN_SAVOR_MS) return;
 
-    game.addRematchVote(voter.internalId);
-
-    if (!this._tryStartRematch(roomId)) {
-      this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
-        rematchVotes: game.getRematchVoterPublicIds(),
-        stockpileSize: game.stockpileSize,
-      });
-    }
+    this.cancelAutoReturnToLobby(roomId);
+    game.resetToLobby();
+    this._broadcastToHumans(roomId, game);
   }
 
-  /**
-   * @private
-   * Start the rematch if the vote is unanimous among the human players.
-   * Returns true when a new game was dealt and broadcast, false otherwise
-   * (the caller is responsible for any vote-state broadcast).
-   */
-  _tryStartRematch(roomId) {
-    const game = this.gameRepository.getGame(roomId);
-    if (!game || game.phase !== Phase.FINISHED) return false;
-
-    const humanPlayers = game.players.filter((p) => !p.isBot);
-    if (!game.canStartRematch(humanPlayers.length)) return false;
-
-    // Don't reset/deal if too few players remain to start (e.g. a 2-player
-    // game whose opponent already left post-game): startGame() would fail
-    // and strand the room in a half-reset lobby state.
-    if (game.players.length < MIN_PLAYERS) return false;
-
-    this.cancelCompletedGameCleanup(roomId);
-    game.resetForRematch();
-    game.startGame();
-
-    game.players
-      .filter((p) => !p.isBot)
-      .forEach((player) => {
-        this.transport.send(player.connectionId, 'gameStarted', {
-          gameState: this._getDecoratedGameState(game),
-          playerState: game.getPlayerState(player.internalId),
-        });
-      });
-
-    this.logger.info('rematch started', { roomId });
-    this._scheduleBotTurnIfNeeded(roomId);
-    return true;
-  }
-
-  handleRequestRematchWithoutDisconnected(connectionId) {
+  handleUpdateStockpileSize(connectionId, { stockpileSize }) {
     const roomId = this.sessionManager.getRoom(connectionId);
     if (!roomId) return;
 
     const game = this.gameRepository.getGame(roomId);
-    if (!game || game.phase !== Phase.FINISHED) return;
+    if (!game || game.phase !== Phase.LOBBY) return;
 
-    const requester = game.getPlayerByConnectionId(connectionId);
-    if (!requester) return;
-
-    // Evict every human whose connection is no longer mapped — they tabbed
-    // out and have not returned. Their rematch vote leaves with them. This
-    // is the survivor-driven escape hatch for a rage-quit: the remaining
-    // players should not be blocked waiting on someone who is gone.
-    const disconnectedHumans = game.players.filter(
-      (p) => !p.isBot && !this.sessionManager.hasRoom(p.connectionId)
-    );
-    disconnectedHumans.forEach((p) => {
-      game.removeRematchVote(p.internalId);
-      game.removePlayer(p.internalId);
-    });
-
-    // The requester opts in by taking this action.
-    game.addRematchVote(requester.internalId);
-
-    this.logger.info('rematch without disconnected requested', {
-      roomId,
-      connectionId,
-      removed: disconnectedHumans.map((p) => p.publicId),
-    });
-
-    if (!this._tryStartRematch(roomId)) {
-      // Either another connected human still needs to vote, or too few
-      // players remain to start. Reflect the removals and current votes.
-      this.transport.sendToGroup(roomId, 'playerLeftPostGame', {
-        gameState: this._getDecoratedGameState(game),
-      });
-      this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
-        rematchVotes: game.getRematchVoterPublicIds(),
-        stockpileSize: game.stockpileSize,
-      });
-    }
-  }
-
-  handleUpdateRematchSettings(connectionId, { stockpileSize }) {
-    const roomId = this.sessionManager.getRoom(connectionId);
-    if (!roomId) return;
-
-    const game = this.gameRepository.getGame(roomId);
-    if (!game || game.phase !== Phase.FINISHED) return;
-
+    // Only the host configures the next game's stockpile, and only before
+    // it starts. game.updateStockpileSize clamps to the legal range.
     const sender = game.getPlayerByConnectionId(connectionId);
     if (!sender || sender.publicId !== game.hostPublicId) return;
+    if (!Number.isInteger(stockpileSize)) return;
 
     game.updateStockpileSize(stockpileSize);
-    game.clearRematchVotes();
-
-    this.transport.sendToGroup(roomId, 'rematchVoteUpdate', {
-      rematchVotes: [],
-      stockpileSize: game.stockpileSize,
-    });
-
-    this.logger.info('rematch settings updated', { roomId, stockpileSize: game.stockpileSize });
+    this._broadcastToHumans(roomId, game);
   }
 
   handleDisconnect(connectionId) {
@@ -927,11 +835,6 @@ class GameCoordinator {
         });
       }
     } else if (game.phase === Phase.FINISHED) {
-      // Only drop the disconnecting player's own vote — a transient peer
-      // disconnect must not wipe everyone's votes (e.g. Alice voted, Bob's
-      // screen locks for a moment; Alice's vote should survive).
-      if (disconnectedPlayer) game.removeRematchVote(disconnectedPlayer.internalId);
-
       if (humansRemaining === 0) {
         this.logger.info('disconnect', {
           branch: 'post-game-empty',
@@ -939,7 +842,7 @@ class GameCoordinator {
           roomId,
           publicId,
         });
-        this.cancelCompletedGameCleanup(roomId);
+        this.cancelAutoReturnToLobby(roomId);
         this.scheduleGameDeletion(roomId);
       } else {
         this.logger.info('disconnect', {
@@ -951,8 +854,8 @@ class GameCoordinator {
         });
         // A post-game disconnect is transient, exactly like a mid-game one:
         // keep the player in game.players so their session token still
-        // resolves and they can reconnect into the room (e.g. to rematch).
-        // The intentional-leave path (handleLeaveGame) is what removes them.
+        // resolves and they can reconnect into the room. The intentional-leave
+        // path (handleLeaveGame) is what removes them.
         this.transport.sendToGroup(roomId, 'playerDisconnected', {
           playerId: publicId,
         });
@@ -1070,7 +973,7 @@ class GameCoordinator {
     this._cancelAllLobbyDisconnects(roomId);
     const game = this.gameRepository.getGame(roomId);
     if (game) {
-      this.cancelCompletedGameCleanup(roomId);
+      this.cancelAutoReturnToLobby(roomId);
       this._cleanupLogger(roomId);
       this.botManager.cleanup(roomId);
       game.players.forEach((p) => {
@@ -1120,32 +1023,23 @@ class GameCoordinator {
     this.lobbyDisconnectTimers.delete(roomId);
   }
 
-  scheduleCompletedGameCleanup(roomId) {
+  scheduleAutoReturnToLobby(roomId) {
     this.gameRepository.scheduleCompletedCleanup(
       roomId,
       () => {
         const game = this.gameRepository.getGame(roomId);
-        this.logger.info('deletion fired', {
-          kind: 'completed',
-          roomId,
-          stillExists: !!game,
-        });
-        if (game) {
-          game.players.forEach((p) => {
-            this.sessionManager.removeRoom(p.connectionId);
-          });
-        }
-        this.botManager.clearAIs(roomId);
-        this.gameRepository.deleteGame(roomId);
-        this.logger.info('completed game cleaned up after TTL', { roomId });
+        if (!game || game.phase !== Phase.FINISHED) return;
+        game.resetToLobby();
+        this._broadcastToHumans(roomId, game);
+        this.logger.info('auto-returned to lobby after savor window', { roomId });
       },
-      COMPLETED_GAME_TTL_MS
+      POST_GAME_AUTO_RETURN_MS
     );
   }
 
-  cancelCompletedGameCleanup(roomId) {
+  cancelAutoReturnToLobby(roomId) {
     if (this.gameRepository.cancelCompletedCleanup(roomId)) {
-      this.logger.info('cancelled completed cleanup', { roomId });
+      this.logger.info('cancelled auto-return', { roomId });
     }
   }
 
@@ -1374,7 +1268,7 @@ class GameCoordinator {
     });
 
     this.botManager.clearTimers(roomId);
-    this.scheduleCompletedGameCleanup(roomId);
+    this.scheduleAutoReturnToLobby(roomId);
   }
 
   _getDecoratedGameState(game) {

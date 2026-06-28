@@ -1,5 +1,9 @@
 const GameCoordinator = require('../../gameCoordinator');
-const { LOBBY_GRACE_PERIOD_MS } = require('../../config');
+const {
+  LOBBY_GRACE_PERIOD_MS,
+  POST_GAME_MIN_SAVOR_MS,
+  POST_GAME_AUTO_RETURN_MS,
+} = require('../../config');
 
 function createMockTransport() {
   return {
@@ -61,60 +65,6 @@ function createRoomWithBot(coordinator) {
   );
   const roomId = call[2].roomId;
   handlers.onMessage('player1', 'addBot', { aiType: 'improved' });
-  return roomId;
-}
-
-/** Helper: create a completed game with a bot (game over state) */
-function createCompletedGameWithBot(coordinator) {
-  const roomId = createRoomWithBot(coordinator);
-  const handlers = coordinator.getTransportHandlers();
-  handlers.onMessage('player1', 'startGame', {});
-  const game = coordinator.games.get(roomId);
-
-  // Force winning condition: 1 card in stockpile, playable hand
-  const player1 = game.players[0];
-  player1.stockpile = [1];
-  player1.hand = [1, 2, 3, 4, 5];
-
-  // Clear bot turn timers so the bot doesn't interfere
-  coordinator.botManager.clearTimers(roomId);
-
-  // Play card via coordinator to trigger game-over path
-  handlers.onMessage('player1', 'playCard', {
-    card: 1,
-    source: 'stockpile',
-    buildingPileIndex: 0,
-  });
-
-  expect(game.gameOver).toBe(true);
-  return roomId;
-}
-
-/** Helper: create a completed game with two humans and a bot */
-function createCompletedGameWithTwoHumansAndBot(coordinator) {
-  const handlers = coordinator.getTransportHandlers();
-  handlers.onMessage('player1', 'createRoom', {
-    playerName: 'Alice',
-    maxPlayers: 3,
-    stockpileSize: null,
-  });
-  const call = coordinator.transport.send.mock.calls.find(
-    (c) => c[0] === 'player1' && c[1] === 'roomCreated'
-  );
-  const roomId = call[2].roomId;
-  handlers.onMessage('player2', 'joinRoom', { roomId, playerName: 'Bob' });
-  handlers.onMessage('player1', 'addBot', { aiType: 'improved' });
-  handlers.onMessage('player1', 'startGame', {});
-  const game = coordinator.games.get(roomId);
-
-  // Force Alice to win
-  const player1 = game.players[0];
-  player1.stockpile = [1];
-  player1.hand = [1, 2, 3, 4, 5];
-  coordinator.botManager.clearTimers(roomId);
-  handlers.onMessage('player1', 'playCard', { card: 1, source: 'stockpile', buildingPileIndex: 0 });
-
-  expect(game.gameOver).toBe(true);
   return roomId;
 }
 
@@ -1152,11 +1102,11 @@ describe('GameCoordinator', () => {
     });
   });
 
-  describe('completedGameCleanup', () => {
+  describe('post-game auto-return', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
-    it('cleans up completed game after TTL', () => {
+    it('returns a completed game to the lobby after the window', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1179,15 +1129,15 @@ describe('GameCoordinator', () => {
       expect(game.gameOver).toBe(true);
       expect(coordinator.games.has(roomId)).toBe(true);
 
-      // Advance past TTL
-      jest.advanceTimersByTime(300001);
+      jest.advanceTimersByTime(POST_GAME_AUTO_RETURN_MS);
 
-      expect(coordinator.games.has(roomId)).toBe(false);
-      expect(coordinator.sessionManager.playerRooms.has('player1')).toBe(false);
-      expect(coordinator.sessionManager.playerRooms.has('player2')).toBe(false);
+      // The room returns to the waiting room, not deleted; players stay.
+      expect(coordinator.games.has(roomId)).toBe(true);
+      expect(game.gameStarted).toBe(false);
+      expect(game.gameOver).toBe(false);
     });
 
-    it('keeps cleanup timer when one player leaves post-game', () => {
+    it('keeps the auto-return timer when one player leaves post-game', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1215,7 +1165,7 @@ describe('GameCoordinator', () => {
       expect(coordinator.games.has(roomId)).toBe(true);
     });
 
-    it('cancels cleanup when last player leaves post-game', () => {
+    it('cancels the auto-return when the last player leaves post-game', () => {
       const { coordinator } = createCoordinator();
       const roomId = createRoomWithTwoPlayers(coordinator);
       const handlers = coordinator.getTransportHandlers();
@@ -1272,179 +1222,91 @@ describe('GameCoordinator', () => {
     });
   });
 
-  describe('handleRequestRematch', () => {
+  describe('returnToLobby', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
-    it('broadcasts rematchVoteUpdate on single vote', () => {
+    it('returns a finished game to the waiting room and broadcasts state', () => {
       const { coordinator, transport } = createCoordinator();
       const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
       const game = coordinator.games.get(roomId);
-      const player1 = game.getPlayerByConnectionId('player1');
-      const player1PublicId = player1.publicId;
-
-      transport.sendToGroup.mockClear();
-      handlers.onMessage('player1', 'requestRematch', {});
-
-      expect(transport.sendToGroup).toHaveBeenCalledWith(
-        roomId,
-        'rematchVoteUpdate',
-        expect.objectContaining({
-          rematchVotes: [player1PublicId],
-        })
-      );
-    });
-
-    it('triggers rematch when all players vote', () => {
-      const { coordinator, transport } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
+      // Simulate the savor window having elapsed.
+      game.finishedAt = Date.now() - POST_GAME_MIN_SAVOR_MS - 1;
       transport.send.mockClear();
-      handlers.onMessage('player1', 'requestRematch', {});
-      handlers.onMessage('player2', 'requestRematch', {});
 
+      coordinator.getTransportHandlers().onMessage('player1', 'returnToLobby', {});
+
+      expect(game.gameStarted).toBe(false);
       expect(game.gameOver).toBe(false);
+      const update = transport.send.mock.calls.find((c) => c[1] === 'gameStateUpdate');
+      expect(update).toBeDefined();
+      expect(update[2].gameState.gameStarted).toBe(false);
+    });
+
+    it('ignores the request before the savor window elapses', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createCompletedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+      game.finishedAt = Date.now();
+
+      coordinator.getTransportHandlers().onMessage('player1', 'returnToLobby', {});
+
+      expect(game.gameOver).toBe(true);
+    });
+
+    it('ignores the request when the game is still in progress', () => {
+      const { coordinator } = createCoordinator();
+      const roomId = createStartedGame(coordinator);
+      const game = coordinator.games.get(roomId);
+
+      coordinator.getTransportHandlers().onMessage('player1', 'returnToLobby', {});
+
       expect(game.gameStarted).toBe(true);
-
-      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
-      expect(gameStartedCalls.length).toBe(2);
-    });
-
-    it('does not start a rematch when too few players remain', () => {
-      const { coordinator, transport } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      // player2 leaves post-game, leaving player1 alone
-      handlers.onMessage('player2', 'leaveGame', {});
-      expect(game.players.length).toBe(1);
-
-      transport.send.mockClear();
-      handlers.onMessage('player1', 'requestRematch', {});
-
-      // No game is dealt and the room stays finished — not stranded in lobby
-      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
-      expect(gameStartedCalls).toHaveLength(0);
-      expect(game.gameOver).toBe(true);
-    });
-
-    it('cancels completed game cleanup timer on unanimous vote', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-
-      expect(coordinator.completedGameTimers.has(roomId)).toBe(true);
-
-      handlers.onMessage('player1', 'requestRematch', {});
-      handlers.onMessage('player2', 'requestRematch', {});
-
-      expect(coordinator.completedGameTimers.has(roomId)).toBe(false);
-    });
-
-    it('ignores requestRematch when game is not over', () => {
-      const { coordinator, transport } = createCoordinator();
-      createStartedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-
-      transport.sendToGroup.mockClear();
-      handlers.onMessage('player1', 'requestRematch', {});
-
-      const rematchCalls = transport.sendToGroup.mock.calls.filter(
-        (c) => c[1] === 'rematchVoteUpdate'
-      );
-      expect(rematchCalls.length).toBe(0);
-    });
-
-    it('double vote from same player is idempotent', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      handlers.onMessage('player1', 'requestRematch', {});
-      handlers.onMessage('player1', 'requestRematch', {});
-
-      expect(game.rematchVotes.size).toBe(1);
-      expect(game.gameOver).toBe(true);
+      expect(game.gameOver).toBe(false);
     });
   });
 
-  describe('handleUpdateRematchSettings', () => {
-    beforeEach(() => jest.useFakeTimers());
-    afterEach(() => jest.useRealTimers());
-
-    it('allows host to update stockpile size', () => {
+  describe('updateStockpileSize', () => {
+    it('lets the host retune the stockpile size in the lobby', () => {
       const { coordinator, transport } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
+      const roomId = createRoomWithTwoPlayers(coordinator);
       const game = coordinator.games.get(roomId);
+      transport.send.mockClear();
 
-      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 15 });
+      coordinator
+        .getTransportHandlers()
+        .onMessage('player1', 'updateStockpileSize', { stockpileSize: 12 });
 
-      expect(game.stockpileSize).toBe(15);
-      expect(transport.sendToGroup).toHaveBeenCalledWith(
-        roomId,
-        'rematchVoteUpdate',
-        expect.objectContaining({ stockpileSize: 15 })
-      );
+      expect(game.stockpileSize).toBe(12);
+      const update = transport.send.mock.calls.find((c) => c[1] === 'gameStateUpdate');
+      expect(update).toBeDefined();
+      expect(update[2].gameState.stockpileSize).toBe(12);
     });
 
-    it('rejects update from non-host player', () => {
+    it('ignores a non-host request', () => {
       const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
+      const roomId = createRoomWithTwoPlayers(coordinator);
       const game = coordinator.games.get(roomId);
-      const originalSize = game.stockpileSize;
+      const before = game.stockpileSize;
 
-      handlers.onMessage('player2', 'updateRematchSettings', { stockpileSize: 15 });
+      coordinator
+        .getTransportHandlers()
+        .onMessage('player2', 'updateStockpileSize', { stockpileSize: 12 });
 
-      expect(game.stockpileSize).toBe(originalSize);
+      expect(game.stockpileSize).toBe(before);
     });
 
-    it('clamps stockpile size to minimum of MIN_STOCKPILE_SIZE', () => {
+    it('ignores the request once the game has started', () => {
       const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
+      const roomId = createStartedGame(coordinator);
       const game = coordinator.games.get(roomId);
+      const before = game.stockpileSize;
 
-      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 0 });
+      coordinator
+        .getTransportHandlers()
+        .onMessage('player1', 'updateStockpileSize', { stockpileSize: 7 });
 
-      expect(game.stockpileSize).toBe(1);
-    });
-
-    it('clamps stockpile size to max 30 for <=4 players', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 50 });
-
-      expect(game.stockpileSize).toBe(30);
-    });
-
-    it('clears existing votes on settings change', () => {
-      const { coordinator, transport } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      handlers.onMessage('player1', 'requestRematch', {});
-      expect(game.rematchVotes.size).toBe(1);
-
-      transport.sendToGroup.mockClear();
-      handlers.onMessage('player1', 'updateRematchSettings', { stockpileSize: 10 });
-
-      expect(game.rematchVotes.size).toBe(0);
-      expect(transport.sendToGroup).toHaveBeenCalledWith(
-        roomId,
-        'rematchVoteUpdate',
-        expect.objectContaining({ rematchVotes: [] })
-      );
+      expect(game.stockpileSize).toBe(before);
     });
   });
 
@@ -1462,20 +1324,6 @@ describe('GameCoordinator', () => {
 
       expect(transport.send).toHaveBeenCalledWith('player1', 'gameAborted');
       expect(coordinator.games.has(roomId)).toBe(true);
-    });
-
-    it('clears rematch votes on post-game leave', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      handlers.onMessage('player1', 'requestRematch', {});
-      expect(game.rematchVotes.size).toBe(1);
-
-      handlers.onMessage('player1', 'leaveGame', {});
-
-      expect(game.rematchVotes.size).toBe(0);
     });
 
     it('sends playerLeftPostGame to remaining players', () => {
@@ -1506,91 +1354,9 @@ describe('GameCoordinator', () => {
     });
   });
 
-  describe('rematch without disconnected', () => {
-    it('starts the rematch after evicting a disconnected human', () => {
-      const { coordinator, transport } = createCoordinator();
-      const roomId = createCompletedGameWithTwoHumansAndBot(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-      const bobInternalId = game.getPlayerByConnectionId('player2').internalId;
-
-      // Bob (player2) rage-quits; Alice and the bot remain
-      handlers.onDisconnect('player2');
-      expect(game.players.find((p) => p.internalId === bobInternalId)).toBeDefined();
-
-      transport.send.mockClear();
-      handlers.onMessage('player1', 'requestRematchWithoutDisconnected', {});
-
-      // Bob is evicted and a new game is dealt to the remaining players
-      expect(game.players.find((p) => p.internalId === bobInternalId)).toBeUndefined();
-      expect(game.gameStarted).toBe(true);
-      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
-      expect(gameStartedCalls).toHaveLength(1); // only the human receives it
-      coordinator.botManager.clearTimers(roomId);
-    });
-
-    it('evicts the disconnected player but does not start with too few left', () => {
-      const { coordinator, transport } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-      const bobInternalId = game.getPlayerByConnectionId('player2').internalId;
-
-      handlers.onDisconnect('player2');
-
-      transport.send.mockClear();
-      transport.sendToGroup.mockClear();
-      handlers.onMessage('player1', 'requestRematchWithoutDisconnected', {});
-
-      // Bob is evicted, but Alice alone cannot start — room stays finished
-      expect(game.players.find((p) => p.internalId === bobInternalId)).toBeUndefined();
-      expect(game.gameOver).toBe(true);
-      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
-      expect(gameStartedCalls).toHaveLength(0);
-      // The survivor is shown the updated player list
-      expect(transport.sendToGroup).toHaveBeenCalledWith(
-        roomId,
-        'playerLeftPostGame',
-        expect.objectContaining({ gameState: expect.any(Object) })
-      );
-    });
-  });
-
   describe('post-game disconnect', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
-
-    it('drops the disconnecting player own vote on post-game disconnect', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      handlers.onMessage('player1', 'requestRematch', {});
-      expect(game.rematchVotes.size).toBe(1);
-
-      handlers.onDisconnect('player1');
-
-      expect(game.rematchVotes.size).toBe(0);
-    });
-
-    it('keeps a remaining player vote when a peer disconnects post-game', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-      const player1InternalId = game.getPlayerByConnectionId('player1').internalId;
-
-      // Alice (player1) votes; quorum (2 humans) is not yet met
-      handlers.onMessage('player1', 'requestRematch', {});
-      expect(game.rematchVotes.has(player1InternalId)).toBe(true);
-
-      // Bob (player2) disconnects without voting
-      handlers.onDisconnect('player2');
-
-      // Alice's vote must survive a peer's transient disconnect
-      expect(game.rematchVotes.has(player1InternalId)).toBe(true);
-    });
 
     it('cleans up game when all players disconnect post-game', () => {
       const { coordinator } = createCoordinator();
@@ -1650,42 +1416,6 @@ describe('GameCoordinator', () => {
       // Server restores the seat with 'reconnected', not 'reconnectFailed'
       const reconnectedCalls = transport.send.mock.calls.filter((c) => c[1] === 'reconnected');
       expect(reconnectedCalls).toHaveLength(1);
-    });
-  });
-
-  describe('reconnect clears stale vote', () => {
-    beforeEach(() => jest.useFakeTimers());
-    afterEach(() => jest.useRealTimers());
-
-    it('removes old connectionId from rematchVotes on reconnect', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGame(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      // Player2 votes then disconnects
-      const player2 = game.getPlayerByConnectionId('player2');
-      const player2InternalId = player2.internalId;
-      handlers.onMessage('player2', 'requestRematch', {});
-      expect(game.rematchVotes.has(player2InternalId)).toBe(true);
-
-      // Get player2's session token
-      const sessionToken = player2.sessionToken;
-
-      handlers.onDisconnect('player2');
-
-      // Reconnect as new connection
-      handlers.onConnect('player2-new');
-      handlers.onMessage('player2-new', 'reconnect', {
-        roomId,
-        sessionToken,
-        playerName: 'Bob',
-      });
-
-      // Old vote should be removed (votes keyed by internalId)
-      expect(game.rematchVotes.has(player2InternalId)).toBe(false);
-      // New connectionId should NOT be auto-added
-      expect(game.rematchVotes.has('player2-new')).toBe(false);
     });
   });
 
@@ -1782,75 +1512,6 @@ describe('GameCoordinator', () => {
         (c) => c[1] === 'turnChanged'
       );
       expect(turnChangedCalls.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  describe('bot + rematch interaction', () => {
-    beforeEach(() => jest.useFakeTimers());
-    afterEach(() => jest.useRealTimers());
-
-    it('rematch triggers with only human votes (bots excluded from threshold)', () => {
-      const { coordinator, transport } = createCoordinator();
-      const roomId = createCompletedGameWithBot(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-      const game = coordinator.games.get(roomId);
-
-      transport.send.mockClear();
-      handlers.onMessage('player1', 'requestRematch', {});
-
-      // Rematch should trigger with just the human's vote
-      expect(game.gameOver).toBe(false);
-      expect(game.gameStarted).toBe(true);
-
-      const gameStartedCalls = transport.send.mock.calls.filter((c) => c[1] === 'gameStarted');
-      // Only human gets gameStarted (bot filtered out)
-      expect(gameStartedCalls.length).toBe(1);
-      expect(gameStartedCalls[0][0]).toBe('player1');
-    });
-
-    it('schedules bot turn after rematch starts', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGameWithBot(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-
-      handlers.onMessage('player1', 'requestRematch', {});
-
-      // Bot turn timer should be scheduled if bot is first player,
-      // or will be scheduled when it becomes the bot's turn.
-      // Either way, the game should be in a playable state.
-      const game = coordinator.games.get(roomId);
-      expect(game.gameStarted).toBe(true);
-      expect(game.gameOver).toBe(false);
-      expect(game.players).toHaveLength(2);
-      expect(game.players.some((p) => p.isBot)).toBe(true);
-    });
-
-    it('cleans up game when last human leaves post-game with bots', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGameWithBot(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-
-      expect(coordinator.games.has(roomId)).toBe(true);
-
-      handlers.onMessage('player1', 'leaveGame', {});
-
-      // Game should be deleted even though bot player remains
-      expect(coordinator.games.has(roomId)).toBe(false);
-    });
-
-    it('cleans up game when last human disconnects post-game with bots', () => {
-      const { coordinator } = createCoordinator();
-      const roomId = createCompletedGameWithBot(coordinator);
-      const handlers = coordinator.getTransportHandlers();
-
-      expect(coordinator.games.has(roomId)).toBe(true);
-
-      handlers.onDisconnect('player1');
-
-      // Game survives during grace period
-      expect(coordinator.games.has(roomId)).toBe(true);
-      jest.advanceTimersByTime(300000);
-      expect(coordinator.games.has(roomId)).toBe(false);
     });
   });
 

@@ -199,6 +199,31 @@ describe('SkipBoGame', () => {
     });
   });
 
+  describe('resetToLobby', () => {
+    it('returns a finished game to the lobby', () => {
+      game.addPlayer('p1', 'Alice');
+      game.addPlayer('p2', 'Bob');
+      game.startGame();
+      const p1 = game.players[0].internalId;
+      game.players[0].stockpile = [1];
+      game.players[0].hand = [2, 3, 4, 5, 6];
+      game.playCard(p1, 1, 'stockpile', 0);
+      expect(game.gameOver).toBe(true);
+
+      game.resetToLobby();
+
+      expect(game.gameStarted).toBe(false);
+      expect(game.gameOver).toBe(false);
+      expect(game.winner).toBeNull();
+      expect(game.finishedAt).toBeNull();
+      expect(game.buildingPiles.every((pile) => pile.length === 0)).toBe(true);
+      game.players.forEach((player) => {
+        expect(player.stockpile).toHaveLength(0);
+        expect(player.hand).toHaveLength(0);
+      });
+    });
+  });
+
   describe('getCurrentPlayer', () => {
     it('returns the player at currentPlayerIndex', () => {
       game.addPlayer('p1', 'Alice');
@@ -351,6 +376,19 @@ describe('SkipBoGame', () => {
       game.playCard(p1, 1, 'stockpile', 0);
       expect(game.gameOver).toBe(true);
       expect(game.winner).toBe(player);
+    });
+
+    it('stamps finishedAt when the game ends', () => {
+      const player = game.players[0];
+      player.stockpile = [1];
+      player.hand = [2, 3, 4, 5, 6];
+
+      expect(game.finishedAt).toBeNull();
+      const before = Date.now();
+      game.playCard(p1, 1, 'stockpile', 0);
+
+      expect(typeof game.finishedAt).toBe('number');
+      expect(game.finishedAt).toBeGreaterThanOrEqual(before);
     });
 
     it('returns error for card not found in hand', () => {
@@ -573,6 +611,7 @@ describe('SkipBoGame', () => {
           gameStarted: true,
           gameOver: false,
           winner: null,
+          finishedAt: null,
         })
       );
       expect(state.players).toHaveLength(2);
@@ -740,137 +779,6 @@ describe('SkipBoGame', () => {
       game.setHost('first');
       game.setHost('second');
       expect(game.hostPublicId).toBe('second');
-    });
-  });
-
-  describe('addRematchVote', () => {
-    let p1, p2;
-
-    beforeEach(() => {
-      game.addPlayer('p1', 'Alice');
-      game.addPlayer('p2', 'Bob');
-      p1 = game.players[0].internalId;
-      p2 = game.players[1].internalId;
-    });
-
-    it('adds a new vote and returns true', () => {
-      expect(game.addRematchVote(p1)).toBe(true);
-      expect(game.rematchVotes.size).toBe(1);
-    });
-
-    it('returns false for duplicate vote', () => {
-      game.addRematchVote(p1);
-      expect(game.addRematchVote(p1)).toBe(false);
-      expect(game.rematchVotes.size).toBe(1);
-    });
-
-    it('tracks multiple voters independently', () => {
-      game.addRematchVote(p1);
-      game.addRematchVote(p2);
-      expect(game.rematchVotes.size).toBe(2);
-    });
-  });
-
-  describe('removeRematchVote', () => {
-    let p1;
-
-    beforeEach(() => {
-      game.addPlayer('p1', 'Alice');
-      p1 = game.players[0].internalId;
-    });
-
-    it('removes an existing vote', () => {
-      game.addRematchVote(p1);
-      game.removeRematchVote(p1);
-      expect(game.rematchVotes.size).toBe(0);
-    });
-
-    it('is a no-op for non-existent vote', () => {
-      game.removeRematchVote(p1);
-      expect(game.rematchVotes.size).toBe(0);
-    });
-  });
-
-  describe('clearRematchVotes', () => {
-    let p1, p2;
-
-    beforeEach(() => {
-      game.addPlayer('p1', 'Alice');
-      game.addPlayer('p2', 'Bob');
-      p1 = game.players[0].internalId;
-      p2 = game.players[1].internalId;
-    });
-
-    it('clears all votes', () => {
-      game.addRematchVote(p1);
-      game.addRematchVote(p2);
-      game.clearRematchVotes();
-      expect(game.rematchVotes.size).toBe(0);
-    });
-  });
-
-  describe('canStartRematch', () => {
-    let p1, p2;
-
-    beforeEach(() => {
-      game.addPlayer('p1', 'Alice');
-      game.addPlayer('p2', 'Bob');
-      p1 = game.players[0].internalId;
-      p2 = game.players[1].internalId;
-    });
-
-    it('returns true when votes meet threshold', () => {
-      game.addRematchVote(p1);
-      game.addRematchVote(p2);
-      expect(game.canStartRematch(2)).toBe(true);
-    });
-
-    it('returns true when votes exceed threshold', () => {
-      game.addRematchVote(p1);
-      game.addRematchVote(p2);
-      expect(game.canStartRematch(1)).toBe(true);
-    });
-
-    it('returns false when votes are below threshold', () => {
-      game.addRematchVote(p1);
-      expect(game.canStartRematch(2)).toBe(false);
-    });
-  });
-
-  describe('getRematchVoterPublicIds', () => {
-    let p1, p2;
-
-    beforeEach(() => {
-      game.addPlayer('p1', 'Alice');
-      game.addPlayer('p2', 'Bob');
-      p1 = game.players[0].internalId;
-      p2 = game.players[1].internalId;
-    });
-
-    it('returns public IDs of voters', () => {
-      game.addRematchVote(p1);
-      const ids = game.getRematchVoterPublicIds();
-      expect(ids).toEqual([game.players[0].publicId]);
-    });
-
-    it('returns empty array when no votes', () => {
-      expect(game.getRematchVoterPublicIds()).toEqual([]);
-    });
-
-    it('preserves player order', () => {
-      game.addRematchVote(p2);
-      game.addRematchVote(p1);
-      const ids = game.getRematchVoterPublicIds();
-      // Order follows players array, not vote order
-      expect(ids).toEqual([game.players[0].publicId, game.players[1].publicId]);
-    });
-
-    it('ignores votes from removed players', () => {
-      game.addRematchVote(p1);
-      game.addRematchVote(p2);
-      game.removePlayer(p1);
-      const ids = game.getRematchVoterPublicIds();
-      expect(ids).toEqual([game.players[0].publicId]); // only p2 remains
     });
   });
 });

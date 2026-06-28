@@ -59,11 +59,8 @@ function App() {
     passTurn,
     leaveLobby,
     leaveGame,
-    requestRematch,
-    requestRematchWithoutDisconnected,
-    updateRematchSettings,
-    rematchVotes,
-    rematchStockpileSize,
+    returnToLobby,
+    updateStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
     addBot,
@@ -95,6 +92,10 @@ function App() {
             onLeaveLobby={leaveLobby}
             onAddBot={addBot}
             onRemoveBot={removeBot}
+            onUpdateStockpileSize={updateStockpileSize}
+            chatMessages={chatMessages}
+            onSendChatMessage={sendChatMessage}
+            onMarkMessagesRead={markMessagesAsRead}
           />
         ) : (
           <GameBoard
@@ -106,11 +107,7 @@ function App() {
             onDiscardCard={discardCard}
             onPassTurn={passTurn}
             onLeaveGame={leaveGame}
-            onRequestRematch={requestRematch}
-            onRequestRematchWithoutDisconnected={requestRematchWithoutDisconnected}
-            onUpdateRematchSettings={updateRematchSettings}
-            rematchVotes={rematchVotes}
-            rematchStockpileSize={rematchStockpileSize}
+            onReturnToLobby={returnToLobby}
             chatMessages={chatMessages}
             onSendChatMessage={sendChatMessage}
             onMarkMessagesRead={markMessagesAsRead}

@@ -13,8 +13,6 @@ export function createMessageHandlers({
   setRoomId,
   setInLobby,
   setError,
-  setRematchVotes,
-  setRematchStockpileSize,
   setChatMessages,
   roomIdRef,
   sessionTokenRef,
@@ -98,10 +96,6 @@ export function createMessageHandlers({
       setPlayerState(playerState);
       setInLobby(false);
 
-      if (gameState.gameOver) {
-        setRematchVotes(gameState.rematchVotes || []);
-      }
-
       const player = gameState.players.find((p) => p.id === playerId);
       if (player) {
         saveSession(roomId, playerId, player.name, sessionToken);
@@ -125,8 +119,6 @@ export function createMessageHandlers({
       });
       setGameState(gameState);
       setPlayerState(playerState);
-      setRematchVotes([]);
-      setRematchStockpileSize(null);
     },
 
     gameStateUpdate({ gameState, playerState }) {
@@ -138,9 +130,9 @@ export function createMessageHandlers({
       debugLog('event', 'gameOver', { winner: gameState?.winner });
       setGameState(gameState);
       // Keep the session token and chat: the game stays in memory and the
-      // same players continue into a rematch. Clearing here broke reconnect
-      // after a post-game tab-out. Explicit-leave paths (gameAborted,
-      // leaveGame) are what clear the session.
+      // players return to the waiting room together. Clearing here broke
+      // reconnect after a post-game tab-out. Explicit-leave paths
+      // (gameAborted, leaveGame) are what clear the session.
     },
 
     playerDisconnected({ playerId }) {
@@ -189,19 +181,10 @@ export function createMessageHandlers({
       setRoomId(null);
       setInLobby(true);
       setChatMessages([]);
-      setRematchVotes([]);
-      setRematchStockpileSize(null);
-    },
-
-    rematchVoteUpdate({ rematchVotes, stockpileSize }) {
-      setRematchVotes(rematchVotes);
-      setRematchStockpileSize(stockpileSize);
     },
 
     playerLeftPostGame({ gameState }) {
       setGameState(gameState);
-      setRematchVotes([]);
-      setRematchStockpileSize(null);
     },
 
     chatMessage(messageData) {

@@ -18,7 +18,8 @@ const MAX_STOCKPILE_SIZE = 30;
 // Timers
 const LOBBY_GRACE_PERIOD_MS = 300000;
 const GAME_GRACE_PERIOD_MS = 300000;
-const COMPLETED_GAME_TTL_MS = 300000;
+const POST_GAME_MIN_SAVOR_MS = 10000; // floor before "Back to room" unlocks
+const POST_GAME_AUTO_RETURN_MS = 900000; // 15 min: an idle results screen returns to the waiting room
 
 // Limits
 const MAX_PENDING_ROOMS = 50;
@@ -61,7 +62,8 @@ module.exports = {
   MAX_STOCKPILE_SIZE,
   LOBBY_GRACE_PERIOD_MS,
   GAME_GRACE_PERIOD_MS,
-  COMPLETED_GAME_TTL_MS,
+  POST_GAME_MIN_SAVOR_MS,
+  POST_GAME_AUTO_RETURN_MS,
   MAX_PENDING_ROOMS,
   MAX_TOTAL_ROOMS,
   MAX_PLAYER_NAME_LENGTH,

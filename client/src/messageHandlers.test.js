@@ -8,8 +8,6 @@ function createMockDeps() {
     setRoomId: jest.fn(),
     setInLobby: jest.fn(),
     setError: jest.fn(),
-    setRematchVotes: jest.fn(),
-    setRematchStockpileSize: jest.fn(),
     setChatMessages: jest.fn(),
     roomIdRef: { current: null },
     sessionTokenRef: { current: null },
@@ -112,26 +110,6 @@ describe('createMessageHandlers', () => {
       expect(deps.setPlayerState).toHaveBeenCalledWith(playerState);
       expect(deps.setInLobby).toHaveBeenCalledWith(false);
     });
-
-    it('restores rematch votes when game is over', () => {
-      const deps = createMockDeps();
-      const handlers = createMessageHandlers(deps);
-      const gameState = {
-        gameOver: true,
-        rematchVotes: ['p1'],
-        players: [{ id: 'p1', name: 'Alice' }],
-      };
-
-      handlers.reconnected({
-        roomId: 'XYZ',
-        playerId: 'p1',
-        sessionToken: 'tok',
-        gameState,
-        playerState: {},
-      });
-
-      expect(deps.setRematchVotes).toHaveBeenCalledWith(['p1']);
-    });
   });
 
   describe('reconnectFailed', () => {
@@ -165,7 +143,7 @@ describe('createMessageHandlers', () => {
   });
 
   describe('gameStarted', () => {
-    it('sets game and player state and clears rematch', () => {
+    it('sets game and player state', () => {
       const deps = createMockDeps();
       const handlers = createMessageHandlers(deps);
       const gameState = { players: [] };
@@ -175,8 +153,6 @@ describe('createMessageHandlers', () => {
 
       expect(deps.setGameState).toHaveBeenCalledWith(gameState);
       expect(deps.setPlayerState).toHaveBeenCalledWith(playerState);
-      expect(deps.setRematchVotes).toHaveBeenCalledWith([]);
-      expect(deps.setRematchStockpileSize).toHaveBeenCalledWith(null);
     });
   });
 
@@ -193,7 +169,7 @@ describe('createMessageHandlers', () => {
   });
 
   describe('gameOver', () => {
-    it('preserves the session so a rematch reconnect works', () => {
+    it('preserves the session so a post-game reconnect works', () => {
       const deps = createMockDeps();
       const handlers = createMessageHandlers(deps);
 
@@ -216,8 +192,6 @@ describe('createMessageHandlers', () => {
       expect(deps.setRoomId).toHaveBeenCalledWith(null);
       expect(deps.setInLobby).toHaveBeenCalledWith(true);
       expect(deps.setChatMessages).toHaveBeenCalledWith([]);
-      expect(deps.setRematchVotes).toHaveBeenCalledWith([]);
-      expect(deps.setRematchStockpileSize).toHaveBeenCalledWith(null);
       expect(deps.roomIdRef.current).toBeNull();
     });
   });
@@ -248,18 +222,6 @@ describe('createMessageHandlers', () => {
       const prevState = { players: [{ id: 'p1' }, { id: 'p2', disconnected: true }] };
       const newState = updater(prevState);
       expect(newState.players[1].disconnected).toBe(false);
-    });
-  });
-
-  describe('rematchVoteUpdate', () => {
-    it('updates rematch votes and stockpile size', () => {
-      const deps = createMockDeps();
-      const handlers = createMessageHandlers(deps);
-
-      handlers.rematchVoteUpdate({ rematchVotes: ['p1'], stockpileSize: 30 });
-
-      expect(deps.setRematchVotes).toHaveBeenCalledWith(['p1']);
-      expect(deps.setRematchStockpileSize).toHaveBeenCalledWith(30);
     });
   });
 

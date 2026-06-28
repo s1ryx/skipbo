@@ -11,8 +11,6 @@ export default function useGameConnection() {
   const [inLobby, setInLobby] = useState(true);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [rematchVotes, setRematchVotes] = useState([]);
-  const [rematchStockpileSize, setRematchStockpileSize] = useState(null);
   const [chatMessages, setChatMessages] = useState(() => {
     const savedSession = localStorage.getItem('skipBoSession');
     if (savedSession) {
@@ -49,8 +47,6 @@ export default function useGameConnection() {
       setRoomId,
       setInLobby,
       setError,
-      setRematchVotes,
-      setRematchStockpileSize,
       setChatMessages,
       roomIdRef,
       sessionTokenRef,
@@ -151,16 +147,12 @@ export default function useGameConnection() {
     transportRef.current?.send('leaveGame');
   }, []);
 
-  const requestRematch = useCallback(() => {
-    transportRef.current?.send('requestRematch');
+  const returnToLobby = useCallback(() => {
+    transportRef.current?.send('returnToLobby');
   }, []);
 
-  const requestRematchWithoutDisconnected = useCallback(() => {
-    transportRef.current?.send('requestRematchWithoutDisconnected');
-  }, []);
-
-  const updateRematchSettings = useCallback((stockpileSize) => {
-    transportRef.current?.send('updateRematchSettings', { stockpileSize });
+  const updateStockpileSize = useCallback((stockpileSize) => {
+    transportRef.current?.send('updateStockpileSize', { stockpileSize });
   }, []);
 
   const sendChatMessage = useCallback((message) => {
@@ -196,11 +188,8 @@ export default function useGameConnection() {
     passTurn,
     leaveLobby,
     leaveGame,
-    requestRematch,
-    requestRematchWithoutDisconnected,
-    updateRematchSettings,
-    rematchVotes,
-    rematchStockpileSize,
+    returnToLobby,
+    updateStockpileSize,
     sendChatMessage,
     markMessagesAsRead,
     addBot,
