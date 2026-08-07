@@ -60,4 +60,61 @@ describe('PlayerHand', () => {
 
     expect(onCardSelect).not.toHaveBeenCalled();
   });
+
+  it('sorts cards ascending when sortHandEnabled is true', () => {
+    const onCardSelect = jest.fn();
+    const { container } = renderPlayerHand({
+      hand: [3, 1, 2],
+      onCardSelect,
+      sortHandEnabled: true,
+    });
+
+    const firstCard = container.querySelectorAll('.hand-card')[0];
+    fireEvent.click(firstCard);
+
+    expect(onCardSelect).toHaveBeenCalledWith(1, 'hand-0');
+  });
+
+  it('places SKIP-BO wildcards last when sorted', () => {
+    const onCardSelect = jest.fn();
+    const { container } = renderPlayerHand({
+      hand: [5, 'SKIP-BO', 2, 'SKIP-BO'],
+      onCardSelect,
+      sortHandEnabled: true,
+    });
+
+    const cards = container.querySelectorAll('.hand-card');
+    fireEvent.click(cards[2]);
+    expect(onCardSelect).toHaveBeenCalledWith('SKIP-BO', 'hand-2');
+    fireEvent.click(cards[3]);
+    expect(onCardSelect).toHaveBeenCalledWith('SKIP-BO', 'hand-3');
+  });
+
+  it('preserves original order when sortHandEnabled is false', () => {
+    const onCardSelect = jest.fn();
+    const { container } = renderPlayerHand({
+      hand: [3, 1, 2],
+      onCardSelect,
+      sortHandEnabled: false,
+    });
+
+    const firstCard = container.querySelectorAll('.hand-card')[0];
+    fireEvent.click(firstCard);
+
+    expect(onCardSelect).toHaveBeenCalledWith(3, 'hand-0');
+  });
+
+  it('selected class matches sorted display position', () => {
+    const { container } = renderPlayerHand({
+      hand: [3, 1, 2],
+      selectedCard: 1,
+      selectedSource: 'hand-0',
+      sortHandEnabled: true,
+    });
+
+    const cards = container.querySelectorAll('.hand-card');
+    expect(cards[0]).toHaveClass('selected');
+    expect(cards[1]).not.toHaveClass('selected');
+    expect(cards[2]).not.toHaveClass('selected');
+  });
 });

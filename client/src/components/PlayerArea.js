@@ -10,6 +10,7 @@ function PlayerArea({
   selectedSource,
   discardMode,
   quickDiscardEnabled,
+  sortHandEnabled,
   onCardSelect,
   onDiscardPileClick,
   onEndTurn,
@@ -49,6 +50,7 @@ function PlayerArea({
           selectedSource={selectedSource}
           onCardSelect={onCardSelect}
           disabled={!isMyTurn}
+          sortHandEnabled={sortHandEnabled}
         />
       </div>
 

@@ -31,6 +31,9 @@ function GameBoard({
     const saved = localStorage.getItem('skipBoQuickDiscard');
     return saved === 'true';
   });
+  const [sortHandEnabled, setSortHandEnabled] = useState(() => {
+    return localStorage.getItem('skipBoSortHand') === 'true';
+  });
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   if (!gameState) {
@@ -95,6 +98,12 @@ function GameBoard({
     localStorage.setItem('skipBoQuickDiscard', newValue.toString());
   };
 
+  const toggleSortHand = () => {
+    const newValue = !sortHandEnabled;
+    setSortHandEnabled(newValue);
+    localStorage.setItem('skipBoSortHand', newValue.toString());
+  };
+
   const handleEndTurn = () => {
     if (!isMyTurn) return;
 
@@ -121,6 +130,8 @@ function GameBoard({
         roomId={roomId}
         quickDiscardEnabled={quickDiscardEnabled}
         onToggleQuickDiscard={toggleQuickDiscard}
+        sortHandEnabled={sortHandEnabled}
+        onToggleSortHand={toggleSortHand}
         onLeaveGame={() => setShowLeaveConfirm(true)}
       />
 
@@ -145,6 +156,7 @@ function GameBoard({
           selectedSource={selectedSource}
           discardMode={discardMode}
           quickDiscardEnabled={quickDiscardEnabled}
+          sortHandEnabled={sortHandEnabled}
           onCardSelect={handleCardSelect}
           onDiscardPileClick={handleDiscardPileClick}
           onEndTurn={handleEndTurn}
